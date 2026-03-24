@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { Mountain, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 const navLinks = [
-  { label: 'Mapa', href: '#mapa' },
-  { label: 'Directorio', href: '#directorio' },
-  { label: 'Precios', href: '#precios' },
+  { label: 'Mapa', href: '/#mapa' },
+  { label: 'Directorio', href: '/directorio' },
+  { label: 'Precios', href: '/#precios' },
 ];
 
 export default function Header() {
