@@ -51,19 +51,19 @@ export default function CategoryBar({ selected, onSelect }: CategoryBarProps) {
   const isMobile = useIsMobile();
 
   return (
-    <section className="container mx-auto px-4 py-6 sm:py-10">
-      <h2 className="mb-4 sm:mb-6 text-xl font-bold">Categorías</h2>
+    <section className="container mx-auto px-4 py-10">
+      <h2 className="mb-6 text-xl font-bold">Categorías</h2>
 
       {isMobile ? (
         <Carousel
           opts={{ align: 'start', loop: false }}
           className="w-full"
         >
-          <CarouselContent className="-ml-2.5">
+          <CarouselContent className="-ml-3">
             {categories.map(cat => {
               const isActive = selected === cat.label;
               return (
-                <CarouselItem key={cat.label} className="pl-2.5 basis-[44%]">
+                <CarouselItem key={cat.label} className="pl-3 basis-[44%]">
                   <CategoryButton
                     cat={cat}
                     isActive={isActive}
@@ -75,7 +75,7 @@ export default function CategoryBar({ selected, onSelect }: CategoryBarProps) {
           </CarouselContent>
         </Carousel>
       ) : (
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-6 gap-4">
           {categories.map(cat => {
             const isActive = selected === cat.label;
             return (
