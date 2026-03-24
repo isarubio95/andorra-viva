@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, Heart, Star, BarChart3 } from 'lucide-react';
+import { useFavorites } from '@/contexts/FavoritesContext';
+import { getBusinesses } from '@/services/api';
+import type { Business } from '@/data/mockData';
+import BusinessCard from '@/components/BusinessCard';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
