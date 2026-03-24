@@ -15,6 +15,8 @@ export interface Business {
   longitude: number;
   is_premium: boolean;
   services: string[];
+  price_range: number; // 1=económico, 2=moderado, 3=premium
+  min_age: number | null; // null = todas las edades
 }
 
 export interface Review {
