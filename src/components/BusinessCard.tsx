@@ -8,9 +8,19 @@ interface BusinessCardProps {
 }
 
 export default function BusinessCard({ business, onClick }: BusinessCardProps) {
+  const handleActivate = () => onClick(business);
+
   return (
-    <button
-      onClick={() => onClick(business)}
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={handleActivate}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleActivate();
+        }
+      }}
       className="group flex flex-col overflow-hidden rounded-xl border bg-card text-left transition-all hover:shadow-lg hover:-translate-y-1"
     >
       {/* Image */}
@@ -49,6 +59,6 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           <span className="text-xs text-muted-foreground">Ver más →</span>
         </div>
       </div>
-    </button>
+    </article>
   );
 }
