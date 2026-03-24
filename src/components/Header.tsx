@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mountain, Menu, X, LogOut, User, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,14 +17,20 @@ import { useToast } from '@/hooks/use-toast';
 const navLinks = [
   { label: 'Mapa', href: '/#mapa' },
   { label: 'Directorio', href: '/directorio' },
-  { label: 'Precios', href: '/#precios' },
 ];
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, displayName, signOut, loading } = useAuth();
+  const { user, displayName, role, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const isPro = role === 'professional';
+
+  // Show pricing link only for professionals or logged-out users
+  const visibleLinks = user && !isPro
+    ? navLinks
+    : [...navLinks, { label: 'Precios', href: '/#precios' }];
 
   const initials = displayName
     .split(' ')
@@ -53,21 +60,13 @@ export default function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-8 md:flex">
-          {navLinks.map(link =>
+          {visibleLinks.map(link =>
             link.href.startsWith('/') && !link.href.includes('#') ? (
-              <Link
-                key={link.href}
-                to={link.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
+              <Link key={link.href} to={link.href} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                 {link.label}
               </Link>
             ) : (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
+              <a key={link.href} href={link.href} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                 {link.label}
               </a>
             )
@@ -86,6 +85,9 @@ export default function Header() {
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium text-foreground">{displayName}</span>
+                  <Badge variant={isPro ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
+                    {isPro ? 'PRO' : 'USER'}
+                  </Badge>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -93,10 +95,12 @@ export default function Header() {
                   <User className="mr-2 h-4 w-4" />
                   Mi Cuenta
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/mi-cuenta')}>
-                  <Store className="mr-2 h-4 w-4" />
-                  Mis Negocios
-                </DropdownMenuItem>
+                {isPro && (
+                  <DropdownMenuItem onClick={() => navigate('/mi-cuenta')}>
+                    <Store className="mr-2 h-4 w-4" />
+                    Mis Negocios
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -117,11 +121,7 @@ export default function Header() {
         </div>
 
         {/* Mobile toggle */}
-        <button
-          className="md:hidden"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle menu"
-        >
+        <button className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Toggle menu">
           {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
@@ -130,23 +130,13 @@ export default function Header() {
       {mobileOpen && (
         <div className="border-t bg-card px-4 py-4 md:hidden">
           <nav className="flex flex-col gap-3">
-            {navLinks.map(link =>
+            {visibleLinks.map(link =>
               link.href.startsWith('/') && !link.href.includes('#') ? (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className="text-sm font-medium text-muted-foreground"
-                  onClick={() => setMobileOpen(false)}
-                >
+                <Link key={link.href} to={link.href} className="text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>
                   {link.label}
                 </Link>
               ) : (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm font-medium text-muted-foreground"
-                  onClick={() => setMobileOpen(false)}
-                >
+                <a key={link.href} href={link.href} className="text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>
                   {link.label}
                 </a>
               )

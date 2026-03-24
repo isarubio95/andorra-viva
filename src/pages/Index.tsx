@@ -8,6 +8,7 @@ import ReviewsPanel from '@/components/ReviewsPanel';
 import Footer from '@/components/Footer';
 import { getBusinesses, getPlans } from '@/services/api';
 import type { Business, Plan } from '@/data/mockData';
+import { useAuth } from '@/contexts/AuthContext';
 
 const categoryMap: Record<string, string[]> = {
   'Gastronomía': ['Restaurante'],
@@ -23,6 +24,10 @@ export default function Index() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
+  const { user, role } = useAuth();
+
+  const isPro = role === 'professional';
+  const showPricing = !user || isPro;
 
   useEffect(() => {
     getBusinesses().then(setBusinesses);
@@ -42,7 +47,7 @@ export default function Index() {
       <HeroMap businesses={businesses} onBusinessClick={setSelectedBusiness} />
       <CategoryBar selected={selectedCategory} onSelect={setSelectedCategory} />
       <BusinessDirectory businesses={filtered} onBusinessClick={setSelectedBusiness} />
-      <PricingSection plans={plans} />
+      {showPricing && <PricingSection plans={plans} />}
       <Footer />
 
       {selectedBusiness && (
