@@ -1,16 +1,56 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useEffect } from 'react';
+import Header from '@/components/Header';
+import HeroMap from '@/components/HeroMap';
+import CategoryBar from '@/components/CategoryBar';
+import BusinessDirectory from '@/components/BusinessDirectory';
+import PricingSection from '@/components/PricingSection';
+import ReviewsPanel from '@/components/ReviewsPanel';
+import Footer from '@/components/Footer';
+import { getBusinesses, getPlans } from '@/services/api';
+import type { Business, Plan } from '@/data/mockData';
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
-  return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
-  );
+const categoryMap: Record<string, string[]> = {
+  'Gastronomía': ['Restaurante'],
+  'Wellness': ['SPA & Wellness'],
+  'Noche': ['Bar', 'Discoteca'],
+  'Shopping': ['Tienda', 'Shopping'],
+  'Montaña': ['Hotel', 'Actividades'],
+  'Cultura': ['Museo', 'Cultura'],
 };
 
-const Index = PlaceholderIndex;
+export default function Index() {
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
 
-export default Index;
+  useEffect(() => {
+    getBusinesses().then(setBusinesses);
+    getPlans().then(setPlans);
+  }, []);
+
+  const filtered = selectedCategory
+    ? businesses.filter(b => {
+        const cats = categoryMap[selectedCategory] || [];
+        return cats.some(c => b.category.toLowerCase().includes(c.toLowerCase()));
+      })
+    : businesses;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <HeroMap businesses={businesses} onBusinessClick={setSelectedBusiness} />
+      <CategoryBar selected={selectedCategory} onSelect={setSelectedCategory} />
+      <BusinessDirectory businesses={filtered} onBusinessClick={setSelectedBusiness} />
+      <PricingSection plans={plans} />
+      <Footer />
+
+      {selectedBusiness && (
+        <ReviewsPanel
+          business={selectedBusiness}
+          onClose={() => setSelectedBusiness(null)}
+        />
+      )}
+    </div>
+  );
+}
