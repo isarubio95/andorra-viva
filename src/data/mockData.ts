@@ -15,6 +15,8 @@ export interface Business {
   longitude: number;
   is_premium: boolean;
   services: string[];
+  price_range: number; // 1=económico, 2=moderado, 3=premium
+  min_age: number | null; // null = todas las edades
 }
 
 export interface Review {
@@ -50,6 +52,8 @@ export const mockBusinesses: Business[] = [
     longitude: 1.5147,
     is_premium: true,
     services: ['Wifi', 'Terraza', 'Parking', 'Bodega'],
+    price_range: 3,
+    min_age: null,
   },
   {
     id: '2',
@@ -64,6 +68,8 @@ export const mockBusinesses: Business[] = [
     longitude: 1.6678,
     is_premium: true,
     services: ['Piscina', 'Sauna', 'Masajes', 'Gimnasio'],
+    price_range: 3,
+    min_age: 16,
   },
   {
     id: '3',
@@ -78,6 +84,8 @@ export const mockBusinesses: Business[] = [
     longitude: 1.6654,
     is_premium: true,
     services: ['Ski-in', 'Restaurante', 'Spa', 'Bar'],
+    price_range: 3,
+    min_age: null,
   },
   {
     id: '4',
@@ -92,6 +100,8 @@ export const mockBusinesses: Business[] = [
     longitude: 1.5218,
     is_premium: false,
     services: ['Wifi', 'Terraza'],
+    price_range: 1,
+    min_age: null,
   },
   {
     id: '5',
@@ -106,6 +116,8 @@ export const mockBusinesses: Business[] = [
     longitude: 1.5806,
     is_premium: false,
     services: ['Parking', 'Menú del día'],
+    price_range: 1,
+    min_age: null,
   },
   {
     id: '6',
@@ -120,6 +132,8 @@ export const mockBusinesses: Business[] = [
     longitude: 1.5393,
     is_premium: false,
     services: ['Termas', 'Spa', 'Restaurante', 'Tienda'],
+    price_range: 2,
+    min_age: null,
   },
 ];
 

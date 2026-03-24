@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { Mountain, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 const navLinks = [
-  { label: 'Mapa', href: '#mapa' },
-  { label: 'Directorio', href: '#directorio' },
-  { label: 'Precios', href: '#precios' },
+  { label: 'Mapa', href: '/#mapa' },
+  { label: 'Directorio', href: '/directorio' },
+  { label: 'Precios', href: '/#precios' },
 ];
 
 export default function Header() {
@@ -26,15 +26,25 @@ export default function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-8 md:flex">
-          {navLinks.map(link => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map(link =>
+            link.href.startsWith('/') && !link.href.includes('#') ? (
+              <Link
+                key={link.href}
+                to={link.href}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            ) : (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {link.label}
+              </a>
+            )
+          )}
         </nav>
 
         {/* Auth buttons */}
@@ -60,16 +70,27 @@ export default function Header() {
       {mobileOpen && (
         <div className="border-t bg-card px-4 py-4 md:hidden">
           <nav className="flex flex-col gap-3">
-            {navLinks.map(link => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-muted-foreground"
-                onClick={() => setMobileOpen(false)}
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map(link =>
+              link.href.startsWith('/') && !link.href.includes('#') ? (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className="text-sm font-medium text-muted-foreground"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm font-medium text-muted-foreground"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </a>
+              )
+            )}
           </nav>
           <div className="mt-4 flex flex-col gap-2">
             <Button variant="ghost" size="sm" asChild>
