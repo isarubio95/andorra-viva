@@ -275,6 +275,3 @@ export default function UserDashboard() {
     </div>
   );
 }
-
-// Need Link import for the upgrade CTA
-import { Link } from 'react-router-dom';
