@@ -1,5 +1,8 @@
 import { Star, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
+import { useToast } from '@/hooks/use-toast';
 import type { Business } from '@/data/mockData';
 
 interface BusinessCardProps {
@@ -8,17 +11,29 @@ interface BusinessCardProps {
 }
 
 export default function BusinessCard({ business, onClick }: BusinessCardProps) {
-  const handleActivate = () => onClick(business);
+  const { user } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { toast } = useToast();
+  const liked = isFavorite(business.id);
+
+  const handleFavorite = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      toast({ title: 'Inicia sesión para guardar favoritos', variant: 'destructive' });
+      return;
+    }
+    await toggleFavorite(business.id);
+  };
 
   return (
     <article
       role="button"
       tabIndex={0}
-      onClick={handleActivate}
+      onClick={() => onClick(business)}
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          handleActivate();
+          onClick(business);
         }
       }}
       className="group flex flex-col overflow-hidden rounded-xl border bg-card text-left transition-all hover:shadow-lg hover:-translate-y-1"
@@ -37,11 +52,19 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           </Badge>
         )}
         <button
-          onClick={e => { e.stopPropagation(); }}
-          className="absolute right-3 bottom-3 rounded-full bg-card/80 p-1.5 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-card"
-          aria-label="Favorito"
+          onClick={handleFavorite}
+          className={`absolute right-3 bottom-3 rounded-full p-1.5 transition-all ${
+            liked
+              ? 'bg-destructive/10 opacity-100'
+              : 'bg-card/80 opacity-0 group-hover:opacity-100 hover:bg-card'
+          }`}
+          aria-label={liked ? 'Quitar de favoritos' : 'Añadir a favoritos'}
         >
-          <Heart className="h-4 w-4 text-muted-foreground" />
+          <Heart
+            className={`h-4 w-4 transition-colors ${
+              liked ? 'fill-destructive text-destructive' : 'text-muted-foreground'
+            }`}
+          />
         </button>
       </div>
 
