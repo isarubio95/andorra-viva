@@ -21,10 +21,18 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function UserDashboard() {
   const { user, displayName, role, signOut } = useAuth();
+  const { favorites } = useFavorites();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
   const [saving, setSaving] = useState(false);
+  const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
+
+  useEffect(() => {
+    getBusinesses().then(setAllBusinesses);
+  }, []);
+
+  const favoriteBusinesses = allBusinesses.filter(b => favorites.has(b.id));
 
   const isPro = role === 'professional';
 
