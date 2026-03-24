@@ -39,10 +39,13 @@ export default function Header() {
 
         {/* Auth buttons */}
         <div className="hidden items-center gap-3 md:flex">
-          <Button variant="ghost" size="sm">Iniciar Sesión</Button>
-          <Button size="sm">Registrar Negocio</Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/login">Iniciar Sesión</Link>
+          </Button>
+          <Button size="sm" asChild>
+            <Link to="/signup">Registrar Negocio</Link>
+          </Button>
         </div>
-
         {/* Mobile toggle */}
         <button
           className="md:hidden"
