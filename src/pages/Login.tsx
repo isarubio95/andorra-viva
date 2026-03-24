@@ -20,7 +20,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       toast({
@@ -29,7 +29,8 @@ export default function Login() {
         variant: 'destructive',
       });
     } else {
-      toast({ title: '¡Bienvenido de nuevo!' });
+      const name = data.user?.user_metadata?.full_name || email.split('@')[0];
+      toast({ title: `¡Bienvenido, ${name}! 👋` });
       navigate('/');
     }
 
