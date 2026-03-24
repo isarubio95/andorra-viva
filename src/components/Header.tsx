@@ -72,8 +72,12 @@ export default function Header() {
             ))}
           </nav>
           <div className="mt-4 flex flex-col gap-2">
-            <Button variant="ghost" size="sm">Iniciar Sesión</Button>
-            <Button size="sm">Registrar Negocio</Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/login">Iniciar Sesión</Link>
+            </Button>
+            <Button size="sm" asChild>
+              <Link to="/signup">Registrar Negocio</Link>
+            </Button>
           </div>
         </div>
       )}
