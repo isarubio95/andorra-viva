@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, Heart, Star, BarChart3 } from 'lucide-react';
+import { useFavorites } from '@/contexts/FavoritesContext';
+import { getBusinesses } from '@/services/api';
+import type { Business } from '@/data/mockData';
+import BusinessCard from '@/components/BusinessCard';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -17,10 +21,18 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function UserDashboard() {
   const { user, displayName, role, signOut } = useAuth();
+  const { favorites } = useFavorites();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
   const [saving, setSaving] = useState(false);
+  const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
+
+  useEffect(() => {
+    getBusinesses().then(setAllBusinesses);
+  }, []);
+
+  const favoriteBusinesses = allBusinesses.filter(b => favorites.has(b.id));
 
   const isPro = role === 'professional';
 
@@ -209,18 +221,26 @@ export default function UserDashboard() {
                     <CardDescription>Negocios que has guardado</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-col items-center gap-4 py-8 text-center">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                        <Heart className="h-8 w-8 text-muted-foreground" />
+                    {favoriteBusinesses.length > 0 ? (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {favoriteBusinesses.map(biz => (
+                          <BusinessCard key={biz.id} business={biz} onClick={() => {}} />
+                        ))}
                       </div>
-                      <div>
-                        <p className="font-medium text-foreground">No tienes favoritos aún</p>
-                        <p className="text-sm text-muted-foreground">Explora el directorio y guarda tus negocios favoritos</p>
+                    ) : (
+                      <div className="flex flex-col items-center gap-4 py-8 text-center">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                          <Heart className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">No tienes favoritos aún</p>
+                          <p className="text-sm text-muted-foreground">Explora el directorio y guarda tus negocios favoritos</p>
+                        </div>
+                        <Button variant="outline" onClick={() => navigate('/directorio')}>
+                          Explorar Directorio
+                        </Button>
                       </div>
-                      <Button variant="outline" onClick={() => navigate('/directorio')}>
-                        Explorar Directorio
-                      </Button>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
