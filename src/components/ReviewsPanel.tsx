@@ -66,7 +66,20 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
               <MessageCircle className="mr-2 h-4 w-4" /> Reservar WhatsApp
             </Button>
             <Button variant="outline" size="icon"><Phone className="h-4 w-4" /></Button>
-            <Button variant="outline" size="icon"><Navigation className="h-4 w-4" /></Button>
+            <Button
+              variant="outline"
+              size="icon"
+              asChild
+            >
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Cómo llegar"
+              >
+                <Navigation className="h-4 w-4" />
+              </a>
+            </Button>
           </div>
 
           {/* Info */}
