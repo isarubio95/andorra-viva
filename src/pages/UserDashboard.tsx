@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, Heart, Star, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -11,15 +11,18 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 export default function UserDashboard() {
-  const { user, displayName, signOut } = useAuth();
+  const { user, displayName, role, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
   const [saving, setSaving] = useState(false);
+
+  const isPro = role === 'professional';
 
   const initials = displayName
     .split(' ')
@@ -31,9 +34,7 @@ export default function UserDashboard() {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const { error } = await supabase.auth.updateUser({
-      data: { full_name: fullName },
-    });
+    const { error } = await supabase.auth.updateUser({ data: { full_name: fullName } });
     if (error) {
       toast({ title: 'Error al actualizar', description: error.message, variant: 'destructive' });
     } else {
@@ -66,15 +67,27 @@ export default function UserDashboard() {
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
+                <Badge variant={isPro ? 'default' : 'secondary'}>
+                  {isPro ? 'Profesional' : 'Usuario'}
+                </Badge>
+              </div>
               <p className="text-sm text-muted-foreground">{user.email}</p>
             </div>
           </div>
 
           <Tabs defaultValue="perfil" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className={`grid w-full ${isPro ? 'grid-cols-4' : 'grid-cols-3'}`}>
               <TabsTrigger value="perfil">Perfil</TabsTrigger>
-              <TabsTrigger value="negocios">Mis Negocios</TabsTrigger>
+              {isPro ? (
+                <>
+                  <TabsTrigger value="negocios">Mis Negocios</TabsTrigger>
+                  <TabsTrigger value="metricas">Métricas</TabsTrigger>
+                </>
+              ) : (
+                <TabsTrigger value="favoritos">Favoritos</TabsTrigger>
+              )}
               <TabsTrigger value="seguridad">Seguridad</TabsTrigger>
             </TabsList>
 
@@ -92,19 +105,25 @@ export default function UserDashboard() {
                   <form onSubmit={handleUpdateProfile} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nombre completo</Label>
-                      <Input
-                        id="name"
-                        value={fullName}
-                        onChange={e => setFullName(e.target.value)}
-                        placeholder="Tu nombre"
-                      />
+                      <Input id="name" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Tu nombre" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email-display">Correo electrónico</Label>
                       <Input id="email-display" value={user.email || ''} disabled />
-                      <p className="text-xs text-muted-foreground">
-                        El correo no se puede cambiar desde aquí
-                      </p>
+                      <p className="text-xs text-muted-foreground">El correo no se puede cambiar desde aquí</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tipo de cuenta</Label>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={isPro ? 'default' : 'secondary'}>
+                          {isPro ? 'Profesional' : 'Usuario'}
+                        </Badge>
+                        {!isPro && (
+                          <span className="text-xs text-muted-foreground">
+                            ¿Tienes un negocio? <Link to="/signup" className="text-primary hover:underline">Actualiza tu cuenta</Link>
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <Button type="submit" disabled={saving}>
                       {saving ? 'Guardando…' : 'Guardar Cambios'}
@@ -114,35 +133,98 @@ export default function UserDashboard() {
               </Card>
             </TabsContent>
 
-            {/* Negocios Tab */}
-            <TabsContent value="negocios">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Store className="h-5 w-5" />
-                    Mis Negocios
-                  </CardTitle>
-                  <CardDescription>Gestiona los negocios que has registrado</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center gap-4 py-8 text-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                      <Store className="h-8 w-8 text-muted-foreground" />
+            {/* Professional: Negocios Tab */}
+            {isPro && (
+              <TabsContent value="negocios">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Store className="h-5 w-5" />
+                      Mis Negocios
+                    </CardTitle>
+                    <CardDescription>Gestiona los negocios que has registrado</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col items-center gap-4 py-8 text-center">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                        <Store className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">No tienes negocios registrados</p>
+                        <p className="text-sm text-muted-foreground">Registra tu primer negocio para aparecer en el directorio</p>
+                      </div>
+                      <Button>
+                        <Store className="mr-2 h-4 w-4" />
+                        Registrar Negocio
+                      </Button>
                     </div>
-                    <div>
-                      <p className="font-medium text-foreground">No tienes negocios registrados</p>
-                      <p className="text-sm text-muted-foreground">
-                        Registra tu primer negocio para aparecer en el directorio
-                      </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Professional: Métricas Tab */}
+            {isPro && (
+              <TabsContent value="metricas">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" />
+                      Métricas
+                    </CardTitle>
+                    <CardDescription>Estadísticas de tus negocios</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="rounded-lg border border-border p-4 text-center">
+                        <p className="text-2xl font-bold text-foreground">0</p>
+                        <p className="text-xs text-muted-foreground">Visitas este mes</p>
+                      </div>
+                      <div className="rounded-lg border border-border p-4 text-center">
+                        <p className="text-2xl font-bold text-foreground">0</p>
+                        <p className="text-xs text-muted-foreground">Reseñas totales</p>
+                      </div>
+                      <div className="rounded-lg border border-border p-4 text-center">
+                        <p className="text-2xl font-bold text-foreground">—</p>
+                        <p className="text-xs text-muted-foreground">Valoración media</p>
+                      </div>
                     </div>
-                    <Button>
-                      <Store className="mr-2 h-4 w-4" />
-                      Registrar Negocio
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                    <p className="mt-4 text-center text-sm text-muted-foreground">
+                      Las métricas se actualizarán cuando registres un negocio
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Basic: Favoritos Tab */}
+            {!isPro && (
+              <TabsContent value="favoritos">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Heart className="h-5 w-5" />
+                      Mis Favoritos
+                    </CardTitle>
+                    <CardDescription>Negocios que has guardado</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col items-center gap-4 py-8 text-center">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                        <Heart className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">No tienes favoritos aún</p>
+                        <p className="text-sm text-muted-foreground">Explora el directorio y guarda tus negocios favoritos</p>
+                      </div>
+                      <Button variant="outline" onClick={() => navigate('/directorio')}>
+                        Explorar Directorio
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
             {/* Seguridad Tab */}
             <TabsContent value="seguridad">
