@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Mountain, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
 const navLinks = [
   { label: 'Mapa', href: '#mapa' },
   { label: 'Directorio', href: '#directorio' },
@@ -39,10 +39,13 @@ export default function Header() {
 
         {/* Auth buttons */}
         <div className="hidden items-center gap-3 md:flex">
-          <Button variant="ghost" size="sm">Iniciar Sesión</Button>
-          <Button size="sm">Registrar Negocio</Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/login">Iniciar Sesión</Link>
+          </Button>
+          <Button size="sm" asChild>
+            <Link to="/signup">Registrar Negocio</Link>
+          </Button>
         </div>
-
         {/* Mobile toggle */}
         <button
           className="md:hidden"
@@ -69,8 +72,12 @@ export default function Header() {
             ))}
           </nav>
           <div className="mt-4 flex flex-col gap-2">
-            <Button variant="ghost" size="sm">Iniciar Sesión</Button>
-            <Button size="sm">Registrar Negocio</Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/login">Iniciar Sesión</Link>
+            </Button>
+            <Button size="sm" asChild>
+              <Link to="/signup">Registrar Negocio</Link>
+            </Button>
           </div>
         </div>
       )}
