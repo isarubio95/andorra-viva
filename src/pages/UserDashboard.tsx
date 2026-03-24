@@ -221,18 +221,26 @@ export default function UserDashboard() {
                     <CardDescription>Negocios que has guardado</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-col items-center gap-4 py-8 text-center">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                        <Heart className="h-8 w-8 text-muted-foreground" />
+                    {favoriteBusinesses.length > 0 ? (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {favoriteBusinesses.map(biz => (
+                          <BusinessCard key={biz.id} business={biz} onClick={() => {}} />
+                        ))}
                       </div>
-                      <div>
-                        <p className="font-medium text-foreground">No tienes favoritos aún</p>
-                        <p className="text-sm text-muted-foreground">Explora el directorio y guarda tus negocios favoritos</p>
+                    ) : (
+                      <div className="flex flex-col items-center gap-4 py-8 text-center">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                          <Heart className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">No tienes favoritos aún</p>
+                          <p className="text-sm text-muted-foreground">Explora el directorio y guarda tus negocios favoritos</p>
+                        </div>
+                        <Button variant="outline" onClick={() => navigate('/directorio')}>
+                          Explorar Directorio
+                        </Button>
                       </div>
-                      <Button variant="outline" onClick={() => navigate('/directorio')}>
-                        Explorar Directorio
-                      </Button>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
