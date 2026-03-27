@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from 'react';
 import { UtensilsCrossed, Sparkles, Music, ShoppingBag, MountainSnow, Landmark } from 'lucide-react';
 import catGastro from '@/assets/cat-gastronomia.jpg';
 import catWellness from '@/assets/cat-wellness.jpg';
@@ -10,6 +11,7 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
+  type CarouselApi,
 } from '@/components/ui/carousel';
 
 const categories = [
@@ -49,31 +51,61 @@ function CategoryButton({ cat, isActive, onSelect }: { cat: typeof categories[0]
 
 export default function CategoryBar({ selected, onSelect }: CategoryBarProps) {
   const isMobile = useIsMobile();
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [count, setCount] = useState(0);
+
+  const onApiSelect = useCallback(() => {
+    if (!api) return;
+    setCurrent(api.selectedScrollSnap());
+  }, [api]);
+
+  useEffect(() => {
+    if (!api) return;
+    setCount(api.scrollSnapList().length);
+    setCurrent(api.selectedScrollSnap());
+    api.on('select', onApiSelect);
+    return () => { api.off('select', onApiSelect); };
+  }, [api, onApiSelect]);
 
   return (
     <section className="container mx-auto px-4 py-10">
       <h2 className="mb-6 text-xl font-bold">Categorías</h2>
 
       {isMobile ? (
-        <Carousel
-          opts={{ align: 'start', loop: false }}
-          className="w-full"
-        >
-          <CarouselContent className="-ml-3">
-            {categories.map(cat => {
-              const isActive = selected === cat.label;
-              return (
-                <CarouselItem key={cat.label} className="pl-3 basis-[44%]">
-                  <CategoryButton
-                    cat={cat}
-                    isActive={isActive}
-                    onSelect={() => onSelect(isActive ? null : cat.label)}
-                  />
-                </CarouselItem>
-              );
-            })}
-          </CarouselContent>
-        </Carousel>
+        <div>
+          <Carousel
+            opts={{ align: 'start', loop: false }}
+            className="w-full"
+            setApi={setApi}
+          >
+            <CarouselContent className="-ml-3">
+              {categories.map(cat => {
+                const isActive = selected === cat.label;
+                return (
+                  <CarouselItem key={cat.label} className="pl-3 basis-[44%]">
+                    <CategoryButton
+                      cat={cat}
+                      isActive={isActive}
+                      onSelect={() => onSelect(isActive ? null : cat.label)}
+                    />
+                  </CarouselItem>
+                );
+              })}
+            </CarouselContent>
+          </Carousel>
+          <div className="flex justify-center gap-1.5 mt-4">
+            {Array.from({ length: count }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => api?.scrollTo(i)}
+                className={`h-2 rounded-full transition-all ${
+                  i === current ? 'w-6 bg-accent' : 'w-2 bg-muted-foreground/30'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-6 gap-4">
           {categories.map(cat => {
