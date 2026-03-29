@@ -75,7 +75,7 @@ export default function CategoryBar({ selected, onSelect }: CategoryBarProps) {
       {isMobile ? (
         <div>
           <Carousel
-            opts={{ align: 'start', loop: false, dragFree: true }}
+            opts={{ align: 'start', loop: false }}
             className="w-full"
             setApi={setApi}
           >
