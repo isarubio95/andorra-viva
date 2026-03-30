@@ -75,8 +75,8 @@ export default function Signup() {
       });
     } else if (data.user) {
       await supabase.from('user_roles').insert({ user_id: data.user.id, role: selectedRole });
-      toast({ title: '¡Cuenta creada!', description: 'Revisa tu correo para confirmar tu cuenta.' });
-      navigate('/login');
+      toast({ title: '¡Cuenta creada!', description: selectedRole === 'professional' ? 'Revisa tu correo y registra tu negocio.' : 'Revisa tu correo para confirmar tu cuenta.' });
+      navigate(selectedRole === 'professional' ? '/registrar-negocio' : '/login');
     }
 
     setLoading(false);
