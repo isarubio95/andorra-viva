@@ -2,10 +2,11 @@ import { supabase } from '@/lib/supabase';
 import { mockBusinesses, mockReviews, mockPlans, type Business, type Review, type Plan } from '@/data/mockData';
 
 // Flag para usar datos mock mientras no haya conexión a Supabase
-const USE_MOCK = true;
+const USE_MOCK_BUSINESSES = true;
+const USE_MOCK_REVIEWS = true;
 
 export async function getBusinesses(): Promise<Business[]> {
-  if (USE_MOCK) return mockBusinesses;
+  if (USE_MOCK_BUSINESSES) return mockBusinesses;
 
   const { data, error } = await supabase
     .from('businesses')
@@ -20,7 +21,7 @@ export async function getBusinesses(): Promise<Business[]> {
 }
 
 export async function getBusinessById(id: string): Promise<Business | null> {
-  if (USE_MOCK) return mockBusinesses.find(b => b.id === id) || null;
+  if (USE_MOCK_BUSINESSES) return mockBusinesses.find(b => b.id === id) || null;
 
   const { data, error } = await supabase
     .from('businesses')
@@ -36,7 +37,7 @@ export async function getBusinessById(id: string): Promise<Business | null> {
 }
 
 export async function getReviewsByBusiness(businessId: string): Promise<Review[]> {
-  if (USE_MOCK) return mockReviews.filter(r => r.business_id === businessId);
+  if (USE_MOCK_REVIEWS) return mockReviews.filter(r => r.business_id === businessId);
 
   const { data, error } = await supabase
     .from('reviews')
@@ -52,16 +53,14 @@ export async function getReviewsByBusiness(businessId: string): Promise<Review[]
 }
 
 export async function getPlans(): Promise<Plan[]> {
-  if (USE_MOCK) return mockPlans;
-
   const { data, error } = await supabase
     .from('plans')
     .select('*')
     .order('price', { ascending: true });
 
   if (error) {
-    console.error('Error fetching plans:', error);
-    return [];
+    console.error('Error fetching plans, using mock:', error);
+    return mockPlans;
   }
-  return data as Plan[];
+  return (data && data.length > 0) ? data as Plan[] : mockPlans;
 }

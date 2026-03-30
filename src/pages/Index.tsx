@@ -3,12 +3,10 @@ import Header from '@/components/Header';
 import HeroMap from '@/components/HeroMap';
 import CategoryBar from '@/components/CategoryBar';
 import BusinessDirectory from '@/components/BusinessDirectory';
-import PricingSection from '@/components/PricingSection';
 import ReviewsPanel from '@/components/ReviewsPanel';
 import Footer from '@/components/Footer';
-import { getBusinesses, getPlans } from '@/services/api';
-import type { Business, Plan } from '@/data/mockData';
-import { useAuth } from '@/contexts/AuthContext';
+import { getBusinesses } from '@/services/api';
+import type { Business } from '@/data/mockData';
 
 const categoryMap: Record<string, string[]> = {
   'Gastronomía': ['Restaurante'],
@@ -21,17 +19,11 @@ const categoryMap: Record<string, string[]> = {
 
 export default function Index() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
-  const { user, role } = useAuth();
-
-  const isPro = role === 'professional';
-  const showPricing = !user || isPro;
 
   useEffect(() => {
     getBusinesses().then(setBusinesses);
-    getPlans().then(setPlans);
   }, []);
 
   const filtered = selectedCategory
@@ -47,7 +39,6 @@ export default function Index() {
       <HeroMap businesses={businesses} onBusinessClick={setSelectedBusiness} />
       <CategoryBar selected={selectedCategory} onSelect={setSelectedCategory} />
       <BusinessDirectory businesses={filtered} onBusinessClick={setSelectedBusiness} />
-      {showPricing && <PricingSection plans={plans} />}
       <Footer />
 
       {selectedBusiness && (
