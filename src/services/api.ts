@@ -1,9 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import { mockBusinesses, mockReviews, mockPlans, type Business, type Review, type Plan } from '@/data/mockData';
 
-// Flag para usar datos mock mientras no haya conexión a Supabase
-const USE_MOCK_BUSINESSES = true;
-const USE_MOCK_REVIEWS = true;
+// Flag para usar datos mock (solo si se activa explícitamente en .env)
+const USE_MOCK_BUSINESSES =
+  (import.meta as any).env?.VITE_USE_MOCK_BUSINESSES === 'true';
+const USE_MOCK_REVIEWS =
+  (import.meta as any).env?.VITE_USE_MOCK_REVIEWS === 'true';
 
 export async function getBusinesses(): Promise<Business[]> {
   if (USE_MOCK_BUSINESSES) return mockBusinesses;
@@ -15,6 +17,22 @@ export async function getBusinesses(): Promise<Business[]> {
 
   if (error) {
     console.error('Error fetching businesses:', error);
+    return [];
+  }
+  return data as Business[];
+}
+
+export async function getMyBusinesses(userId: string): Promise<Business[]> {
+  if (USE_MOCK_BUSINESSES) return mockBusinesses;
+
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('*')
+    .eq('owner_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching my businesses:', error);
     return [];
   }
   return data as Business[];

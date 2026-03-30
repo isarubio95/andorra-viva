@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { SlidersHorizontal, X } from 'lucide-react';
 
 const ALL_CATEGORIES = [
@@ -36,6 +37,7 @@ const AGE_OPTIONS = [
 
 export default function Directory() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -45,7 +47,10 @@ export default function Directory() {
   const [minAge, setMinAge] = useState<number>(0);
 
   useEffect(() => {
-    getBusinesses().then(setBusinesses);
+    setLoading(true);
+    getBusinesses()
+      .then(setBusinesses)
+      .finally(() => setLoading(false));
   }, []);
 
   const toggleCategory = (cat: string) => {
@@ -192,7 +197,32 @@ export default function Directory() {
         )}
 
         {/* Results */}
-        {grouped.length > 0 ? (
+        {loading ? (
+          <div className="space-y-8">
+            {Array.from({ length: 2 }).map((_, sectionIdx) => (
+              <div key={sectionIdx}>
+                <div className="mb-4 flex items-center gap-2">
+                  <Skeleton className="h-6 w-44" />
+                  <Skeleton className="h-4 w-10" />
+                </div>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                  {Array.from({ length: 8 }).map((__, i) => (
+                    <div key={i} className="rounded-xl border bg-card overflow-hidden">
+                      <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                      <div className="space-y-2 p-4">
+                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton className="h-3 w-1/2" />
+                        <div className="pt-2">
+                          <Skeleton className="h-4 w-20" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : grouped.length > 0 ? (
           grouped.map(([category, items]) => (
             <div key={category} className="mb-10">
               <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-foreground">

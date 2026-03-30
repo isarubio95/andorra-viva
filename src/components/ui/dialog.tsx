@@ -3,8 +3,15 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useSyncOverlayWithHistory } from "@/hooks/use-sync-overlay-with-history";
 
-const Dialog = DialogPrimitive.Root;
+const DialogRoot = DialogPrimitive.Root;
+
+const Dialog = ({ open, onOpenChange, ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) => {
+  const controlled = open !== undefined;
+  useSyncOverlayWithHistory(controlled && open === true, () => onOpenChange?.(false));
+  return <DialogRoot open={open} onOpenChange={onOpenChange} {...props} />;
+};
 
 const DialogTrigger = DialogPrimitive.Trigger;
 

@@ -4,8 +4,15 @@ import { X } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { useSyncOverlayWithHistory } from "@/hooks/use-sync-overlay-with-history";
 
-const Sheet = SheetPrimitive.Root;
+const SheetRoot = SheetPrimitive.Root;
+
+const Sheet = ({ open, onOpenChange, ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) => {
+  const controlled = open !== undefined;
+  useSyncOverlayWithHistory(controlled && open === true, () => onOpenChange?.(false));
+  return <SheetRoot open={open} onOpenChange={onOpenChange} {...props} />;
+};
 
 const SheetTrigger = SheetPrimitive.Trigger;
 

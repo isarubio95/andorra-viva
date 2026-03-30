@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useSyncOverlayWithHistory } from '@/hooks/use-sync-overlay-with-history';
 
 const navLinks = [
   { label: 'Mapa', href: '/#mapa' },
@@ -21,17 +22,18 @@ const navLinks = [
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, displayName, role, signOut, loading, hasProAccess } = useAuth();
+  useSyncOverlayWithHistory(mobileOpen, () => setMobileOpen(false));
+  const { user, displayName, role, signOut, loading, hasProAccess, roleLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const isPro = hasProAccess;
   const roleBadge = role === 'admin' ? 'ADMIN' : isPro ? 'PRO' : 'USER';
 
-  // Show pricing link only for professionals or logged-out users
-  const visibleLinks = user && !isPro
-    ? navLinks
-    : [...navLinks, { label: 'Precios', href: '/#precios' }];
+  const mobileNavLinks = navLinks;
+
+  const linkClass =
+    'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground';
 
   const initials = displayName
     .split(' ')
@@ -61,34 +63,47 @@ export default function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-8 md:flex">
-          {visibleLinks.map(link =>
-            link.href.startsWith('/') && !link.href.includes('#') ? (
-              <Link key={link.href} to={link.href} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                {link.label}
-              </Link>
-            ) : (
-              <a key={link.href} href={link.href} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                {link.label}
-              </a>
-            )
-          )}
+          {navLinks.map(link => (
+            <Link key={link.href} to={link.href} className={linkClass}>
+              {link.label}
+            </Link>
+          ))}
         </nav>
 
-        {/* Auth area */}
-        <div className="hidden items-center gap-3 md:flex">
-          {!loading && user ? (
+        {/* Auth: placeholder mientras Supabase restaura sesión (evita salto logo/nav → contenido) */}
+        <div className="hidden min-h-10 min-w-[200px] items-center justify-end gap-3 md:flex">
+          {loading ? (
+            <div
+              className="h-9 w-full max-w-[240px] rounded-full bg-muted/45"
+              aria-hidden
+            />
+          ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 transition-colors hover:bg-muted">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 transition-colors hover:bg-muted"
+                  aria-busy={roleLoading}
+                >
                   <Avatar className="h-7 w-7">
                     <AvatarFallback className="bg-primary text-xs text-primary-foreground">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium text-foreground">{displayName}</span>
-                  <Badge variant={isPro || role === 'admin' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
-                    {roleBadge}
-                  </Badge>
+                  {roleLoading ? (
+                    <span
+                      className="inline-flex h-5 min-w-[2.75rem] rounded-md border border-border bg-muted/70 px-1.5"
+                      aria-hidden
+                    />
+                  ) : (
+                    <Badge
+                      variant={isPro || role === 'admin' ? 'default' : 'secondary'}
+                      className="min-w-[2.75rem] justify-center text-[10px] px-1.5 py-0 transition-opacity duration-200"
+                    >
+                      {roleBadge}
+                    </Badge>
+                  )}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -109,7 +124,7 @@ export default function Header() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : !loading ? (
+          ) : (
             <>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/login">Iniciar Sesión</Link>
@@ -118,7 +133,7 @@ export default function Header() {
                 <Link to="/signup">Registrar Negocio</Link>
               </Button>
             </>
-          ) : null}
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -131,17 +146,16 @@ export default function Header() {
       {mobileOpen && (
         <div className="border-t bg-card px-4 py-4 md:hidden">
           <nav className="flex flex-col gap-3">
-            {visibleLinks.map(link =>
-              link.href.startsWith('/') && !link.href.includes('#') ? (
-                <Link key={link.href} to={link.href} className="text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>
-                  {link.label}
-                </Link>
-              ) : (
-                <a key={link.href} href={link.href} className="text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>
-                  {link.label}
-                </a>
-              )
-            )}
+            {mobileNavLinks.map(link => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className="text-sm font-medium text-muted-foreground"
+                onClick={() => setMobileOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
           </nav>
           <div className="mt-4 flex flex-col gap-2">
             {user ? (

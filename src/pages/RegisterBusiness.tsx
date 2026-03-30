@@ -165,29 +165,42 @@ export default function RegisterBusiness() {
         imageUrls.push(urlData.publicUrl);
       }
 
-      // Insert business
-      const { error } = await supabase.from('businesses').insert({
+      const lat = parseFloat(latitude);
+      const lon = parseFloat(longitude);
+      if (Number.isNaN(lat) || Number.isNaN(lon)) {
+        toast({ title: 'Coordenadas no válidas', variant: 'destructive' });
+        setLoading(false);
+        return;
+      }
+
+      // Insert business (sin enviar gallery vacío: algunos esquemas/PostgREST lo rechazan con 400)
+      const row: Record<string, unknown> = {
         name: name.trim(),
         category,
         location,
         description: description.trim(),
         phone: phone.trim() || null,
         website: website.trim() || null,
-        price_range: parseInt(priceRange),
-        min_age: minAge ? parseInt(minAge) : null,
+        price_range: parseInt(priceRange, 10),
+        min_age: minAge !== '' && minAge != null ? parseInt(minAge, 10) : null,
         services: selectedServices,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
+        latitude: lat,
+        longitude: lon,
         image_url: imageUrls[0] || '',
-        gallery: imageUrls,
         owner_id: user.id,
         rating: 0,
         review_count: 0,
         is_premium: false,
-      });
+      };
+      if (imageUrls.length > 0) {
+        row.gallery = imageUrls;
+      }
+
+      const { error } = await supabase.from('businesses').insert(row);
 
       if (error) {
-        toast({ title: 'Error al registrar', description: error.message, variant: 'destructive' });
+        const detail = [error.message, error.details, error.hint].filter(Boolean).join(' · ');
+        toast({ title: 'Error al registrar', description: detail, variant: 'destructive' });
       } else {
         toast({ title: '¡Negocio registrado!', description: 'Tu negocio aparecerá en el directorio.' });
         navigate('/mi-cuenta');

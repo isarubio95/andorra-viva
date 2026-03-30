@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, Heart, Star, BarChart3 } from 'lucide-react';
 import { useFavorites } from '@/contexts/FavoritesContext';
-import { getBusinesses } from '@/services/api';
-import type { Business } from '@/data/mockData';
+import { getBusinesses, getMyBusinesses, getPlans } from '@/services/api';
+import type { Business, Plan } from '@/data/mockData';
 import BusinessCard from '@/components/BusinessCard';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
@@ -16,21 +16,45 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 export default function UserDashboard() {
-  const { user, displayName, role, signOut, hasProAccess, planId } = useAuth();
+  const { user, displayName, role, signOut, hasProAccess, planId, refreshProfile, subscriptionStatus } = useAuth();
   const { favorites } = useFavorites();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
   const [saving, setSaving] = useState(false);
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
+  const [myBusinesses, setMyBusinesses] = useState<Business[]>([]);
+  const [myBusinessesLoading, setMyBusinessesLoading] = useState(false);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+  const [changingPlan, setChangingPlan] = useState(false);
 
   useEffect(() => {
     getBusinesses().then(setAllBusinesses);
   }, []);
+
+  useEffect(() => {
+    setPlansLoading(true);
+    getPlans()
+      .then(setPlans)
+      .finally(() => setPlansLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id || !hasProAccess) {
+      setMyBusinesses([]);
+      return;
+    }
+    setMyBusinessesLoading(true);
+    getMyBusinesses(user.id)
+      .then(setMyBusinesses)
+      .finally(() => setMyBusinessesLoading(false));
+  }, [user?.id, hasProAccess]);
 
   const favoriteBusinesses = allBusinesses.filter(b => favorites.has(b.id));
 
@@ -63,6 +87,24 @@ export default function UserDashboard() {
     navigate('/');
   };
 
+  const handleChangePlan = async (nextPlanId: string) => {
+    if (!user?.id) return;
+    if (nextPlanId === planId) return;
+    setChangingPlan(true);
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({ plan_id: nextPlanId })
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast({ title: 'No se pudo cambiar el plan', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Plan actualizado', description: `Nuevo plan: ${nextPlanId}` });
+      await refreshProfile();
+    }
+    setChangingPlan(false);
+  };
+
   if (!user) {
     navigate('/login');
     return null;
@@ -92,12 +134,13 @@ export default function UserDashboard() {
           </div>
 
           <Tabs defaultValue="perfil" className="space-y-6">
-            <TabsList className={`grid w-full ${isPro ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            <TabsList className={`grid w-full ${isPro ? 'grid-cols-5' : 'grid-cols-3'}`}>
               <TabsTrigger value="perfil">Perfil</TabsTrigger>
               {isPro ? (
                 <>
                   <TabsTrigger value="negocios">Mis Negocios</TabsTrigger>
                   <TabsTrigger value="metricas">Métricas</TabsTrigger>
+                  <TabsTrigger value="plan">Plan</TabsTrigger>
                 </>
               ) : (
                 <TabsTrigger value="favoritos">Favoritos</TabsTrigger>
@@ -164,19 +207,46 @@ export default function UserDashboard() {
                     <CardDescription>Gestiona los negocios que has registrado</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-col items-center gap-4 py-8 text-center">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                        <Store className="h-8 w-8 text-muted-foreground" />
+                    {myBusinessesLoading ? (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="rounded-xl border bg-card overflow-hidden">
+                            <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                            <div className="space-y-2 p-4">
+                              <Skeleton className="h-4 w-2/3" />
+                              <Skeleton className="h-3 w-1/2" />
+                              <div className="pt-2">
+                                <Skeleton className="h-4 w-20" />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div>
-                        <p className="font-medium text-foreground">No tienes negocios registrados</p>
-                        <p className="text-sm text-muted-foreground">Registra tu primer negocio para aparecer en el directorio</p>
+                    ) : myBusinesses.length > 0 ? (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {myBusinesses.map(biz => (
+                          <BusinessCard
+                            key={biz.id}
+                            business={biz}
+                            onClick={() => {}}
+                          />
+                        ))}
                       </div>
-                      <Button onClick={() => navigate('/registrar-negocio')}>
-                        <Store className="mr-2 h-4 w-4" />
-                        Registrar Negocio
-                      </Button>
-                    </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-4 py-8 text-center">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                          <Store className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">No tienes negocios registrados</p>
+                          <p className="text-sm text-muted-foreground">Registra tu primer negocio para aparecer en el directorio</p>
+                        </div>
+                        <Button onClick={() => navigate('/registrar-negocio')}>
+                          <Store className="mr-2 h-4 w-4" />
+                          Registrar Negocio
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -211,6 +281,109 @@ export default function UserDashboard() {
                     <p className="mt-4 text-center text-sm text-muted-foreground">
                       Las métricas se actualizarán cuando registres un negocio
                     </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Professional: Plan Tab */}
+            {isPro && (
+              <TabsContent value="plan">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Star className="h-5 w-5" />
+                      Tu Plan
+                    </CardTitle>
+                    <CardDescription>
+                      Cambia tu plan profesional cuando lo necesites.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-6 rounded-lg border border-border p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Plan actual</p>
+                          <p className="font-semibold text-foreground">{planId ?? '—'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">Estado</p>
+                          <p className="font-medium text-foreground">{subscriptionStatus ?? '—'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {plansLoading ? (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="relative flex flex-col rounded-xl border p-5">
+                            <Skeleton className="h-5 w-28" />
+                            <Skeleton className="mt-2 h-4 w-24" />
+                            <div className="mt-4 space-y-2">
+                              <Skeleton className="h-3 w-5/6" />
+                              <Skeleton className="h-3 w-4/6" />
+                              <Skeleton className="h-3 w-3/6" />
+                            </div>
+                            <Skeleton className="mt-4 h-9 w-full rounded-md" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {plans
+                          .filter(p => p.id !== 'free')
+                          .map(plan => {
+                            const selected = planId === plan.id;
+                            return (
+                              <button
+                                key={plan.id}
+                                type="button"
+                                disabled={changingPlan}
+                                onClick={() => handleChangePlan(plan.id)}
+                                className={`relative flex flex-col rounded-xl border p-5 text-left transition-all ${
+                                  selected
+                                    ? 'border-primary bg-primary/5 shadow-sm'
+                                    : 'border-border hover:border-muted-foreground/30 hover:bg-muted/50'
+                                } ${changingPlan ? 'opacity-70' : ''}`}
+                              >
+                                {plan.is_popular && (
+                                  <Badge className="absolute -top-2.5 right-4 bg-accent text-accent-foreground border-0 text-xs">
+                                    Más popular
+                                  </Badge>
+                                )}
+                                <div className="flex items-start justify-between gap-4">
+                                  <div>
+                                    <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                      {plan.price === 0 ? 'Gratis' : `${plan.price}${plan.currency}`}{plan.price > 0 ? `/${plan.interval}` : ''}
+                                    </p>
+                                  </div>
+                                  {selected && (
+                                    <Badge variant="default" className="h-fit">Actual</Badge>
+                                  )}
+                                </div>
+                                <div className="mt-4 grid gap-1.5">
+                                  {plan.features.slice(0, 5).map(f => (
+                                    <div key={f} className="text-xs text-muted-foreground">
+                                      - {f}
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="mt-4">
+                                  <Button
+                                    type="button"
+                                    className="w-full"
+                                    variant={selected ? 'outline' : 'default'}
+                                    disabled={changingPlan || selected}
+                                  >
+                                    {selected ? 'Plan actual' : changingPlan ? 'Cambiando…' : 'Cambiar a este plan'}
+                                  </Button>
+                                </div>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

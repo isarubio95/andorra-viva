@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getReviewsByBusiness } from '@/services/api';
 import type { Business, Review } from '@/data/mockData';
+import { useSyncOverlayWithHistory } from '@/hooks/use-sync-overlay-with-history';
 
 interface ReviewsPanelProps {
   business: Business;
@@ -12,6 +13,8 @@ interface ReviewsPanelProps {
 
 export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
+
+  useSyncOverlayWithHistory(true, onClose);
 
   useEffect(() => {
     getReviewsByBusiness(business.id).then(setReviews);
