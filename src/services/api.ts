@@ -53,16 +53,14 @@ export async function getReviewsByBusiness(businessId: string): Promise<Review[]
 }
 
 export async function getPlans(): Promise<Plan[]> {
-  if (USE_MOCK) return mockPlans;
-
   const { data, error } = await supabase
     .from('plans')
     .select('*')
     .order('price', { ascending: true });
 
   if (error) {
-    console.error('Error fetching plans:', error);
-    return [];
+    console.error('Error fetching plans, using mock:', error);
+    return mockPlans;
   }
-  return data as Plan[];
+  return (data && data.length > 0) ? data as Plan[] : mockPlans;
 }
