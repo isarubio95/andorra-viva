@@ -1,6 +1,7 @@
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import { Star } from 'lucide-react';
+import { useEffect } from 'react';
 import type { Business } from '@/data/mockData';
 import 'leaflet/dist/leaflet.css';
 
@@ -17,6 +18,16 @@ const defaultIcon = new Icon({
 interface HeroMapProps {
   businesses: Business[];
   onBusinessClick: (business: Business) => void;
+}
+
+function AttributionPrefixCleaner() {
+  const map = useMap();
+
+  useEffect(() => {
+    map.attributionControl.setPrefix(false);
+  }, [map]);
+
+  return null;
 }
 
 export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
@@ -38,6 +49,7 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
         scrollWheelZoom
         className="h-[50vh] w-full md:h-[60vh]"
       >
+        <AttributionPrefixCleaner />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

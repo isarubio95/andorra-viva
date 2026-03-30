@@ -33,14 +33,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
 
-  const fetchRole = async (userId: string) => {
+  const fetchRole = async (userId: string, metadataRole?: unknown) => {
     setRoleLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
-      .single();
-    setRole((data?.role as UserRole) ?? 'basic');
+      .maybeSingle();
+
+    if (!error && data?.role) {
+      setRole(data.role as UserRole);
+      setRoleLoading(false);
+      return;
+    }
+
+    // Fallback while DB trigger/replication catches up
+    const roleFromMetadata = metadataRole === 'professional' ? 'professional' : 'basic';
+    setRole(roleFromMetadata);
     setRoleLoading(false);
   };
 
@@ -52,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         if (session?.user) {
           // Use setTimeout to avoid potential Supabase auth deadlock
-          setTimeout(() => fetchRole(session.user.id), 0);
+          setTimeout(() => fetchRole(session.user.id, session.user.user_metadata?.role), 0);
         } else {
           setRole(null);
           setRoleLoading(false);
@@ -65,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
-        fetchRole(session.user.id);
+        fetchRole(session.user.id, session.user.user_metadata?.role);
       } else {
         setRoleLoading(false);
       }
