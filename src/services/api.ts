@@ -21,7 +21,7 @@ export async function getBusinesses(): Promise<Business[]> {
 }
 
 export async function getBusinessById(id: string): Promise<Business | null> {
-  if (USE_MOCK) return mockBusinesses.find(b => b.id === id) || null;
+  if (USE_MOCK_BUSINESSES) return mockBusinesses.find(b => b.id === id) || null;
 
   const { data, error } = await supabase
     .from('businesses')
