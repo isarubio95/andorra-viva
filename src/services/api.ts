@@ -2,7 +2,8 @@ import { supabase } from '@/lib/supabase';
 import { mockBusinesses, mockReviews, mockPlans, type Business, type Review, type Plan } from '@/data/mockData';
 
 // Flag para usar datos mock mientras no haya conexión a Supabase
-const USE_MOCK = true;
+const USE_MOCK_BUSINESSES = true;
+const USE_MOCK_REVIEWS = true;
 
 export async function getBusinesses(): Promise<Business[]> {
   if (USE_MOCK) return mockBusinesses;
