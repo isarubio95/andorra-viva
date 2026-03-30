@@ -1,7 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-// TODO: Reemplaza con tus credenciales de Supabase
-const supabaseUrl = 'https://jyjrvpglviozrsezocbj.supabase.co';
-const supabaseAnonKey = 'sb_publishable_Lwxyua9-YRDgg1wnBePwow_5qDqi85m';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY. Copia .env.example a .env y rellena los valores (Supabase → Project Settings → API).'
+  );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

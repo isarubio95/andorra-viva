@@ -21,11 +21,12 @@ const navLinks = [
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, displayName, role, signOut, loading } = useAuth();
+  const { user, displayName, role, signOut, loading, hasProAccess } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const isPro = role === 'professional';
+  const isPro = hasProAccess;
+  const roleBadge = role === 'admin' ? 'ADMIN' : isPro ? 'PRO' : 'USER';
 
   // Show pricing link only for professionals or logged-out users
   const visibleLinks = user && !isPro
@@ -85,8 +86,8 @@ export default function Header() {
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium text-foreground">{displayName}</span>
-                  <Badge variant={isPro ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
-                    {isPro ? 'PRO' : 'USER'}
+                  <Badge variant={isPro || role === 'admin' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
+                    {roleBadge}
                   </Badge>
                 </button>
               </DropdownMenuTrigger>

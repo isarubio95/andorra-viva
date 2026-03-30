@@ -20,7 +20,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 export default function UserDashboard() {
-  const { user, displayName, role, signOut } = useAuth();
+  const { user, displayName, role, signOut, hasProAccess, planId } = useAuth();
   const { favorites } = useFavorites();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -34,7 +34,9 @@ export default function UserDashboard() {
 
   const favoriteBusinesses = allBusinesses.filter(b => favorites.has(b.id));
 
-  const isPro = role === 'professional';
+  const isPro = hasProAccess;
+  const accountLabel =
+    role === 'admin' ? 'Admin' : isPro ? 'Profesional' : 'Usuario';
 
   const initials = displayName
     .split(' ')
@@ -82,7 +84,7 @@ export default function UserDashboard() {
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
                 <Badge variant={isPro ? 'default' : 'secondary'}>
-                  {isPro ? 'Profesional' : 'Usuario'}
+                  {accountLabel}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -128,8 +130,13 @@ export default function UserDashboard() {
                       <Label>Tipo de cuenta</Label>
                       <div className="flex items-center gap-2">
                         <Badge variant={isPro ? 'default' : 'secondary'}>
-                          {isPro ? 'Profesional' : 'Usuario'}
+                          {accountLabel}
                         </Badge>
+                        {planId && planId !== 'free' && (
+                          <span className="text-xs text-muted-foreground">
+                            Plan: <span className="font-medium text-foreground">{planId}</span>
+                          </span>
+                        )}
                         {!isPro && (
                           <span className="text-xs text-muted-foreground">
                             ¿Tienes un negocio? <Link to="/signup" className="text-primary hover:underline">Actualiza tu cuenta</Link>
