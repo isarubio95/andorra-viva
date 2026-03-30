@@ -10,6 +10,7 @@ import Login from "./pages/Login.tsx";
 import Signup from "./pages/Signup.tsx";
 import Directory from "./pages/Directory.tsx";
 import UserDashboard from "./pages/UserDashboard.tsx";
+import RegisterBusiness from "./pages/RegisterBusiness.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
