@@ -74,6 +74,7 @@ export default function Signup() {
         variant: 'destructive',
       });
     } else if (data.user) {
+      await supabase.from('user_roles').insert({ user_id: data.user.id, role: selectedRole });
       toast({ title: '¡Cuenta creada!', description: 'Revisa tu correo para confirmar tu cuenta.' });
       navigate('/login');
     }
