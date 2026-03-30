@@ -6,7 +6,7 @@ const USE_MOCK_BUSINESSES = true;
 const USE_MOCK_REVIEWS = true;
 
 export async function getBusinesses(): Promise<Business[]> {
-  if (USE_MOCK) return mockBusinesses;
+  if (USE_MOCK_BUSINESSES) return mockBusinesses;
 
   const { data, error } = await supabase
     .from('businesses')
