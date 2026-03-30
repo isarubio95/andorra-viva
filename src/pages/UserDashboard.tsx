@@ -165,7 +165,7 @@ export default function UserDashboard() {
                         <p className="font-medium text-foreground">No tienes negocios registrados</p>
                         <p className="text-sm text-muted-foreground">Registra tu primer negocio para aparecer en el directorio</p>
                       </div>
-                      <Button>
+                      <Button onClick={() => navigate('/registrar-negocio')}>
                         <Store className="mr-2 h-4 w-4" />
                         Registrar Negocio
                       </Button>
