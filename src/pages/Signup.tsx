@@ -67,6 +67,12 @@ export default function Signup() {
 
     if (error) {
       toast({ title: 'Error al crear la cuenta', description: error.message, variant: 'destructive' });
+    } else if (data.user && (!data.user.identities || data.user.identities.length === 0)) {
+      toast({
+        title: 'Este email ya está registrado',
+        description: 'Ya existe una cuenta con este correo. Inicia sesión o usa otro email.',
+        variant: 'destructive',
+      });
     } else if (data.user) {
       await supabase.from('user_roles').insert({ user_id: data.user.id, role: selectedRole });
       toast({ title: '¡Cuenta creada!', description: 'Revisa tu correo para confirmar tu cuenta.' });
