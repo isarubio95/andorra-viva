@@ -37,7 +37,7 @@ export async function getBusinessById(id: string): Promise<Business | null> {
 }
 
 export async function getReviewsByBusiness(businessId: string): Promise<Review[]> {
-  if (USE_MOCK) return mockReviews.filter(r => r.business_id === businessId);
+  if (USE_MOCK_REVIEWS) return mockReviews.filter(r => r.business_id === businessId);
 
   const { data, error } = await supabase
     .from('reviews')
