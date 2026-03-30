@@ -1,17 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mountain, Mail, Lock, User, Eye, EyeOff, Store, UserCircle } from 'lucide-react';
+import { Mountain, Mail, Lock, User, Eye, EyeOff, Store, UserCircle, Check, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { getPlans } from '@/services/api';
 import type { UserRole } from '@/contexts/AuthContext';
+import type { Plan } from '@/data/mockData';
 
 export default function Signup() {
-  const [step, setStep] = useState<'role' | 'form'>('role');
+  const [step, setStep] = useState<'role' | 'plan' | 'form'>('role');
   const [selectedRole, setSelectedRole] = useState<UserRole>('basic');
+  const [selectedPlan, setSelectedPlan] = useState<string>('free');
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,6 +25,18 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    getPlans().then(setPlans);
+  }, []);
+
+  const handleContinueFromRole = () => {
+    if (selectedRole === 'professional') {
+      setStep('plan');
+    } else {
+      setStep('form');
+    }
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +56,11 @@ export default function Signup() {
       email,
       password,
       options: {
-        data: { full_name: fullName, role: selectedRole },
+        data: {
+          full_name: fullName,
+          role: selectedRole,
+          ...(selectedRole === 'professional' ? { plan: selectedPlan } : {}),
+        },
         emailRedirectTo: window.location.origin,
       },
     });
@@ -47,7 +68,6 @@ export default function Signup() {
     if (error) {
       toast({ title: 'Error al crear la cuenta', description: error.message, variant: 'destructive' });
     } else if (data.user) {
-      // Insert role into user_roles table
       await supabase.from('user_roles').insert({ user_id: data.user.id, role: selectedRole });
       toast({ title: '¡Cuenta creada!', description: 'Revisa tu correo para confirmar tu cuenta.' });
       navigate('/login');
@@ -63,6 +83,7 @@ export default function Signup() {
       title: 'Usuario',
       description: 'Explora negocios, deja reseñas y guarda tus favoritos',
       features: ['Explorar directorio', 'Dejar reseñas', 'Guardar favoritos'],
+      badge: 'Gratis',
     },
     {
       role: 'professional' as UserRole,
@@ -70,8 +91,19 @@ export default function Signup() {
       title: 'Profesional',
       description: 'Registra tu negocio y llega a más clientes en Andorra',
       features: ['Registrar negocios', 'Ver métricas', 'Planes de suscripción'],
+      badge: 'Desde 0€',
     },
   ];
+
+  const goBack = () => {
+    if (step === 'form' && selectedRole === 'professional') {
+      setStep('plan');
+    } else if (step === 'form') {
+      setStep('role');
+    } else if (step === 'plan') {
+      setStep('role');
+    }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
@@ -87,11 +119,28 @@ export default function Signup() {
             </span>
           </Link>
           <p className="text-sm text-muted-foreground">
-            {step === 'role' ? 'Elige tu tipo de cuenta' : selectedRole === 'professional' ? 'Registra tu negocio' : 'Crea tu cuenta'}
+            {step === 'role' && 'Elige tu tipo de cuenta'}
+            {step === 'plan' && 'Elige tu plan profesional'}
+            {step === 'form' && (selectedRole === 'professional' ? 'Registra tu negocio' : 'Crea tu cuenta')}
           </p>
+          {/* Step indicators */}
+          <div className="flex items-center gap-2">
+            {['role', ...(selectedRole === 'professional' ? ['plan'] : []), 'form'].map((s, i, arr) => (
+              <div key={s} className="flex items-center gap-2">
+                <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                  step === s ? 'bg-primary text-primary-foreground' : 
+                  arr.indexOf(step) > i ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
+                }`}>
+                  {arr.indexOf(step) > i ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                </div>
+                {i < arr.length - 1 && <div className={`h-0.5 w-6 rounded ${arr.indexOf(step) > i ? 'bg-accent' : 'bg-muted'}`} />}
+              </div>
+            ))}
+          </div>
         </div>
 
-        {step === 'role' ? (
+        {/* Step 1: Role Selection */}
+        {step === 'role' && (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               {roleCards.map(card => {
@@ -107,8 +156,13 @@ export default function Signup() {
                         : 'border-border hover:border-muted-foreground/30 hover:bg-muted/50'
                     }`}
                   >
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                      <Icon className="h-6 w-6" />
+                    <div className="flex w-full items-start justify-between">
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                        <Icon className="h-6 w-6" />
+                      </div>
+                      <Badge variant={isSelected ? 'default' : 'secondary'} className="text-xs">
+                        {card.badge}
+                      </Badge>
                     </div>
                     <div>
                       <h3 className="font-semibold text-foreground">{card.title}</h3>
@@ -126,7 +180,7 @@ export default function Signup() {
                 );
               })}
             </div>
-            <Button className="w-full" onClick={() => setStep('form')}>
+            <Button className="w-full" onClick={handleContinueFromRole}>
               Continuar como {selectedRole === 'professional' ? 'Profesional' : 'Usuario'}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
@@ -136,7 +190,72 @@ export default function Signup() {
               </Link>
             </p>
           </div>
-        ) : (
+        )}
+
+        {/* Step 2: Plan Selection (Professional only) */}
+        {step === 'plan' && (
+          <div className="space-y-4">
+            <div className="grid gap-4">
+              {plans.map(plan => {
+                const isSelected = selectedPlan === plan.id;
+                return (
+                  <button
+                    key={plan.id}
+                    onClick={() => setSelectedPlan(plan.id)}
+                    className={`relative flex flex-col rounded-xl border-2 p-5 text-left transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary/5 shadow-md'
+                        : 'border-border hover:border-muted-foreground/30 hover:bg-muted/50'
+                    } ${plan.is_popular ? 'ring-1 ring-accent' : ''}`}
+                  >
+                    {plan.is_popular && (
+                      <Badge className="absolute -top-2.5 right-4 bg-accent text-accent-foreground border-0 text-xs">
+                        Más popular
+                      </Badge>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
+                        <div className="mt-1 flex items-baseline gap-1">
+                          <span className="text-2xl font-extrabold text-foreground">
+                            {plan.price === 0 ? 'Gratis' : `${plan.price}${plan.currency}`}
+                          </span>
+                          {plan.price > 0 && (
+                            <span className="text-xs text-muted-foreground">/{plan.interval}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
+                        isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'
+                      }`}>
+                        {isSelected && <Check className="h-3.5 w-3.5 text-primary-foreground" />}
+                      </div>
+                    </div>
+                    <ul className="mt-4 grid gap-1.5 sm:grid-cols-2">
+                      {plan.features.map(f => (
+                        <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <Check className="mt-0.5 h-3 w-3 flex-shrink-0 text-accent" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={goBack} className="gap-1">
+                <ArrowLeft className="h-4 w-4" /> Atrás
+              </Button>
+              <Button className="flex-1" onClick={() => setStep('form')}>
+                Continuar con {plans.find(p => p.id === selectedPlan)?.name || 'Free'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Registration Form */}
+        {step === 'form' && (
           <Card className="border-border/50 shadow-lg">
             <CardHeader className="text-center">
               <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -147,7 +266,7 @@ export default function Signup() {
               </CardTitle>
               <CardDescription>
                 {selectedRole === 'professional'
-                  ? 'Completa tus datos para registrar tu negocio'
+                  ? `Plan ${plans.find(p => p.id === selectedPlan)?.name || 'Free'} · Completa tus datos`
                   : 'Completa tus datos para explorar el directorio'}
               </CardDescription>
             </CardHeader>
@@ -194,8 +313,8 @@ export default function Signup() {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creando cuenta…' : 'Crear Cuenta'}
                 </Button>
-                <button type="button" onClick={() => setStep('role')} className="text-sm text-muted-foreground hover:text-foreground">
-                  ← Cambiar tipo de cuenta
+                <button type="button" onClick={goBack} className="text-sm text-muted-foreground hover:text-foreground">
+                  ← {selectedRole === 'professional' ? 'Cambiar plan' : 'Cambiar tipo de cuenta'}
                 </button>
               </CardFooter>
             </form>
