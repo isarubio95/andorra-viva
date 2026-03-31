@@ -1,4 +1,4 @@
-import { Star, Heart } from 'lucide-react';
+import { Star, Heart, Medal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -46,9 +46,10 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           loading="lazy"
           className="h-full w-full object-cover transition-transform group-hover:scale-105"
         />
-        {business.is_premium && (
+        {business.is_recommended && (
           <Badge className="absolute right-3 top-3 bg-premium text-premium-foreground border-0 text-xs font-bold">
-            PREMIUM
+            <Medal className="mr-1 h-3.5 w-3.5" />
+            RECOMENDADO
           </Badge>
         )}
         <button

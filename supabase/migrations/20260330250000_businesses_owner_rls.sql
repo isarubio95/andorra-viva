@@ -10,7 +10,7 @@ alter table public.businesses add column if not exists longitude double precisio
 alter table public.businesses add column if not exists image_url text;
 alter table public.businesses add column if not exists rating double precision not null default 0;
 alter table public.businesses add column if not exists review_count integer not null default 0;
-alter table public.businesses add column if not exists is_premium boolean not null default false;
+alter table public.businesses add column if not exists is_recommended boolean not null default false;
 
 alter table public.businesses enable row level security;
 

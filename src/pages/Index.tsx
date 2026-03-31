@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import HeroMap from '@/components/HeroMap';
 import CategoryBar from '@/components/CategoryBar';
 import BusinessDirectory from '@/components/BusinessDirectory';
+import BusinessCard from '@/components/BusinessCard';
 import ReviewsPanel from '@/components/ReviewsPanel';
 import Footer from '@/components/Footer';
 import { getBusinesses } from '@/services/api';
@@ -37,12 +38,25 @@ export default function Index() {
         return cats.some(c => b.category.toLowerCase().includes(c.toLowerCase()));
       })
     : businesses;
+  const recommended = businesses.filter(b => b.is_recommended);
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <HeroMap businesses={loading ? [] : businesses} onBusinessClick={setSelectedBusiness} />
       <CategoryBar selected={selectedCategory} onSelect={setSelectedCategory} />
+      {!loading && recommended.length > 0 && (
+        <section className="container mx-auto px-4 pt-10">
+          <h2 className="mb-6 flex items-center gap-2 text-xl font-bold">
+            <span>🏅</span> Nuestras recomendaciones
+          </h2>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {recommended.map(biz => (
+              <BusinessCard key={biz.id} business={biz} onClick={setSelectedBusiness} />
+            ))}
+          </div>
+        </section>
+      )}
       {loading ? (
         <section className="container mx-auto px-4 py-10">
           <Skeleton className="mb-6 h-7 w-48" />

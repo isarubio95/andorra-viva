@@ -190,7 +190,7 @@ export default function RegisterBusiness() {
         owner_id: user.id,
         rating: 0,
         review_count: 0,
-        is_premium: false,
+        is_recommended: false,
       };
       if (imageUrls.length > 0) {
         row.gallery = imageUrls;

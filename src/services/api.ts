@@ -13,7 +13,7 @@ export async function getBusinesses(): Promise<Business[]> {
   const { data, error } = await supabase
     .from('businesses')
     .select('*')
-    .order('is_premium', { ascending: false });
+    .order('is_recommended', { ascending: false });
 
   if (error) {
     console.error('Error fetching businesses:', error);

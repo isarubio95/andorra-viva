@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Star, MapPin, Clock, Phone, MessageCircle, Navigation, CheckCircle } from 'lucide-react';
+import { X, Star, MapPin, Clock, Phone, MessageCircle, Navigation, CheckCircle, Medal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getReviewsByBusiness } from '@/services/api';
@@ -37,8 +37,11 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
           >
             <X className="h-5 w-5" />
           </button>
-          {business.is_premium && (
-            <Badge className="absolute left-4 top-4 bg-premium text-premium-foreground border-0">Premium</Badge>
+          {business.is_recommended && (
+            <Badge className="absolute left-4 top-4 bg-premium text-premium-foreground border-0">
+              <Medal className="mr-1 h-3.5 w-3.5" />
+              Recomendado
+            </Badge>
           )}
         </div>
 

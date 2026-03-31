@@ -13,7 +13,7 @@ export interface Business {
   description: string;
   latitude: number;
   longitude: number;
-  is_premium: boolean;
+  is_recommended: boolean;
   services: string[];
   price_range: number; // 1=económico, 2=moderado, 3=premium
   min_age: number | null; // null = todas las edades
@@ -50,7 +50,7 @@ export const mockBusinesses: Business[] = [
     description: 'Alta cocina en un entorno rústico y exclusivo. Especialidad en carnes a la brasa.',
     latitude: 42.5457,
     longitude: 1.5147,
-    is_premium: true,
+    is_recommended: true,
     services: ['Wifi', 'Terraza', 'Parking', 'Bodega'],
     price_range: 3,
     min_age: null,
@@ -66,7 +66,7 @@ export const mockBusinesses: Business[] = [
     description: 'Spa de lujo con vistas a la montaña. Tratamientos exclusivos y piscina climatizada.',
     latitude: 42.5774,
     longitude: 1.6678,
-    is_premium: true,
+    is_recommended: true,
     services: ['Piscina', 'Sauna', 'Masajes', 'Gimnasio'],
     price_range: 3,
     min_age: 16,
@@ -82,7 +82,7 @@ export const mockBusinesses: Business[] = [
     description: 'Hotel de montaña con acceso directo a pistas. Servicio premium y gastronomía de autor.',
     latitude: 42.5756,
     longitude: 1.6654,
-    is_premium: true,
+    is_recommended: true,
     services: ['Ski-in', 'Restaurante', 'Spa', 'Bar'],
     price_range: 3,
     min_age: null,
@@ -98,7 +98,7 @@ export const mockBusinesses: Business[] = [
     description: 'Cocina tradicional andorrana en un ambiente familiar y acogedor.',
     latitude: 42.5063,
     longitude: 1.5218,
-    is_premium: false,
+    is_recommended: false,
     services: ['Wifi', 'Terraza'],
     price_range: 1,
     min_age: null,
@@ -114,7 +114,7 @@ export const mockBusinesses: Business[] = [
     description: 'Restaurante de cocina de montaña con productos de proximidad.',
     latitude: 42.5348,
     longitude: 1.5806,
-    is_premium: false,
+    is_recommended: false,
     services: ['Parking', 'Menú del día'],
     price_range: 1,
     min_age: null,
@@ -130,7 +130,7 @@ export const mockBusinesses: Business[] = [
     description: 'El centro termolúdico más grande del sur de Europa. Una experiencia única de bienestar.',
     latitude: 42.5103,
     longitude: 1.5393,
-    is_premium: false,
+    is_recommended: false,
     services: ['Termas', 'Spa', 'Restaurante', 'Tienda'],
     price_range: 2,
     min_age: null,

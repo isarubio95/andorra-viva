@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, Heart, Star, BarChart3 } from 'lucide-react';
+import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, Heart, Star, BarChart3, Medal } from 'lucide-react';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { getBusinesses, getMyBusinesses, getPlans } from '@/services/api';
 import type { Business, Plan } from '@/data/mockData';
@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -33,6 +34,7 @@ export default function UserDashboard() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [plansLoading, setPlansLoading] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
+  const [changingRecommendedId, setChangingRecommendedId] = useState<string | null>(null);
 
   useEffect(() => {
     getBusinesses().then(setAllBusinesses);
@@ -59,8 +61,11 @@ export default function UserDashboard() {
   const favoriteBusinesses = allBusinesses.filter(b => favorites.has(b.id));
 
   const isPro = hasProAccess;
+  const canManageRecommendation =
+    role === 'admin' || (planId === 'enterprise' && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing'));
   const accountLabel =
     role === 'admin' ? 'Admin' : isPro ? 'Profesional' : 'Usuario';
+  const currentRecommendedId = myBusinesses.find(b => b.is_recommended)?.id ?? null;
 
   const initials = displayName
     .split(' ')
@@ -87,6 +92,14 @@ export default function UserDashboard() {
     navigate('/');
   };
 
+  const refreshMyBusinesses = async () => {
+    if (!user?.id || !hasProAccess) return;
+    setMyBusinessesLoading(true);
+    const rows = await getMyBusinesses(user.id);
+    setMyBusinesses(rows);
+    setMyBusinessesLoading(false);
+  };
+
   const handleChangePlan = async (nextPlanId: string) => {
     if (!user?.id) return;
     if (nextPlanId === planId) return;
@@ -103,6 +116,50 @@ export default function UserDashboard() {
       await refreshProfile();
     }
     setChangingPlan(false);
+  };
+
+  const handleToggleRecommended = async (businessId: string, checked: boolean) => {
+    if (!user?.id) return;
+    if (!canManageRecommendation) {
+      toast({
+        title: 'Plan Enterprise requerido',
+        description: 'Solo cuentas enterprise pueden destacar un negocio como recomendado.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setChangingRecommendedId(businessId);
+
+    if (checked) {
+      const { error: unsetError } = await supabase
+        .from('businesses')
+        .update({ is_recommended: false })
+        .eq('owner_id', user.id)
+        .eq('is_recommended', true);
+      if (unsetError) {
+        toast({ title: 'No se pudo actualizar', description: unsetError.message, variant: 'destructive' });
+        setChangingRecommendedId(null);
+        return;
+      }
+    }
+
+    const { error } = await supabase
+      .from('businesses')
+      .update({ is_recommended: checked })
+      .eq('id', businessId)
+      .eq('owner_id', user.id);
+
+    if (error) {
+      toast({ title: 'No se pudo guardar', description: error.message, variant: 'destructive' });
+    } else {
+      toast({
+        title: checked ? 'Negocio recomendado activado' : 'Negocio recomendado desactivado',
+        description: checked ? 'Este negocio aparecerá en "Nuestras recomendaciones".' : 'Ya no aparecerá como recomendado.',
+      });
+      await refreshMyBusinesses();
+    }
+    setChangingRecommendedId(null);
   };
 
   if (!user) {
@@ -223,14 +280,47 @@ export default function UserDashboard() {
                         ))}
                       </div>
                     ) : myBusinesses.length > 0 ? (
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        {myBusinesses.map(biz => (
-                          <BusinessCard
-                            key={biz.id}
-                            business={biz}
-                            onClick={() => {}}
-                          />
-                        ))}
+                      <div className="space-y-4">
+                        <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">
+                          <p className="font-medium text-foreground">Distintivo recomendado</p>
+                          <p>
+                            Solo puedes destacar un negocio. Requiere plan enterprise activo o en trial.
+                          </p>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {myBusinesses.map(biz => (
+                            <div key={biz.id} className="space-y-3 rounded-xl border p-3">
+                              <BusinessCard
+                                business={biz}
+                                onClick={() => {}}
+                              />
+                              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Medal className="h-4 w-4 text-premium" />
+                                  <span className="font-medium text-foreground">Recomendado</span>
+                                  {currentRecommendedId === biz.id && (
+                                    <Badge variant="secondary">Activo</Badge>
+                                  )}
+                                </div>
+                                <Switch
+                                  checked={biz.is_recommended}
+                                  disabled={
+                                    !!changingRecommendedId ||
+                                    !canManageRecommendation ||
+                                    (!!currentRecommendedId && currentRecommendedId !== biz.id && !biz.is_recommended)
+                                  }
+                                  onCheckedChange={(checked) => handleToggleRecommended(biz.id, checked)}
+                                  aria-label={`Marcar ${biz.name} como recomendado`}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {!canManageRecommendation && (
+                          <p className="text-xs text-muted-foreground">
+                            Para activar el distintivo recomendado necesitas plan enterprise con estado active o trialing.
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-4 py-8 text-center">
