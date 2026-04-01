@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, Heart, Star, BarChart3, Medal } from 'lucide-react';
 import { useFavorites } from '@/contexts/FavoritesContext';
-import { getBusinesses, getMyBusinesses, getPlans } from '@/services/api';
+import { getBusinesses, getMyBusinesses, getPlans, getMyBusinessMetrics, type BusinessMetricRow } from '@/services/api';
 import type { Business, Plan } from '@/data/mockData';
 import BusinessCard from '@/components/BusinessCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +18,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { CartesianGrid, Line, LineChart, XAxis } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -35,6 +37,8 @@ export default function UserDashboard() {
   const [plansLoading, setPlansLoading] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
   const [changingRecommendedId, setChangingRecommendedId] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState<BusinessMetricRow[]>([]);
+  const [metricsLoading, setMetricsLoading] = useState(false);
 
   useEffect(() => {
     getBusinesses().then(setAllBusinesses);
@@ -56,6 +60,17 @@ export default function UserDashboard() {
     getMyBusinesses(user.id)
       .then(setMyBusinesses)
       .finally(() => setMyBusinessesLoading(false));
+  }, [user?.id, hasProAccess]);
+
+  useEffect(() => {
+    if (!user?.id || !hasProAccess) {
+      setMetrics([]);
+      return;
+    }
+    setMetricsLoading(true);
+    getMyBusinessMetrics(30)
+      .then(setMetrics)
+      .finally(() => setMetricsLoading(false));
   }, [user?.id, hasProAccess]);
 
   const favoriteBusinesses = allBusinesses.filter(b => favorites.has(b.id));
@@ -351,26 +366,90 @@ export default function UserDashboard() {
                       <BarChart3 className="h-5 w-5" />
                       Métricas
                     </CardTitle>
-                    <CardDescription>Estadísticas de tus negocios</CardDescription>
+                    <CardDescription>Visitas, reseñas y evolución de los últimos 30 días por negocio</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      <div className="rounded-lg border border-border p-4 text-center">
-                        <p className="text-2xl font-bold text-foreground">0</p>
-                        <p className="text-xs text-muted-foreground">Visitas este mes</p>
+                    {metricsLoading ? (
+                      <div className="space-y-6">
+                        {Array.from({ length: 2 }).map((_, i) => (
+                          <div key={i} className="rounded-xl border p-4">
+                            <Skeleton className="h-5 w-48" />
+                            <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                              {Array.from({ length: 4 }).map((__, j) => (
+                                <Skeleton key={j} className="h-16 rounded-lg" />
+                              ))}
+                            </div>
+                            <Skeleton className="mt-4 h-48 rounded-lg" />
+                          </div>
+                        ))}
                       </div>
-                      <div className="rounded-lg border border-border p-4 text-center">
-                        <p className="text-2xl font-bold text-foreground">0</p>
-                        <p className="text-xs text-muted-foreground">Reseñas totales</p>
+                    ) : metrics.length > 0 ? (
+                      <div className="space-y-6">
+                        {metrics.map(row => (
+                          <div key={row.business_id} className="rounded-xl border p-4">
+                            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                              <h3 className="font-semibold text-foreground">{row.business_name}</h3>
+                              <Badge variant="secondary">Ultimos 30 dias</Badge>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-4">
+                              <div className="rounded-lg border border-border p-3 text-center">
+                                <p className="text-xl font-bold text-foreground">{row.visits_month}</p>
+                                <p className="text-xs text-muted-foreground">Visitas este mes</p>
+                              </div>
+                              <div className="rounded-lg border border-border p-3 text-center">
+                                <p className="text-xl font-bold text-foreground">{row.visits_total}</p>
+                                <p className="text-xs text-muted-foreground">Visitas totales</p>
+                              </div>
+                              <div className="rounded-lg border border-border p-3 text-center">
+                                <p className="text-xl font-bold text-foreground">{row.reviews_total}</p>
+                                <p className="text-xs text-muted-foreground">Resenas totales</p>
+                              </div>
+                              <div className="rounded-lg border border-border p-3 text-center">
+                                <p className="text-xl font-bold text-foreground">{row.rating_avg.toFixed(1)}</p>
+                                <p className="text-xs text-muted-foreground">Valoracion media</p>
+                              </div>
+                            </div>
+                            <div className="mt-4">
+                              <ChartContainer
+                                config={{
+                                  visits: {
+                                    label: 'Visitas',
+                                    color: 'hsl(var(--primary))',
+                                  },
+                                }}
+                                className="h-56 w-full"
+                              >
+                                <LineChart data={row.daily_visits}>
+                                  <CartesianGrid vertical={false} />
+                                  <XAxis
+                                    dataKey="date"
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickMargin={8}
+                                    tickFormatter={(value) => String(value).slice(5)}
+                                  />
+                                  <ChartTooltip
+                                    cursor={false}
+                                    content={<ChartTooltipContent indicator="line" />}
+                                  />
+                                  <Line
+                                    dataKey="visits"
+                                    type="monotone"
+                                    stroke="var(--color-visits)"
+                                    strokeWidth={2}
+                                    dot={false}
+                                  />
+                                </LineChart>
+                              </ChartContainer>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="rounded-lg border border-border p-4 text-center">
-                        <p className="text-2xl font-bold text-foreground">—</p>
-                        <p className="text-xs text-muted-foreground">Valoración media</p>
-                      </div>
-                    </div>
-                    <p className="mt-4 text-center text-sm text-muted-foreground">
-                      Las métricas se actualizarán cuando registres un negocio
-                    </p>
+                    ) : (
+                      <p className="text-center text-sm text-muted-foreground">
+                        Las metricas apareceran cuando tengas negocios con visitas.
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

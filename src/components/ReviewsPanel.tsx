@@ -2,13 +2,29 @@ import { useEffect, useState } from 'react';
 import { X, Star, MapPin, Clock, Phone, MessageCircle, Navigation, CheckCircle, Medal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getReviewsByBusiness } from '@/services/api';
+import { getReviewsByBusiness, trackBusinessVisit } from '@/services/api';
 import type { Business, Review } from '@/data/mockData';
 import { useSyncOverlayWithHistory } from '@/hooks/use-sync-overlay-with-history';
 
 interface ReviewsPanelProps {
   business: Business;
   onClose: () => void;
+}
+
+function getVisitorKey(): string {
+  const storageKey = 'andorra-viva-visitor-key';
+  try {
+    const existing = localStorage.getItem(storageKey);
+    if (existing && existing.length >= 8) return existing;
+    const generated =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `visitor-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(storageKey, generated);
+    return generated;
+  } catch {
+    return `visitor-fallback-${Date.now()}`;
+  }
 }
 
 export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
@@ -18,6 +34,11 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
 
   useEffect(() => {
     getReviewsByBusiness(business.id).then(setReviews);
+  }, [business.id]);
+
+  useEffect(() => {
+    const visitorKey = getVisitorKey();
+    void trackBusinessVisit(business.id, visitorKey);
   }, [business.id]);
 
   return (

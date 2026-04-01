@@ -7,6 +7,20 @@ const USE_MOCK_BUSINESSES =
 const USE_MOCK_REVIEWS =
   (import.meta as any).env?.VITE_USE_MOCK_REVIEWS === 'true';
 
+export interface TopVisitedBusiness extends Business {
+  visits_month: number;
+}
+
+export interface BusinessMetricRow {
+  business_id: string;
+  business_name: string;
+  visits_month: number;
+  visits_total: number;
+  reviews_total: number;
+  rating_avg: number;
+  daily_visits: { date: string; visits: number }[];
+}
+
 export async function getBusinesses(): Promise<Business[]> {
   if (USE_MOCK_BUSINESSES) return mockBusinesses;
 
@@ -81,4 +95,113 @@ export async function getPlans(): Promise<Plan[]> {
     return mockPlans;
   }
   return (data && data.length > 0) ? data as Plan[] : mockPlans;
+}
+
+function currentMonthKey(): string {
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  return monthStart.toISOString().slice(0, 10);
+}
+
+export async function trackBusinessVisit(businessId: string, visitorKey: string): Promise<void> {
+  if (!businessId || !visitorKey || visitorKey.length < 8) return;
+  if (USE_MOCK_BUSINESSES) return;
+
+  const { error } = await supabase
+    .from('business_visits')
+    .upsert(
+      {
+        business_id: businessId,
+        visitor_key: visitorKey,
+        visit_month: currentMonthKey(),
+      },
+      {
+        onConflict: 'business_id,visitor_key,visit_month',
+        ignoreDuplicates: true,
+      }
+    );
+
+  if (error) {
+    console.error('Error tracking business visit:', error);
+  }
+}
+
+export async function getTopVisitedBusinessesOfMonth(limit = 6): Promise<TopVisitedBusiness[]> {
+  if (USE_MOCK_BUSINESSES) {
+    return mockBusinesses
+      .slice()
+      .sort((a, b) => b.review_count - a.review_count)
+      .slice(0, limit)
+      .map(b => ({ ...b, visits_month: b.review_count }));
+  }
+
+  const { data: ranking, error: rankingError } = await supabase
+    .rpc('get_top_visited_businesses_month', { _limit: limit });
+
+  if (rankingError) {
+    console.error('Error fetching top visited ranking:', rankingError);
+    return [];
+  }
+
+  const rows = (ranking ?? []) as { business_id: string; visits_month: number }[];
+  if (rows.length === 0) return [];
+
+  const ids = rows.map(r => r.business_id);
+  const { data: businesses, error: businessesError } = await supabase
+    .from('businesses')
+    .select('*')
+    .in('id', ids);
+
+  if (businessesError) {
+    console.error('Error fetching top visited businesses:', businessesError);
+    return [];
+  }
+
+  const byId = new Map((businesses as Business[]).map(b => [b.id, b]));
+  return rows
+    .map(r => {
+      const business = byId.get(r.business_id);
+      if (!business) return null;
+      return { ...business, visits_month: Number(r.visits_month ?? 0) };
+    })
+    .filter((x): x is TopVisitedBusiness => x !== null);
+}
+
+export async function getMyBusinessMetrics(days = 30): Promise<BusinessMetricRow[]> {
+  if (USE_MOCK_BUSINESSES) {
+    return mockBusinesses.slice(0, 2).map((b, i) => ({
+      business_id: b.id,
+      business_name: b.name,
+      visits_month: 120 - i * 20,
+      visits_total: 540 - i * 100,
+      reviews_total: b.review_count,
+      rating_avg: b.rating,
+      daily_visits: Array.from({ length: days }).map((_, idx) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (days - 1 - idx));
+        return { date: d.toISOString().slice(0, 10), visits: Math.max(0, 2 + ((idx + i) % 9)) };
+      }),
+    }));
+  }
+
+  const { data, error } = await supabase.rpc('get_my_business_metrics', { _days: days });
+  if (error) {
+    console.error('Error fetching my business metrics:', error);
+    return [];
+  }
+
+  return ((data ?? []) as any[]).map(row => ({
+    business_id: row.business_id,
+    business_name: row.business_name,
+    visits_month: Number(row.visits_month ?? 0),
+    visits_total: Number(row.visits_total ?? 0),
+    reviews_total: Number(row.reviews_total ?? 0),
+    rating_avg: Number(row.rating_avg ?? 0),
+    daily_visits: Array.isArray(row.daily_visits)
+      ? row.daily_visits.map((p: any) => ({
+          date: String(p.date ?? ''),
+          visits: Number(p.visits ?? 0),
+        }))
+      : [],
+  }));
 }

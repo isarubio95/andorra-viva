@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useSyncOverlayWithHistory } from '@/hooks/use-sync-overlay-with-history';
 
 const navLinks = [
   { label: 'Mapa', href: '/#mapa' },
@@ -22,7 +21,6 @@ const navLinks = [
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  useSyncOverlayWithHistory(mobileOpen, () => setMobileOpen(false));
   const { user, displayName, role, signOut, loading, hasProAccess, roleLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
