@@ -56,8 +56,8 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           onClick={handleFavorite}
           className={`absolute right-3 bottom-3 rounded-full p-1.5 transition-all ${
             liked
-              ? 'bg-destructive/10 opacity-100'
-              : 'bg-card/80 opacity-0 group-hover:opacity-100 hover:bg-card'
+              ? 'bg-destructive/10'
+              : 'bg-card/80 hover:bg-card'
           }`}
           aria-label={liked ? 'Quitar de favoritos' : 'Añadir a favoritos'}
         >

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mountain, Mail, Lock, User, Eye, EyeOff, Store, UserCircle, Check, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,10 @@ import type { UserRole } from '@/contexts/AuthContext';
 import type { Plan } from '@/data/mockData';
 
 export default function Signup() {
-  const [step, setStep] = useState<'role' | 'plan' | 'form'>('role');
+  const [searchParams] = useSearchParams();
+  const reviewMode = searchParams.get('mode') === 'review';
+  const next = searchParams.get('next');
+  const [step, setStep] = useState<'role' | 'plan' | 'form'>(reviewMode ? 'form' : 'role');
   const [selectedRole, setSelectedRole] = useState<UserRole>('basic');
   const [selectedPlan, setSelectedPlan] = useState<string>('free');
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -75,7 +78,7 @@ export default function Signup() {
       });
     } else if (data.user) {
       toast({ title: '¡Cuenta creada!', description: 'Revisa tu correo para confirmar tu cuenta.' });
-      navigate('/login');
+      navigate(`/login${reviewMode ? `?mode=review${next ? `&next=${next}` : ''}` : ''}`);
     }
 
     setLoading(false);
@@ -124,24 +127,27 @@ export default function Signup() {
             </span>
           </Link>
           <p className="text-sm text-muted-foreground">
-            {step === 'role' && 'Elige tu tipo de cuenta'}
+            {reviewMode && 'Cuenta personal para valorar negocios'}
+            {!reviewMode && step === 'role' && 'Elige tu tipo de cuenta'}
             {step === 'plan' && 'Elige tu plan profesional'}
             {step === 'form' && (selectedRole === 'professional' ? 'Registra tu negocio' : 'Crea tu cuenta')}
           </p>
           {/* Step indicators */}
-          <div className="flex items-center gap-2">
-            {['role', ...(selectedRole === 'professional' ? ['plan'] : []), 'form'].map((s, i, arr) => (
-              <div key={s} className="flex items-center gap-2">
-                <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                  step === s ? 'bg-primary text-primary-foreground' : 
-                  arr.indexOf(step) > i ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
-                }`}>
-                  {arr.indexOf(step) > i ? <Check className="h-3.5 w-3.5" /> : i + 1}
+          {!reviewMode && (
+            <div className="flex items-center gap-2">
+              {['role', ...(selectedRole === 'professional' ? ['plan'] : []), 'form'].map((s, i, arr) => (
+                <div key={s} className="flex items-center gap-2">
+                  <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                    step === s ? 'bg-primary text-primary-foreground' :
+                    arr.indexOf(step) > i ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {arr.indexOf(step) > i ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                  </div>
+                  {i < arr.length - 1 && <div className={`h-0.5 w-6 rounded ${arr.indexOf(step) > i ? 'bg-accent' : 'bg-muted'}`} />}
                 </div>
-                {i < arr.length - 1 && <div className={`h-0.5 w-6 rounded ${arr.indexOf(step) > i ? 'bg-accent' : 'bg-muted'}`} />}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Step 1: Role Selection */}
@@ -270,7 +276,9 @@ export default function Signup() {
                 Cuenta {selectedRole === 'professional' ? 'Profesional' : 'de Usuario'}
               </CardTitle>
               <CardDescription>
-                {selectedRole === 'professional'
+                {reviewMode
+                  ? 'Completa tus datos para poder valorar este negocio'
+                  : selectedRole === 'professional'
                   ? `Plan ${plans.find(p => p.id === selectedPlan)?.name || 'Free'} · Completa tus datos`
                   : 'Completa tus datos para explorar el directorio'}
               </CardDescription>
@@ -318,9 +326,11 @@ export default function Signup() {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creando cuenta…' : 'Crear Cuenta'}
                 </Button>
-                <button type="button" onClick={goBack} className="text-sm text-muted-foreground hover:text-foreground">
-                  ← {selectedRole === 'professional' ? 'Cambiar plan' : 'Cambiar tipo de cuenta'}
-                </button>
+                {!reviewMode && (
+                  <button type="button" onClick={goBack} className="text-sm text-muted-foreground hover:text-foreground">
+                    ← {selectedRole === 'professional' ? 'Cambiar plan' : 'Cambiar tipo de cuenta'}
+                  </button>
+                )}
               </CardFooter>
             </form>
           </Card>

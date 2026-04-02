@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mountain, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const next = searchParams.get('next');
+  const reviewMode = searchParams.get('mode') === 'review';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +34,7 @@ export default function Login() {
     } else {
       const name = data.user?.user_metadata?.full_name || email.split('@')[0];
       toast({ title: `¡Bienvenido, ${name}! 👋` });
-      navigate('/');
+      navigate(next ? decodeURIComponent(next) : '/');
     }
 
     setLoading(false);
@@ -51,7 +54,7 @@ export default function Login() {
             </span>
           </Link>
           <p className="text-sm text-muted-foreground">
-            Tu directorio de negocios en Andorra
+            {reviewMode ? 'Inicia sesión para valorar este negocio' : 'Tu directorio de negocios en Andorra'}
           </p>
         </div>
 
@@ -59,7 +62,9 @@ export default function Login() {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
             <CardDescription>
-              Accede a tu cuenta para gestionar tu negocio
+              {reviewMode
+                ? 'Accede o crea una cuenta personal para dejar tu valoración'
+                : 'Accede a tu cuenta para gestionar tu negocio'}
             </CardDescription>
           </CardHeader>
 
@@ -111,7 +116,10 @@ export default function Login() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 ¿No tienes cuenta?{' '}
-                <Link to="/signup" className="font-medium text-primary hover:underline">
+                <Link
+                  to={reviewMode ? `/signup?mode=review${next ? `&next=${next}` : ''}` : '/signup'}
+                  className="font-medium text-primary hover:underline"
+                >
                   Regístrate
                 </Link>
               </p>

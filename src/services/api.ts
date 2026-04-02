@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { clearStoredVisitorKey, getStoredVisitorKey } from '@/lib/visitor-key';
 import { mockBusinesses, mockReviews, mockPlans, type Business, type Review, type Plan } from '@/data/mockData';
 
 // Flag para usar datos mock (solo si se activa explícitamente en .env)
@@ -84,6 +85,48 @@ export async function getReviewsByBusiness(businessId: string): Promise<Review[]
   return data as Review[];
 }
 
+export async function getMyReviewForBusiness(businessId: string, userId: string): Promise<Review | null> {
+  if (!businessId || !userId) return null;
+  if (USE_MOCK_REVIEWS) return null;
+
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('business_id', businessId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching my review:', error);
+    return null;
+  }
+  return data as Review | null;
+}
+
+export async function submitBusinessReview(params: {
+  businessId: string;
+  rating: number;
+  comment?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { businessId, rating, comment } = params;
+  if (!businessId) return { ok: false, error: 'Negocio inválido' };
+  if (rating < 1 || rating > 5) return { ok: false, error: 'La valoración debe estar entre 1 y 5' };
+
+  if (USE_MOCK_REVIEWS) return { ok: true };
+
+  const { error } = await supabase.rpc('submit_business_review', {
+    p_business_id: businessId,
+    p_rating: rating,
+    p_comment: comment?.trim() || null,
+  });
+
+  if (error) {
+    console.error('Error submitting review:', error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
 export async function getPlans(): Promise<Plan[]> {
   const { data, error } = await supabase
     .from('plans')
@@ -104,26 +147,40 @@ function currentMonthKey(): string {
 }
 
 export async function trackBusinessVisit(businessId: string, visitorKey: string): Promise<void> {
-  if (!businessId || !visitorKey || visitorKey.length < 8) return;
-  if (USE_MOCK_BUSINESSES) return;
+  if (!businessId || USE_MOCK_BUSINESSES) return;
 
-  const { error } = await supabase
-    .from('business_visits')
-    .upsert(
-      {
-        business_id: businessId,
-        visitor_key: visitorKey,
-        visit_month: currentMonthKey(),
-      },
-      {
-        onConflict: 'business_id,visitor_key,visit_month',
-        ignoreDuplicates: true,
-      }
-    );
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const anonKeyOk = visitorKey.length >= 8;
+  if (!session && !anonKeyOk) return;
+
+  const { error } = await supabase.rpc('track_business_visit', {
+    p_business_id: businessId,
+    p_visitor_key: anonKeyOk ? visitorKey : '________',
+    p_visit_month: currentMonthKey(),
+  });
 
   if (error) {
     console.error('Error tracking business visit:', error);
   }
+}
+
+/** Tras login: une visitas anónimas (localStorage) a la cuenta y limpia la clave. */
+export async function mergeAnonymousVisitsForUser(userId: string): Promise<void> {
+  if (USE_MOCK_BUSINESSES) return;
+  const anonKey = getStoredVisitorKey();
+  if (!anonKey || anonKey === userId) return;
+
+  const { error } = await supabase.rpc('merge_anonymous_business_visits', {
+    p_visitor_key: anonKey,
+  });
+
+  if (error) {
+    console.warn('[visits] merge anónimas:', error.message);
+    return;
+  }
+  clearStoredVisitorKey();
 }
 
 export async function getTopVisitedBusinessesOfMonth(limit = 6): Promise<TopVisitedBusiness[]> {

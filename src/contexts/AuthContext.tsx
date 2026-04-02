@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { supabase } from '@/lib/supabase';
+import { mergeAnonymousVisitsForUser } from '@/services/api';
 import type { User, Session } from '@supabase/supabase-js';
 
 export type UserRole = 'basic' | 'professional' | 'admin';
@@ -152,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         setLoading(false);
         if (session?.user) {
+          void mergeAnonymousVisitsForUser(session.user.id);
           setTimeout(() => fetchProfile(session.user.id, session.user.user_metadata?.role), 0);
         } else {
           setRole(null);
@@ -168,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
+        void mergeAnonymousVisitsForUser(session.user.id);
         fetchProfile(session.user.id, session.user.user_metadata?.role);
       } else {
         setRoleLoading(false);

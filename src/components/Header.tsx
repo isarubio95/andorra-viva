@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mountain, Menu, X, LogOut, User, Store } from 'lucide-react';
+import { Mountain, Menu, X, LogOut, User, Store, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -27,8 +28,6 @@ export default function Header() {
 
   const isPro = hasProAccess;
   const roleBadge = role === 'admin' ? 'ADMIN' : isPro ? 'PRO' : 'USER';
-
-  const mobileNavLinks = navLinks;
 
   const linkClass =
     'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground';
@@ -105,6 +104,10 @@ export default function Header() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => navigate('/favoritos')}>
+                  <Heart className="mr-2 h-4 w-4" />
+                  Mis favoritos
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/mi-cuenta')}>
                   <User className="mr-2 h-4 w-4" />
                   Mi Cuenta
@@ -135,49 +138,95 @@ export default function Header() {
         </div>
 
         {/* Mobile toggle */}
-        <button className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Toggle menu">
+        <button
+          type="button"
+          className="md:hidden"
+          onClick={() => setMobileOpen(o => !o)}
+          aria-expanded={mobileOpen}
+          aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+        >
           {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <div className="border-t bg-card px-4 py-4 md:hidden">
-          <nav className="flex flex-col gap-3">
-            {mobileNavLinks.map(link => (
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen} syncWithHistory={false}>
+        <SheetContent
+          side="right"
+          className="flex w-full flex-col gap-0 border-l bg-card p-0 pt-14 [&>button]:right-4 [&>button]:top-4"
+        >
+          <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
+          <SheetDescription className="sr-only">
+            Enlaces del sitio, favoritos y opciones de iniciar sesión o cerrar sesión.
+          </SheetDescription>
+          <nav className="flex flex-1 flex-col gap-1 px-4 pb-6">
+            {navLinks.map(link => (
               <Link
                 key={link.href}
                 to={link.href}
-                className="text-sm font-medium text-muted-foreground"
+                className="rounded-lg px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-muted"
                 onClick={() => setMobileOpen(false)}
               >
                 {link.label}
               </Link>
             ))}
+            <Link
+              to="/favoritos"
+              className={`flex items-center gap-2 rounded-lg px-3 py-3 text-base font-medium transition-colors hover:bg-muted ${
+                user ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setMobileOpen(false)}
+            >
+              <Heart className={`h-5 w-5 ${user ? 'text-destructive' : ''}`} />
+              Mis favoritos
+            </Link>
           </nav>
-          <div className="mt-4 flex flex-col gap-2">
+
+          <div className="mt-auto border-t border-border px-4 py-4">
             {user ? (
-              <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/mi-cuenta" onClick={() => setMobileOpen(false)}>Mi Cuenta</Link>
+              <div className="flex flex-col gap-2">
+                <Button variant="ghost" className="justify-start" asChild>
+                  <Link to="/mi-cuenta" onClick={() => setMobileOpen(false)}>
+                    <User className="mr-2 h-4 w-4" />
+                    Mi cuenta
+                  </Link>
                 </Button>
-                <Button variant="destructive" size="sm" onClick={() => { handleSignOut(); setMobileOpen(false); }}>
-                  Cerrar Sesión
+                {isPro && (
+                  <Button variant="ghost" className="justify-start" asChild>
+                    <Link to="/mi-cuenta" onClick={() => setMobileOpen(false)}>
+                      <Store className="mr-2 h-4 w-4" />
+                      Mis negocios
+                    </Link>
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  className="justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    void handleSignOut();
+                  }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Cerrar sesión
                 </Button>
-              </>
+              </div>
             ) : (
-              <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/login" onClick={() => setMobileOpen(false)}>Iniciar Sesión</Link>
+              <div className="flex flex-col gap-2">
+                <Button variant="outline" className="w-full" asChild>
+                  <Link to="/login" onClick={() => setMobileOpen(false)}>
+                    Iniciar sesión
+                  </Link>
                 </Button>
-                <Button size="sm" asChild>
-                  <Link to="/signup" onClick={() => setMobileOpen(false)}>Registrar Negocio</Link>
+                <Button className="w-full" asChild>
+                  <Link to="/signup" onClick={() => setMobileOpen(false)}>
+                    Registrar negocio
+                  </Link>
                 </Button>
-              </>
+              </div>
             )}
           </div>
-        </div>
-      )}
+        </SheetContent>
+      </Sheet>
     </header>
   );
 }

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, Heart, Star, BarChart3, Medal } from 'lucide-react';
-import { useFavorites } from '@/contexts/FavoritesContext';
-import { getBusinesses, getMyBusinesses, getPlans, getMyBusinessMetrics, type BusinessMetricRow } from '@/services/api';
+import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, Star, BarChart3, Medal, Copy, QrCode, Download } from 'lucide-react';
+import QRCode from 'qrcode';
+import { getMyBusinesses, getPlans, getMyBusinessMetrics, type BusinessMetricRow } from '@/services/api';
 import type { Business, Plan } from '@/data/mockData';
 import BusinessCard from '@/components/BusinessCard';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,16 +21,25 @@ import { Switch } from '@/components/ui/switch';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { CartesianGrid, Line, LineChart, XAxis } from 'recharts';
 import { supabase } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 export default function UserDashboard() {
-  const { user, displayName, role, signOut, hasProAccess, planId, refreshProfile, subscriptionStatus } = useAuth();
-  const { favorites } = useFavorites();
+  const {
+    user,
+    displayName,
+    role,
+    signOut,
+    hasProAccess,
+    planId,
+    refreshProfile,
+    subscriptionStatus,
+    loading: authLoading,
+  } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
   const [saving, setSaving] = useState(false);
-  const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [myBusinesses, setMyBusinesses] = useState<Business[]>([]);
   const [myBusinessesLoading, setMyBusinessesLoading] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -41,8 +50,11 @@ export default function UserDashboard() {
   const [metricsLoading, setMetricsLoading] = useState(false);
 
   useEffect(() => {
-    getBusinesses().then(setAllBusinesses);
-  }, []);
+    if (authLoading) return;
+    if (!user) {
+      navigate('/login', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   useEffect(() => {
     setPlansLoading(true);
@@ -72,8 +84,6 @@ export default function UserDashboard() {
       .then(setMetrics)
       .finally(() => setMetricsLoading(false));
   }, [user?.id, hasProAccess]);
-
-  const favoriteBusinesses = allBusinesses.filter(b => favorites.has(b.id));
 
   const isPro = hasProAccess;
   const canManageRecommendation =
@@ -113,6 +123,46 @@ export default function UserDashboard() {
     const rows = await getMyBusinesses(user.id);
     setMyBusinesses(rows);
     setMyBusinessesLoading(false);
+  };
+
+  const getReviewUrl = (businessId: string): string => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}/valorar/${businessId}`;
+  };
+
+  const handleCopyReviewUrl = async (businessId: string) => {
+    const url = getReviewUrl(businessId);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Enlace copiado', description: 'Ya puedes pegarlo en tu QR o material impreso.' });
+    } catch {
+      toast({
+        title: 'No se pudo copiar automáticamente',
+        description: `Copia este enlace manualmente: ${url}`,
+      });
+    }
+  };
+
+  const handleDownloadReviewQr = async (business: Business) => {
+    const url = getReviewUrl(business.id);
+    try {
+      const dataUrl = await QRCode.toDataURL(url, {
+        width: 768,
+        margin: 2,
+        errorCorrectionLevel: 'M',
+      });
+      const a = document.createElement('a');
+      const safeName = business.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      a.href = dataUrl;
+      a.download = `qr-valorar-${safeName || business.id}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast({ title: 'QR descargado', description: 'PNG listo para imprimir.' });
+    } catch (error) {
+      console.error('Error generating QR image:', error);
+      toast({ title: 'No se pudo generar el QR', variant: 'destructive' });
+    }
   };
 
   const handleChangePlan = async (nextPlanId: string) => {
@@ -177,8 +227,7 @@ export default function UserDashboard() {
     setChangingRecommendedId(null);
   };
 
-  if (!user) {
-    navigate('/login');
+  if (authLoading || !user) {
     return null;
   }
 
@@ -206,16 +255,23 @@ export default function UserDashboard() {
           </div>
 
           <Tabs defaultValue="perfil" className="space-y-6">
-            <TabsList className={`grid w-full ${isPro ? 'grid-cols-5' : 'grid-cols-3'}`}>
+            <TabsList
+              className={cn(
+                'h-auto min-h-10 w-full max-w-full gap-1.5 p-1',
+                'flex flex-nowrap items-stretch justify-start overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] touch-pan-x',
+                '[&>*]:shrink-0',
+                isPro
+                  ? 'md:grid md:h-10 md:grid-cols-5 md:items-center md:justify-center md:overflow-hidden md:gap-0'
+                  : 'md:grid md:h-10 md:grid-cols-2 md:items-center md:justify-center md:overflow-hidden md:gap-0'
+              )}
+            >
               <TabsTrigger value="perfil">Perfil</TabsTrigger>
-              {isPro ? (
+              {isPro && (
                 <>
                   <TabsTrigger value="negocios">Mis Negocios</TabsTrigger>
                   <TabsTrigger value="metricas">Métricas</TabsTrigger>
                   <TabsTrigger value="plan">Plan</TabsTrigger>
                 </>
-              ) : (
-                <TabsTrigger value="favoritos">Favoritos</TabsTrigger>
               )}
               <TabsTrigger value="seguridad">Seguridad</TabsTrigger>
             </TabsList>
@@ -244,7 +300,10 @@ export default function UserDashboard() {
                     <div className="space-y-2">
                       <Label>Tipo de cuenta</Label>
                       <div className="flex items-center gap-2">
-                        <Badge variant={isPro ? 'default' : 'secondary'}>
+                        <Badge
+                          variant="secondary"
+                          className="border-transparent bg-muted font-medium text-muted-foreground shadow-none"
+                        >
                           {accountLabel}
                         </Badge>
                         {planId && planId !== 'free' && (
@@ -327,6 +386,45 @@ export default function UserDashboard() {
                                   onCheckedChange={(checked) => handleToggleRecommended(biz.id, checked)}
                                   aria-label={`Marcar ${biz.name} como recomendado`}
                                 />
+                              </div>
+                              <div className="rounded-lg border border-border p-3">
+                                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                                  <QrCode className="h-4 w-4 text-muted-foreground" />
+                                  QR de valoraciones
+                                </div>
+                                <p className="mb-3 break-all rounded-md bg-muted/60 px-2 py-1 text-xs text-muted-foreground">
+                                  {getReviewUrl(biz.id)}
+                                </p>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => handleCopyReviewUrl(biz.id)}
+                                  >
+                                    <Copy className="mr-2 h-4 w-4" />
+                                    Copiar enlace
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => handleDownloadReviewQr(biz)}
+                                  >
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Descargar QR
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => window.open(getReviewUrl(biz.id), '_blank', 'noopener,noreferrer')}
+                                  >
+                                    Probar flujo
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -504,16 +602,26 @@ export default function UserDashboard() {
                           .map(plan => {
                             const selected = planId === plan.id;
                             return (
-                              <button
+                              <div
                                 key={plan.id}
-                                type="button"
-                                disabled={changingPlan}
-                                onClick={() => handleChangePlan(plan.id)}
-                                className={`relative flex flex-col rounded-xl border p-5 text-left transition-all ${
+                                role="button"
+                                tabIndex={changingPlan ? -1 : 0}
+                                aria-disabled={changingPlan}
+                                onClick={() => {
+                                  if (!changingPlan) handleChangePlan(plan.id);
+                                }}
+                                onKeyDown={e => {
+                                  if (changingPlan) return;
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    handleChangePlan(plan.id);
+                                  }
+                                }}
+                                className={`relative flex cursor-pointer flex-col rounded-xl border p-5 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                                   selected
                                     ? 'border-primary bg-primary/5 shadow-sm'
                                     : 'border-border hover:border-muted-foreground/30 hover:bg-muted/50'
-                                } ${changingPlan ? 'opacity-70' : ''}`}
+                                } ${changingPlan ? 'pointer-events-none opacity-70' : ''}`}
                               >
                                 {plan.is_popular && (
                                   <Badge className="absolute -top-2.5 right-4 bg-accent text-accent-foreground border-0 text-xs">
@@ -539,55 +647,21 @@ export default function UserDashboard() {
                                   ))}
                                 </div>
                                 <div className="mt-4">
-                                  <Button
-                                    type="button"
-                                    className="w-full"
-                                    variant={selected ? 'outline' : 'default'}
-                                    disabled={changingPlan || selected}
+                                  <div
+                                    className={cn(
+                                      buttonVariants({
+                                        variant: selected ? 'outline' : 'default',
+                                        className: 'w-full pointer-events-none select-none',
+                                      }),
+                                      (changingPlan || selected) && 'opacity-50'
+                                    )}
                                   >
                                     {selected ? 'Plan actual' : changingPlan ? 'Cambiando…' : 'Cambiar a este plan'}
-                                  </Button>
+                                  </div>
                                 </div>
-                              </button>
+                              </div>
                             );
                           })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-
-            {/* Basic: Favoritos Tab */}
-            {!isPro && (
-              <TabsContent value="favoritos">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Heart className="h-5 w-5" />
-                      Mis Favoritos
-                    </CardTitle>
-                    <CardDescription>Negocios que has guardado</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {favoriteBusinesses.length > 0 ? (
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        {favoriteBusinesses.map(biz => (
-                          <BusinessCard key={biz.id} business={biz} onClick={() => {}} />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-4 py-8 text-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                          <Heart className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">No tienes favoritos aún</p>
-                          <p className="text-sm text-muted-foreground">Explora el directorio y guarda tus negocios favoritos</p>
-                        </div>
-                        <Button variant="outline" onClick={() => navigate('/directorio')}>
-                          Explorar Directorio
-                        </Button>
                       </div>
                     )}
                   </CardContent>
