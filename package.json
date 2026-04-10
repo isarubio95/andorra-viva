@@ -5,13 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run docs:build && node scripts/merge-docusaurus-into-dist.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed:test-users": "node scripts/seed-test-users-and-visits.mjs"
+    "seed:test-users": "node scripts/seed-test-users-and-visits.mjs",
+    "docs:dev": "npm run start --prefix documentation",
+    "docs:build": "npm run build --prefix documentation",
+    "docs:serve": "npm run serve --prefix documentation",
+    "postinstall": "npm install --prefix documentation"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
