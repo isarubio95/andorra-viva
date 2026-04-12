@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Andorra Viva">
+  <!-- Primary theme: hsl(160 30% 25%) -->
+  <circle cx="16" cy="16" r="16" fill="hsl(160 30% 25%)" />
+  <!-- Mountain silhouette (matches header Mountain icon style) -->
+  <path fill="#ffffff" d="M7.5 23 12 11.5l3.2 4.2L18.5 8l6.5 15H7.5z" />
+</svg>

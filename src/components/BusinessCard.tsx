@@ -36,7 +36,7 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           onClick(business);
         }
       }}
-      className="group flex flex-col overflow-hidden rounded-xl border bg-card text-left transition-all hover:shadow-lg hover:-translate-y-1"
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-card text-left transition-all hover:shadow-lg hover:-translate-y-1"
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -53,8 +53,9 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           </Badge>
         )}
         <button
+          type="button"
           onClick={handleFavorite}
-          className={`absolute right-3 bottom-3 rounded-full p-1.5 transition-all ${
+          className={`absolute right-3 bottom-3 cursor-pointer rounded-full p-1.5 transition-all ${
             liked
               ? 'bg-destructive/10'
               : 'bg-card/80 hover:bg-card'

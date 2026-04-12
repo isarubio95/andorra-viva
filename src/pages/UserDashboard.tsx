@@ -363,7 +363,7 @@ export default function UserDashboard() {
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">
                           {myBusinesses.map(biz => (
-                            <div key={biz.id} className="space-y-3 rounded-xl border p-3">
+                            <div key={biz.id} className="min-w-0 space-y-3 rounded-xl border p-3">
                               <BusinessCard
                                 business={biz}
                                 onClick={() => {}}
@@ -387,42 +387,43 @@ export default function UserDashboard() {
                                   aria-label={`Marcar ${biz.name} como recomendado`}
                                 />
                               </div>
-                              <div className="rounded-lg border border-border p-3">
-                                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
-                                  <QrCode className="h-4 w-4 text-muted-foreground" />
-                                  QR de valoraciones
+                              <div className="min-w-0 rounded-lg border border-border p-3">
+                                <div className="mb-2 flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
+                                  <QrCode className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                  <span className="min-w-0">QR de valoraciones</span>
                                 </div>
-                                <p className="mb-3 break-all rounded-md bg-muted/60 px-2 py-1 text-xs text-muted-foreground">
+                                <p className="mb-3 max-w-full break-all rounded-md bg-muted/60 px-2 py-1 text-xs text-muted-foreground">
                                   {getReviewUrl(biz.id)}
                                 </p>
-                                <div className="flex gap-2">
+                                <div className="flex flex-col gap-2">
+                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full min-w-0 cursor-pointer justify-center"
+                                      onClick={() => handleCopyReviewUrl(biz.id)}
+                                    >
+                                      <Copy className="mr-2 h-4 w-4 shrink-0" />
+                                      Copiar enlace
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full min-w-0 cursor-pointer justify-center"
+                                      onClick={() => window.open(getReviewUrl(biz.id), '_blank', 'noopener,noreferrer')}
+                                    >
+                                      Probar flujo
+                                    </Button>
+                                  </div>
                                   <Button
                                     type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex-1"
-                                    onClick={() => handleCopyReviewUrl(biz.id)}
-                                  >
-                                    <Copy className="mr-2 h-4 w-4" />
-                                    Copiar enlace
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex-1"
+                                    className="w-full min-w-0 cursor-pointer justify-center"
                                     onClick={() => handleDownloadReviewQr(biz)}
                                   >
-                                    <Download className="mr-2 h-4 w-4" />
+                                    <Download className="mr-2 h-4 w-4 shrink-0" />
                                     Descargar QR
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    className="flex-1"
-                                    onClick={() => window.open(getReviewUrl(biz.id), '_blank', 'noopener,noreferrer')}
-                                  >
-                                    Probar flujo
                                   </Button>
                                 </div>
                               </div>
@@ -512,7 +513,7 @@ export default function UserDashboard() {
                                 config={{
                                   visits: {
                                     label: 'Visitas',
-                                    color: 'hsl(var(--primary))',
+                                    color: 'var(--primary)',
                                   },
                                 }}
                                 className="h-56 w-full"

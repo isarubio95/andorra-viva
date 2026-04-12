@@ -3,10 +3,8 @@ import { clearStoredVisitorKey, getStoredVisitorKey } from '@/lib/visitor-key';
 import { mockBusinesses, mockReviews, mockPlans, type Business, type Review, type Plan } from '@/data/mockData';
 
 // Flag para usar datos mock (solo si se activa explícitamente en .env)
-const USE_MOCK_BUSINESSES =
-  (import.meta as any).env?.VITE_USE_MOCK_BUSINESSES === 'true';
-const USE_MOCK_REVIEWS =
-  (import.meta as any).env?.VITE_USE_MOCK_REVIEWS === 'true';
+const USE_MOCK_BUSINESSES = import.meta.env.VITE_USE_MOCK_BUSINESSES === 'true';
+const USE_MOCK_REVIEWS = import.meta.env.VITE_USE_MOCK_REVIEWS === 'true';
 
 export interface TopVisitedBusiness extends Business {
   visits_month: number;
@@ -247,7 +245,18 @@ export async function getMyBusinessMetrics(days = 30): Promise<BusinessMetricRow
     return [];
   }
 
-  return ((data ?? []) as any[]).map(row => ({
+  type RpcRow = {
+    business_id: string;
+    business_name: string;
+    visits_month: unknown;
+    visits_total: unknown;
+    reviews_total: unknown;
+    rating_avg: unknown;
+    daily_visits: unknown;
+  };
+  type DailyPoint = { date?: unknown; visits?: unknown };
+
+  return ((data ?? []) as RpcRow[]).map(row => ({
     business_id: row.business_id,
     business_name: row.business_name,
     visits_month: Number(row.visits_month ?? 0),
@@ -255,7 +264,7 @@ export async function getMyBusinessMetrics(days = 30): Promise<BusinessMetricRow
     reviews_total: Number(row.reviews_total ?? 0),
     rating_avg: Number(row.rating_avg ?? 0),
     daily_visits: Array.isArray(row.daily_visits)
-      ? row.daily_visits.map((p: any) => ({
+      ? (row.daily_visits as DailyPoint[]).map(p => ({
           date: String(p.date ?? ''),
           visits: Number(p.visits ?? 0),
         }))

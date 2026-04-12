@@ -79,7 +79,7 @@ export default function Header() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 transition-colors hover:bg-muted"
+                  className="flex cursor-pointer items-center gap-2 rounded-full border border-border px-3 py-1.5 transition-colors hover:bg-muted"
                   aria-busy={roleLoading}
                 >
                   <Avatar className="h-7 w-7">

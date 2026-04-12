@@ -10,7 +10,7 @@ title: Stack y modelo de datos
 - **Vite** + **React 18** + **TypeScript**
 - **React Router** para rutas
 - **Supabase JS** (`@supabase/supabase-js`) como cliente de Auth, base de datos y RPCs
-- **TanStack Query**, **shadcn/ui** (Radix), **Tailwind CSS** para UI
+- **TanStack Query**, **shadcn/ui** (Radix), **Tailwind CSS 4.2** (`@tailwindcss/vite`, tema en `src/index.css` con `@theme inline`) para UI
 
 El código de integración con Supabase para listados, métricas y tracking vive principalmente en `src/services/api.ts`. El contexto de sesión y permisos está en `src/contexts/AuthContext.tsx`.
 
