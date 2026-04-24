@@ -1,10 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { clearStoredVisitorKey, getStoredVisitorKey } from '@/lib/visitor-key';
-import { mockBusinesses, mockReviews, mockPlans, type Business, type Review, type Plan } from '@/data/mockData';
-
-// Flag para usar datos mock (solo si se activa explícitamente en .env)
-const USE_MOCK_BUSINESSES = import.meta.env.VITE_USE_MOCK_BUSINESSES === 'true';
-const USE_MOCK_REVIEWS = import.meta.env.VITE_USE_MOCK_REVIEWS === 'true';
+import type { Business, Plan, Review } from '@/types/domain';
 
 export interface TopVisitedBusiness extends Business {
   visits_month: number;
@@ -20,24 +16,51 @@ export interface BusinessMetricRow {
   daily_visits: { date: string; visits: number }[];
 }
 
-export async function getBusinesses(): Promise<Business[]> {
-  if (USE_MOCK_BUSINESSES) return mockBusinesses;
+/** Asegura campos coherentes con la app (p. ej. `is_premium`, arrays). */
+function normalizeBusinessRow(row: unknown): Business {
+  const r = row as Business & { is_premium?: boolean; services?: unknown; gallery?: unknown };
+  const services = Array.isArray(r.services) ? (r.services as string[]) : [];
+  return {
+    ...r,
+    rating: Number(r.rating ?? 0),
+    review_count: Number(r.review_count ?? 0),
+    price_range: Number(r.price_range ?? 2),
+    services,
+    is_premium: !!r.is_premium,
+    gallery: Array.isArray(r.gallery) ? (r.gallery as string[]) : undefined,
+  };
+}
 
+function normalizePlanRow(row: unknown): Plan {
+  const r = row as Record<string, unknown>;
+  const features = Array.isArray(r.features) ? (r.features as string[]) : [];
+  const price = typeof r.price === 'number' ? r.price : Number(r.price ?? 0);
+  return {
+    id: String(r.id ?? ''),
+    name: String(r.name ?? ''),
+    price: Number.isFinite(price) ? price : 0,
+    currency: String(r.currency ?? '€'),
+    interval: String(r.interval ?? 'mes'),
+    features,
+    is_popular: Boolean(r.is_popular),
+  };
+}
+
+export async function getBusinesses(): Promise<Business[]> {
   const { data, error } = await supabase
     .from('businesses')
     .select('*')
+    .order('is_premium', { ascending: false })
     .order('is_recommended', { ascending: false });
 
   if (error) {
     console.error('Error fetching businesses:', error);
     return [];
   }
-  return data as Business[];
+  return (data ?? []).map(normalizeBusinessRow);
 }
 
 export async function getMyBusinesses(userId: string): Promise<Business[]> {
-  if (USE_MOCK_BUSINESSES) return mockBusinesses;
-
   const { data, error } = await supabase
     .from('businesses')
     .select('*')
@@ -48,12 +71,10 @@ export async function getMyBusinesses(userId: string): Promise<Business[]> {
     console.error('Error fetching my businesses:', error);
     return [];
   }
-  return data as Business[];
+  return (data ?? []).map(normalizeBusinessRow);
 }
 
 export async function getBusinessById(id: string): Promise<Business | null> {
-  if (USE_MOCK_BUSINESSES) return mockBusinesses.find(b => b.id === id) || null;
-
   const { data, error } = await supabase
     .from('businesses')
     .select('*')
@@ -64,12 +85,10 @@ export async function getBusinessById(id: string): Promise<Business | null> {
     console.error('Error fetching business:', error);
     return null;
   }
-  return data as Business;
+  return normalizeBusinessRow(data);
 }
 
 export async function getReviewsByBusiness(businessId: string): Promise<Review[]> {
-  if (USE_MOCK_REVIEWS) return mockReviews.filter(r => r.business_id === businessId);
-
   const { data, error } = await supabase
     .from('reviews')
     .select('*')
@@ -80,12 +99,11 @@ export async function getReviewsByBusiness(businessId: string): Promise<Review[]
     console.error('Error fetching reviews:', error);
     return [];
   }
-  return data as Review[];
+  return (data ?? []) as Review[];
 }
 
 export async function getMyReviewForBusiness(businessId: string, userId: string): Promise<Review | null> {
   if (!businessId || !userId) return null;
-  if (USE_MOCK_REVIEWS) return null;
 
   const { data, error } = await supabase
     .from('reviews')
@@ -110,8 +128,6 @@ export async function submitBusinessReview(params: {
   if (!businessId) return { ok: false, error: 'Negocio inválido' };
   if (rating < 1 || rating > 5) return { ok: false, error: 'La valoración debe estar entre 1 y 5' };
 
-  if (USE_MOCK_REVIEWS) return { ok: true };
-
   const { error } = await supabase.rpc('submit_business_review', {
     p_business_id: businessId,
     p_rating: rating,
@@ -132,10 +148,23 @@ export async function getPlans(): Promise<Plan[]> {
     .order('price', { ascending: true });
 
   if (error) {
-    console.error('Error fetching plans, using mock:', error);
-    return mockPlans;
+    console.error('Error fetching plans:', error);
+    return [];
   }
-  return (data && data.length > 0) ? data as Plan[] : mockPlans;
+  return (data ?? []).map(normalizePlanRow);
+}
+
+/** Actualiza el plan de la suscripción del usuario autenticado (RPC `set_my_subscription_plan`). */
+export async function setMySubscriptionPlan(planId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!planId?.trim()) return { ok: false, error: 'Plan inválido' };
+
+  const { error } = await supabase.rpc('set_my_subscription_plan', { p_plan_id: planId.trim() });
+
+  if (error) {
+    console.error('[plans] set_my_subscription_plan:', error.message);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }
 
 function currentMonthKey(): string {
@@ -145,7 +174,7 @@ function currentMonthKey(): string {
 }
 
 export async function trackBusinessVisit(businessId: string, visitorKey: string): Promise<void> {
-  if (!businessId || USE_MOCK_BUSINESSES) return;
+  if (!businessId) return;
 
   const {
     data: { session },
@@ -166,7 +195,6 @@ export async function trackBusinessVisit(businessId: string, visitorKey: string)
 
 /** Tras login: une visitas anónimas (localStorage) a la cuenta y limpia la clave. */
 export async function mergeAnonymousVisitsForUser(userId: string): Promise<void> {
-  if (USE_MOCK_BUSINESSES) return;
   const anonKey = getStoredVisitorKey();
   if (!anonKey || anonKey === userId) return;
 
@@ -182,14 +210,6 @@ export async function mergeAnonymousVisitsForUser(userId: string): Promise<void>
 }
 
 export async function getTopVisitedBusinessesOfMonth(limit = 6): Promise<TopVisitedBusiness[]> {
-  if (USE_MOCK_BUSINESSES) {
-    return mockBusinesses
-      .slice()
-      .sort((a, b) => b.review_count - a.review_count)
-      .slice(0, limit)
-      .map(b => ({ ...b, visits_month: b.review_count }));
-  }
-
   const { data: ranking, error: rankingError } = await supabase
     .rpc('get_top_visited_businesses_month', { _limit: limit });
 
@@ -212,7 +232,12 @@ export async function getTopVisitedBusinessesOfMonth(limit = 6): Promise<TopVisi
     return [];
   }
 
-  const byId = new Map((businesses as Business[]).map(b => [b.id, b]));
+  const byId = new Map(
+    (businesses ?? []).map(raw => {
+      const b = normalizeBusinessRow(raw);
+      return [b.id, b] as const;
+    })
+  );
   return rows
     .map(r => {
       const business = byId.get(r.business_id);
@@ -223,22 +248,6 @@ export async function getTopVisitedBusinessesOfMonth(limit = 6): Promise<TopVisi
 }
 
 export async function getMyBusinessMetrics(days = 30): Promise<BusinessMetricRow[]> {
-  if (USE_MOCK_BUSINESSES) {
-    return mockBusinesses.slice(0, 2).map((b, i) => ({
-      business_id: b.id,
-      business_name: b.name,
-      visits_month: 120 - i * 20,
-      visits_total: 540 - i * 100,
-      reviews_total: b.review_count,
-      rating_avg: b.rating,
-      daily_visits: Array.from({ length: days }).map((_, idx) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (days - 1 - idx));
-        return { date: d.toISOString().slice(0, 10), visits: Math.max(0, 2 + ((idx + i) % 9)) };
-      }),
-    }));
-  }
-
   const { data, error } = await supabase.rpc('get_my_business_metrics', { _days: days });
   if (error) {
     console.error('Error fetching my business metrics:', error);

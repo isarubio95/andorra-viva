@@ -7,7 +7,7 @@ import BusinessCard from '@/components/BusinessCard';
 import ReviewsPanel from '@/components/ReviewsPanel';
 import Footer from '@/components/Footer';
 import { getBusinesses, getTopVisitedBusinessesOfMonth, type TopVisitedBusiness } from '@/services/api';
-import type { Business } from '@/data/mockData';
+import type { Business } from '@/types/domain';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const categoryMap: Record<string, string[]> = {
@@ -47,20 +47,20 @@ export default function Index() {
         return cats.some(c => b.category.toLowerCase().includes(c.toLowerCase()));
       })
     : businesses;
-  const recommended = businesses.filter(b => b.is_recommended);
+  const premiumRecommendations = businesses.filter(b => b.is_premium);
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <HeroMap businesses={loading ? [] : businesses} onBusinessClick={setSelectedBusiness} />
       <CategoryBar selected={selectedCategory} onSelect={setSelectedCategory} />
-      {!loading && recommended.length > 0 && (
+      {!loading && premiumRecommendations.length > 0 && (
         <section className="container mx-auto px-4 pt-10">
           <h2 className="mb-6 flex items-center gap-2 text-xl font-bold">
-            <span>🏅</span> Nuestras recomendaciones
+            <span>🏅</span> Recomendaciones premium
           </h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {recommended.map(biz => (
+            {premiumRecommendations.map(biz => (
               <BusinessCard key={biz.id} business={biz} onClick={setSelectedBusiness} />
             ))}
           </div>

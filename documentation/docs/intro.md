@@ -15,7 +15,7 @@ Esta documentación describe la **lógica de negocio y de datos** de la aplicaci
 | [Usuarios, roles y planes](./usuarios-roles-y-planes) | `app_role`, `user_roles`, `subscriptions`, `get_my_access` |
 | [Visitas y métricas](./visitas-y-metricas) | `business_visits`, `visitor_key`, RPCs de tracking y ranking |
 | [Reseñas y comentarios](./resenas-y-comentarios) | Tabla `reviews`, `submit_business_review`, una reseña por usuario y negocio |
-| [Desarrollo local](./desarrollo) | Variables de entorno, datos mock, seed de usuarios de prueba |
+| [Desarrollo local](./desarrollo) | Variables de entorno, seed de usuarios de prueba |
 
 ## Principio general
 

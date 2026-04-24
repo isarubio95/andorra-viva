@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { getPlans } from '@/services/api';
 import type { UserRole } from '@/contexts/AuthContext';
-import type { Plan } from '@/data/mockData';
+import type { Plan } from '@/types/domain';
 
 export default function Signup() {
   const [searchParams] = useSearchParams();

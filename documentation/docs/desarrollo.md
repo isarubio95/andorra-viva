@@ -24,14 +24,7 @@ Variables típicas en **`.env`** (no commitear):
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
-### Modo mock
-
-Si defines:
-
-- `VITE_USE_MOCK_BUSINESSES=true` → listados y métricas de negocios usan datos de `mockData`.
-- `VITE_USE_MOCK_REVIEWS=true` → reseñas simuladas; no llama al RPC de envío real.
-
-Útil para UI sin backend.
+Los listados (negocios, planes, reseñas) y las métricas salen siempre de **Supabase**; hace falta proyecto configurado y migraciones aplicadas.
 
 ## Sitio de documentación (Docusaurus)
 

@@ -3,7 +3,7 @@ import { X, Star, MapPin, Clock, Phone, MessageCircle, Navigation, CheckCircle, 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getReviewsByBusiness, trackBusinessVisit } from '@/services/api';
-import type { Business, Review } from '@/data/mockData';
+import type { Business, Review } from '@/types/domain';
 import { getOrCreateVisitorKey } from '@/lib/visitor-key';
 import { useSyncOverlayWithHistory } from '@/hooks/use-sync-overlay-with-history';
 
@@ -43,7 +43,7 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
           >
             <X className="h-5 w-5" />
           </button>
-          {business.is_recommended && (
+          {business.is_premium && (
             <Badge className="absolute left-4 top-4 bg-premium text-premium-foreground border-0">
               <Medal className="mr-1 h-3.5 w-3.5" />
               Recomendado

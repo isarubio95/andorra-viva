@@ -1,5 +1,5 @@
 import BusinessCard from './BusinessCard';
-import type { Business } from '@/data/mockData';
+import type { Business } from '@/types/domain';
 
 interface BusinessDirectoryProps {
   businesses: Business[];

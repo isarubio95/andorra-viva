@@ -32,13 +32,13 @@ function CategoryButton({ cat, isActive, onSelect }: { cat: typeof categories[0]
   return (
     <button
       onClick={onSelect}
-      className={`group relative overflow-hidden rounded-xl aspect-[4/3] w-full transition-all hover:shadow-lg ${isActive ? 'ring-2 ring-accent ring-offset-2' : ''}`}
+      className={`group relative overflow-hidden rounded-xl aspect-4/3 w-full cursor-pointer transition-[transform,box-shadow,translate] duration-300 ease-in-out hover:shadow-md hover:-translate-y-1 ${isActive ? 'ring-2 ring-accent ring-offset-2' : ''}`}
     >
       <img
         src={cat.image}
         alt={cat.label}
         loading="lazy"
-        className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
       <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
@@ -99,7 +99,7 @@ export default function CategoryBar({ selected, onSelect }: CategoryBarProps) {
               <button
                 key={i}
                 onClick={() => api?.scrollTo(i)}
-                className={`h-2 rounded-full transition-all ${
+                className={`h-2 rounded-full transition-[width,background-color] duration-300 ease-out ${
                   i === current ? 'w-6 bg-accent' : 'w-2 bg-muted-foreground/30'
                 }`}
               />

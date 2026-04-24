@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { getBusinesses } from '@/services/api';
-import type { Business } from '@/data/mockData';
+import type { Business } from '@/types/domain';
 
 export default function Favorites() {
   const { user, loading: authLoading } = useAuth();

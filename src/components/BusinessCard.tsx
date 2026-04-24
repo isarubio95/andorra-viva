@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useToast } from '@/hooks/use-toast';
-import type { Business } from '@/data/mockData';
+import type { Business } from '@/types/domain';
 
 interface BusinessCardProps {
   business: Business;
@@ -36,7 +36,7 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           onClick(business);
         }
       }}
-      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-card text-left transition-all hover:shadow-lg hover:-translate-y-1"
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-card text-left transition-[transform,box-shadow,translate] duration-300 ease-in-out hover:shadow-md hover:-translate-y-1"
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -44,9 +44,9 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           src={business.image_url}
           alt={business.name}
           loading="lazy"
-          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]"
         />
-        {business.is_recommended && (
+        {business.is_premium && (
           <Badge className="absolute right-3 top-3 bg-premium text-premium-foreground border-0 text-xs font-bold">
             <Medal className="mr-1 h-3.5 w-3.5" />
             RECOMENDADO
@@ -55,7 +55,7 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
         <button
           type="button"
           onClick={handleFavorite}
-          className={`absolute right-3 bottom-3 cursor-pointer rounded-full p-1.5 transition-all ${
+          className={`absolute right-3 bottom-3 cursor-pointer rounded-full p-1.5 transition-colors duration-200 ease-out ${
             liked
               ? 'bg-destructive/10'
               : 'bg-card/80 hover:bg-card'
@@ -78,7 +78,11 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
         </p>
         <div className="mt-auto flex items-center justify-between pt-2">
           <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 fill-premium text-premium" />
+            <Star
+              className={`h-4 w-4 ${
+                business.is_premium ? 'fill-premium text-premium' : 'fill-muted-foreground/25 text-muted-foreground'
+              }`}
+            />
             <span className="text-sm font-semibold">{business.rating}</span>
           </div>
           <span className="text-xs text-muted-foreground">Ver más →</span>

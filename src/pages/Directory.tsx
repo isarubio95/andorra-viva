@@ -4,7 +4,7 @@ import Footer from '@/components/Footer';
 import BusinessCard from '@/components/BusinessCard';
 import ReviewsPanel from '@/components/ReviewsPanel';
 import { getBusinesses } from '@/services/api';
-import type { Business } from '@/data/mockData';
+import type { Business } from '@/types/domain';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';

@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, Star, BarChart3, Medal, Copy, QrCode, Download } from 'lucide-react';
+import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, BarChart3, Medal, Copy, QrCode, Download } from 'lucide-react';
 import QRCode from 'qrcode';
-import { getMyBusinesses, getPlans, getMyBusinessMetrics, type BusinessMetricRow } from '@/services/api';
-import type { Business, Plan } from '@/data/mockData';
+import {
+  getMyBusinesses,
+  getPlans,
+  getMyBusinessMetrics,
+  setMySubscriptionPlan,
+  type BusinessMetricRow,
+} from '@/services/api';
+import type { Business, Plan } from '@/types/domain';
 import BusinessCard from '@/components/BusinessCard';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
@@ -48,6 +54,7 @@ export default function UserDashboard() {
   const [changingRecommendedId, setChangingRecommendedId] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<BusinessMetricRow[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
+  const [mainTab, setMainTab] = useState('perfil');
 
   useEffect(() => {
     if (authLoading) return;
@@ -169,13 +176,14 @@ export default function UserDashboard() {
     if (!user?.id) return;
     if (nextPlanId === planId) return;
     setChangingPlan(true);
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({ plan_id: nextPlanId })
-      .eq('user_id', user.id);
+    const result = await setMySubscriptionPlan(nextPlanId);
 
-    if (error) {
-      toast({ title: 'No se pudo cambiar el plan', description: error.message, variant: 'destructive' });
+    if (!result.ok) {
+      toast({
+        title: 'No se pudo cambiar el plan',
+        description: result.error ?? 'Error desconocido',
+        variant: 'destructive',
+      });
     } else {
       toast({ title: 'Plan actualizado', description: `Nuevo plan: ${nextPlanId}` });
       await refreshProfile();
@@ -254,7 +262,7 @@ export default function UserDashboard() {
             </div>
           </div>
 
-          <Tabs defaultValue="perfil" className="space-y-6">
+          <Tabs value={mainTab} onValueChange={setMainTab} className="space-y-6">
             <TabsList
               className={cn(
                 'h-auto min-h-10 w-full max-w-full gap-1.5 p-1',
@@ -560,7 +568,6 @@ export default function UserDashboard() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Star className="h-5 w-5" />
                       Tu Plan
                     </CardTitle>
                     <CardDescription>
@@ -624,11 +631,6 @@ export default function UserDashboard() {
                                     : 'border-border hover:border-muted-foreground/30 hover:bg-muted/50'
                                 } ${changingPlan ? 'pointer-events-none opacity-70' : ''}`}
                               >
-                                {plan.is_popular && (
-                                  <Badge className="absolute -top-2.5 right-4 bg-accent text-accent-foreground border-0 text-xs">
-                                    Más popular
-                                  </Badge>
-                                )}
                                 <div className="flex items-start justify-between gap-4">
                                   <div>
                                     <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
@@ -641,7 +643,7 @@ export default function UserDashboard() {
                                   )}
                                 </div>
                                 <div className="mt-4 grid gap-1.5">
-                                  {plan.features.slice(0, 5).map(f => (
+                                  {(Array.isArray(plan.features) ? plan.features : []).slice(0, 5).map(f => (
                                     <div key={f} className="text-xs text-muted-foreground">
                                       - {f}
                                     </div>

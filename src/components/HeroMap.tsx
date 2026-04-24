@@ -2,7 +2,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import { Star } from 'lucide-react';
 import { useEffect } from 'react';
-import type { Business } from '@/data/mockData';
+import type { Business } from '@/types/domain';
 import 'leaflet/dist/leaflet.css';
 
 // Fix leaflet default icon
@@ -58,16 +58,25 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
           <Marker key={biz.id} position={[biz.latitude, biz.longitude]} icon={defaultIcon}>
             <Popup>
               <div className="min-w-[180px]">
-                <h3 className="font-bold text-sm">{biz.name}</h3>
-                <p className="text-xs text-gray-500">{biz.category} · {biz.location}</p>
+                <h3 className="font-bold text-sm leading-tight">{biz.name}</h3>
+                {biz.image_url ? (
+                  <img
+                    src={biz.image_url}
+                    alt=""
+                    className="mt-1.5 h-20 w-full rounded-md border border-border/70 object-cover"
+                  />
+                ) : null}
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {biz.category} · {biz.location}
+                </p>
                 <div className="flex items-center gap-1 mt-1">
                   <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                   <span className="text-xs font-medium">{biz.rating}</span>
-                  <span className="text-xs text-gray-400">({biz.review_count})</span>
+                  <span className="text-xs text-muted-foreground">({biz.review_count})</span>
                 </div>
                 <button
                   onClick={() => onBusinessClick(biz)}
-                  className="mt-2 w-full rounded bg-[hsl(160,30%,25%)] px-2 py-1 text-xs font-medium text-white hover:opacity-90"
+                  className="mt-2 w-full cursor-pointer rounded bg-[hsl(160,30%,25%)] px-2 py-1 text-xs font-medium text-white hover:opacity-90"
                 >
                   Ver detalles
                 </button>
