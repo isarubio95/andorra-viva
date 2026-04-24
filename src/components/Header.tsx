@@ -119,7 +119,10 @@ export default function Header() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="text-destructive hover:bg-muted focus:bg-muted focus:text-destructive data-highlighted:bg-muted data-highlighted:text-destructive"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Cerrar Sesión
                 </DropdownMenuItem>
@@ -200,7 +203,7 @@ export default function Header() {
                 )}
                 <Button
                   variant="ghost"
-                  className="justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  className="justify-start text-destructive hover:bg-muted hover:text-destructive focus-visible:bg-muted focus-visible:text-destructive"
                   onClick={() => {
                     setMobileOpen(false);
                     void handleSignOut();
