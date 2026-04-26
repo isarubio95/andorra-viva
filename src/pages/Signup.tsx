@@ -18,7 +18,7 @@ export default function Signup() {
   const next = searchParams.get('next');
   const [step, setStep] = useState<'role' | 'plan' | 'form'>(reviewMode ? 'form' : 'role');
   const [selectedRole, setSelectedRole] = useState<UserRole>('basic');
-  const [selectedPlan, setSelectedPlan] = useState<string>('free');
+  const [selectedPlan, setSelectedPlan] = useState<string>('basico');
   const [plans, setPlans] = useState<Plan[]>([]);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -259,7 +259,7 @@ export default function Signup() {
                 <ArrowLeft className="h-4 w-4" /> Atrás
               </Button>
               <Button className="flex-1" onClick={() => setStep('form')}>
-                Continuar con {plans.find(p => p.id === selectedPlan)?.name || 'Free'}
+                Continuar con {plans.find(p => p.id === selectedPlan)?.name || 'Básico'}
               </Button>
             </div>
           </div>
@@ -279,7 +279,7 @@ export default function Signup() {
                 {reviewMode
                   ? 'Completa tus datos para poder valorar este negocio'
                   : selectedRole === 'professional'
-                  ? `Plan ${plans.find(p => p.id === selectedPlan)?.name || 'Free'} · Completa tus datos`
+                  ? `Plan ${plans.find(p => p.id === selectedPlan)?.name || 'Básico'} · Completa tus datos`
                   : 'Completa tus datos para explorar el directorio'}
               </CardDescription>
             </CardHeader>
@@ -327,7 +327,7 @@ export default function Signup() {
                   {loading ? 'Creando cuenta…' : 'Crear Cuenta'}
                 </Button>
                 {!reviewMode && (
-                  <button type="button" onClick={goBack} className="text-sm text-muted-foreground hover:text-foreground">
+                  <button type="button" onClick={goBack} className="text-sm text-muted-foreground hover:text-foreground cursor-pointer">
                     ← {selectedRole === 'professional' ? 'Cambiar plan' : 'Cambiar tipo de cuenta'}
                   </button>
                 )}

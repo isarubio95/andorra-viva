@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useToast } from '@/hooks/use-toast';
+import { isOwnBusiness } from '@/lib/business-access';
 import type { Business } from '@/types/domain';
 
 interface BusinessCardProps {
@@ -15,6 +16,8 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { toast } = useToast();
   const liked = isFavorite(business.id);
+  const own = isOwnBusiness(user?.id, business);
+  const showFavoriteBtn = !own || liked;
 
   const handleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -22,7 +25,7 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
       toast({ title: 'Inicia sesión para guardar favoritos', variant: 'destructive' });
       return;
     }
-    await toggleFavorite(business.id);
+    await toggleFavorite(business.id, business.owner_id);
   };
 
   return (
@@ -52,22 +55,24 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
             RECOMENDADO
           </Badge>
         )}
-        <button
-          type="button"
-          onClick={handleFavorite}
-          className={`absolute right-3 bottom-3 cursor-pointer rounded-full p-1.5 transition-colors duration-200 ease-out ${
-            liked
-              ? 'bg-destructive/10'
-              : 'bg-card/80 hover:bg-card'
-          }`}
-          aria-label={liked ? 'Quitar de favoritos' : 'Añadir a favoritos'}
-        >
-          <Heart
-            className={`h-4 w-4 transition-colors ${
-              liked ? 'fill-destructive text-destructive' : 'text-muted-foreground'
+        {showFavoriteBtn && (
+          <button
+            type="button"
+            onClick={handleFavorite}
+            className={`absolute right-3 bottom-3 cursor-pointer rounded-full p-1.5 transition-colors duration-200 ease-out ${
+              liked
+                ? 'bg-destructive/10'
+                : 'bg-card/80 hover:bg-card'
             }`}
-          />
-        </button>
+            aria-label={liked ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+          >
+            <Heart
+              className={`h-4 w-4 transition-colors ${
+                liked ? 'fill-destructive text-destructive' : 'text-muted-foreground'
+              }`}
+            />
+          </button>
+        )}
       </div>
 
       {/* Info */}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UtensilsCrossed, Sparkles, Music, ShoppingBag, MountainSnow, Landmark } from 'lucide-react';
 import catGastro from '@/assets/cat-gastronomia.jpg';
 import catWellness from '@/assets/cat-wellness.jpg';
@@ -23,16 +24,12 @@ const categories = [
   { label: 'Cultura', icon: Landmark, image: catCultura },
 ];
 
-interface CategoryBarProps {
-  selected: string | null;
-  onSelect: (cat: string | null) => void;
-}
-
-function CategoryButton({ cat, isActive, onSelect }: { cat: typeof categories[0]; isActive: boolean; onSelect: () => void }) {
+function CategoryButton({ cat, onSelect }: { cat: typeof categories[0]; onSelect: () => void }) {
   return (
     <button
+      type="button"
       onClick={onSelect}
-      className={`group relative overflow-hidden rounded-xl aspect-4/3 w-full cursor-pointer transition-[transform,box-shadow,translate] duration-300 ease-in-out hover:shadow-md hover:-translate-y-1 ${isActive ? 'ring-2 ring-accent ring-offset-2' : ''}`}
+      className="group relative overflow-hidden rounded-xl aspect-4/3 w-full cursor-pointer transition-[transform,box-shadow,translate] duration-300 ease-in-out hover:shadow-md hover:-translate-y-1"
     >
       <img
         src={cat.image}
@@ -49,8 +46,16 @@ function CategoryButton({ cat, isActive, onSelect }: { cat: typeof categories[0]
   );
 }
 
-export default function CategoryBar({ selected, onSelect }: CategoryBarProps) {
+export default function CategoryBar() {
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
+
+  const goToDirectory = useCallback(
+    (grupo: string) => {
+      navigate(`/directorio?grupo=${encodeURIComponent(grupo)}`);
+    },
+    [navigate]
+  );
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
@@ -80,18 +85,11 @@ export default function CategoryBar({ selected, onSelect }: CategoryBarProps) {
             setApi={setApi}
           >
             <CarouselContent className="-ml-3">
-              {categories.map(cat => {
-                const isActive = selected === cat.label;
-                return (
-                  <CarouselItem key={cat.label} className="pl-3 basis-[44%]">
-                    <CategoryButton
-                      cat={cat}
-                      isActive={isActive}
-                      onSelect={() => onSelect(isActive ? null : cat.label)}
-                    />
-                  </CarouselItem>
-                );
-              })}
+              {categories.map(cat => (
+                <CarouselItem key={cat.label} className="pl-3 basis-[44%]">
+                  <CategoryButton cat={cat} onSelect={() => goToDirectory(cat.label)} />
+                </CarouselItem>
+              ))}
             </CarouselContent>
           </Carousel>
           <div className="flex justify-center gap-1.5 mt-4">
@@ -108,17 +106,9 @@ export default function CategoryBar({ selected, onSelect }: CategoryBarProps) {
         </div>
       ) : (
         <div className="grid grid-cols-6 gap-4">
-          {categories.map(cat => {
-            const isActive = selected === cat.label;
-            return (
-              <CategoryButton
-                key={cat.label}
-                cat={cat}
-                isActive={isActive}
-                onSelect={() => onSelect(isActive ? null : cat.label)}
-              />
-            );
-          })}
+          {categories.map(cat => (
+            <CategoryButton key={cat.label} cat={cat} onSelect={() => goToDirectory(cat.label)} />
+          ))}
         </div>
       )}
     </section>

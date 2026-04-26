@@ -18,11 +18,11 @@ export default function PricingSection({ plans }: PricingSectionProps) {
           </p>
         </div>
 
-        <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-3">
+        <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-3 md:items-stretch">
           {plans.map(plan => (
             <div
               key={plan.id}
-              className={`relative flex flex-col rounded-2xl border bg-card p-8 transition-shadow hover:shadow-xl ${
+              className={`relative flex h-full min-h-0 flex-col rounded-2xl border bg-card p-8 transition-shadow hover:shadow-xl ${
                 plan.is_popular ? 'ring-2 ring-accent' : ''
               }`}
             >
@@ -43,7 +43,7 @@ export default function PricingSection({ plans }: PricingSectionProps) {
                 )}
               </div>
 
-              <ul className="mt-8 flex flex-1 flex-col gap-3">
+              <ul className="mt-8 flex min-h-0 flex-1 flex-col gap-3 content-start">
                 {plan.features.map(f => (
                   <li key={f} className="flex items-start gap-2 text-sm">
                     <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" />
@@ -52,12 +52,14 @@ export default function PricingSection({ plans }: PricingSectionProps) {
                 ))}
               </ul>
 
-              <Button
-                className={`mt-8 w-full ${plan.is_popular ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`}
-                variant={plan.is_popular ? 'default' : 'outline'}
-              >
-                {plan.price === 0 ? 'Empezar gratis' : 'Elegir plan'}
-              </Button>
+              <div className="mt-auto shrink-0 pt-8">
+                <Button
+                  className={`w-full ${plan.is_popular ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`}
+                  variant={plan.is_popular ? 'default' : 'outline'}
+                >
+                  {plan.price === 0 ? 'Empezar gratis' : 'Elegir plan'}
+                </Button>
+              </div>
             </div>
           ))}
         </div>

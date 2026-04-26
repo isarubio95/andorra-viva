@@ -8,42 +8,49 @@ type FeatureItem = {
   description: ReactNode;
 };
 
+/** Mismas claves que `CATEGORY_GROUP_MAP` en la app (`src/constants/categoryGroups.ts`) */
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Visitas y métricas',
-    description: (
-      <>
-        Regla de una visita por visitante y negocio al mes (UTC), clave anónima o{' '}
-        <code>auth.uid()</code>, y fusión al iniciar sesión.
-      </>
-    ),
+    title: 'Gastronomía',
+    description: <>Restaurantes y experiencias culinarias en el país.</>,
   },
   {
-    title: 'Roles y planes',
-    description: (
-      <>
-        <code>basic</code>, <code>professional</code>, <code>admin</code>; suscripciones y{' '}
-        <code>get_my_access</code> para <code>has_pro_access</code>.
-      </>
-    ),
+    title: 'Wellness',
+    description: <>Spas, bienestar y cuidado personal.</>,
   },
   {
-    title: 'Reseñas',
-    description: (
-      <>
-        Valoración 1–5 y comentario opcional; una reseña por usuario y negocio, editable vía RPC.
-      </>
-    ),
+    title: 'Noche',
+    description: <>Bares y discotecas para salir de fiesta.</>,
+  },
+  {
+    title: 'Shopping',
+    description: <>Tiendas y compras en Andorra.</>,
+  },
+  {
+    title: 'Montaña',
+    description: <>Hoteles y actividades al aire libre.</>,
+  },
+  {
+    title: 'Cultura',
+    description: <>Museos y propuestas culturales.</>,
   },
 ];
+
+function directorioHref(grupo: string): string {
+  return `/directorio?grupo=${encodeURIComponent(grupo)}`;
+}
 
 function Feature({title, description}: FeatureItem) {
   return (
     <div className={clsx('col col--4')}>
-      <div className="text--center padding-horiz--md">
-        <Heading as="h3">{title}</Heading>
-        <p>{description}</p>
-      </div>
+      <a href={directorioHref(title)} className={styles.cardLink}>
+        <div className="text--center padding-horiz--md">
+          <Heading as="h3" className={styles.cardTitle}>
+            {title}
+          </Heading>
+          <p className={styles.cardDescription}>{description}</p>
+        </div>
+      </a>
     </div>
   );
 }

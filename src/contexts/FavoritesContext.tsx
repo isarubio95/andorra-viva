@@ -5,14 +5,15 @@ import { useAuth } from '@/contexts/AuthContext';
 interface FavoritesContextType {
   favorites: Set<string>;
   loading: boolean;
-  toggleFavorite: (businessId: string) => Promise<void>;
+  /** `ownerId`: si coincide con el usuario autenticado, no se permite añadir a favoritos (sí quitar). */
+  toggleFavorite: (businessId: string, ownerId?: string | null) => Promise<void>;
   isFavorite: (businessId: string) => boolean;
 }
 
 const FavoritesContext = createContext<FavoritesContextType>({
   favorites: new Set(),
   loading: true,
-  toggleFavorite: async () => {},
+  toggleFavorite: async () => undefined,
   isFavorite: () => false,
 });
 
@@ -44,10 +45,11 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     fetchFavorites();
   }, [user]);
 
-  const toggleFavorite = useCallback(async (businessId: string) => {
+  const toggleFavorite = useCallback(async (businessId: string, ownerId?: string | null) => {
     if (!user) return;
 
     const isFav = favorites.has(businessId);
+    if (!isFav && ownerId && ownerId === user.id) return;
 
     // Optimistic update
     setFavorites(prev => {
@@ -57,15 +59,29 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     });
 
     if (isFav) {
-      await supabase
+      const { error } = await supabase
         .from('favorites')
         .delete()
         .eq('user_id', user.id)
         .eq('business_id', businessId);
+      if (error) {
+        setFavorites(prev => {
+          const next = new Set(prev);
+          next.add(businessId);
+          return next;
+        });
+      }
     } else {
-      await supabase
+      const { error } = await supabase
         .from('favorites')
         .insert({ user_id: user.id, business_id: businessId });
+      if (error) {
+        setFavorites(prev => {
+          const next = new Set(prev);
+          next.delete(businessId);
+          return next;
+        });
+      }
     }
   }, [user, favorites]);
 

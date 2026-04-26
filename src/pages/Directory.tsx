@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BusinessCard from '@/components/BusinessCard';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SlidersHorizontal, X } from 'lucide-react';
+import { CATEGORY_GROUP_MAP } from '@/constants/categoryGroups';
 
 const ALL_CATEGORIES = [
   'Restaurante',
@@ -36,6 +38,7 @@ const AGE_OPTIONS = [
 ];
 
 export default function Directory() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
@@ -45,6 +48,21 @@ export default function Directory() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([1, 3]);
   const [minAge, setMinAge] = useState<number>(0);
+
+  useEffect(() => {
+    const grupo = searchParams.get('grupo');
+    const raw = searchParams.get('categoria');
+    if (grupo && CATEGORY_GROUP_MAP[grupo]) {
+      setSelectedCategories(CATEGORY_GROUP_MAP[grupo]);
+      return;
+    }
+    if (raw) {
+      const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+      setSelectedCategories(parts);
+      return;
+    }
+    setSelectedCategories([]);
+  }, [searchParams]);
 
   useEffect(() => {
     setLoading(true);
@@ -63,6 +81,12 @@ export default function Directory() {
     setSelectedCategories([]);
     setPriceRange([1, 3]);
     setMinAge(0);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.delete('grupo');
+      next.delete('categoria');
+      return next;
+    });
   };
 
   const hasActiveFilters = selectedCategories.length > 0 || priceRange[0] > 1 || priceRange[1] < 3 || minAge > 0;
@@ -92,7 +116,8 @@ export default function Directory() {
   }, [filtered]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
+      <div className="flex flex-1 flex-col">
       <Header />
 
       {/* Hero */}
@@ -241,6 +266,7 @@ export default function Directory() {
             No se encontraron negocios con los filtros seleccionados.
           </p>
         )}
+      </div>
       </div>
 
       <Footer />

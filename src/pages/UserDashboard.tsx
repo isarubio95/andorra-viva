@@ -94,7 +94,7 @@ export default function UserDashboard() {
 
   const isPro = hasProAccess;
   const canManageRecommendation =
-    role === 'admin' || (planId === 'enterprise' && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing'));
+    role === 'admin' || (planId === 'premium' && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing'));
   const accountLabel =
     role === 'admin' ? 'Admin' : isPro ? 'Profesional' : 'Usuario';
   const currentRecommendedId = myBusinesses.find(b => b.is_recommended)?.id ?? null;
@@ -195,8 +195,8 @@ export default function UserDashboard() {
     if (!user?.id) return;
     if (!canManageRecommendation) {
       toast({
-        title: 'Plan Enterprise requerido',
-        description: 'Solo cuentas enterprise pueden destacar un negocio como recomendado.',
+        title: 'Plan Premium requerido',
+        description: 'Solo el plan Premium permite destacar un negocio y mostrar la insignia Premium.',
         variant: 'destructive',
       });
       return;
@@ -314,7 +314,7 @@ export default function UserDashboard() {
                         >
                           {accountLabel}
                         </Badge>
-                        {planId && planId !== 'free' && (
+                        {planId && planId !== 'basico' && planId !== 'free' && (
                           <span className="text-xs text-muted-foreground">
                             Plan: <span className="font-medium text-foreground">{planId}</span>
                           </span>
@@ -366,7 +366,7 @@ export default function UserDashboard() {
                         <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">
                           <p className="font-medium text-foreground">Distintivo recomendado</p>
                           <p>
-                            Solo puedes destacar un negocio. Requiere plan enterprise activo o en trial.
+                            Solo puedes destacar un negocio. Requiere plan Premium activo o en prueba.
                           </p>
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">
@@ -404,27 +404,16 @@ export default function UserDashboard() {
                                   {getReviewUrl(biz.id)}
                                 </p>
                                 <div className="flex flex-col gap-2">
-                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      className="w-full min-w-0 cursor-pointer justify-center"
-                                      onClick={() => handleCopyReviewUrl(biz.id)}
-                                    >
-                                      <Copy className="mr-2 h-4 w-4 shrink-0" />
-                                      Copiar enlace
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      className="w-full min-w-0 cursor-pointer justify-center"
-                                      onClick={() => window.open(getReviewUrl(biz.id), '_blank', 'noopener,noreferrer')}
-                                    >
-                                      Probar flujo
-                                    </Button>
-                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full min-w-0 cursor-pointer justify-center"
+                                    onClick={() => handleCopyReviewUrl(biz.id)}
+                                  >
+                                    <Copy className="mr-2 h-4 w-4 shrink-0" />
+                                    Copiar enlace
+                                  </Button>
                                   <Button
                                     type="button"
                                     className="w-full min-w-0 cursor-pointer justify-center"
@@ -440,7 +429,7 @@ export default function UserDashboard() {
                         </div>
                         {!canManageRecommendation && (
                           <p className="text-xs text-muted-foreground">
-                            Para activar el distintivo recomendado necesitas plan enterprise con estado active o trialing.
+                            Para la insignia Premium visible en el directorio necesitas plan Premium con estado activo o en prueba.
                           </p>
                         )}
                       </div>
@@ -509,7 +498,7 @@ export default function UserDashboard() {
                               </div>
                               <div className="rounded-lg border border-border p-3 text-center">
                                 <p className="text-xl font-bold text-foreground">{row.reviews_total}</p>
-                                <p className="text-xs text-muted-foreground">Resenas totales</p>
+                                <p className="text-xs text-muted-foreground">Reseñas totales</p>
                               </div>
                               <div className="rounded-lg border border-border p-3 text-center">
                                 <p className="text-xl font-bold text-foreground">{row.rating_avg.toFixed(1)}</p>
@@ -589,22 +578,24 @@ export default function UserDashboard() {
                     </div>
 
                     {plansLoading ? (
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-4 sm:grid-cols-2 sm:items-stretch">
                         {Array.from({ length: 4 }).map((_, i) => (
-                          <div key={i} className="relative flex flex-col rounded-xl border p-5">
+                          <div key={i} className="relative flex h-full min-h-0 flex-col rounded-xl border p-5">
                             <Skeleton className="h-5 w-28" />
                             <Skeleton className="mt-2 h-4 w-24" />
-                            <div className="mt-4 space-y-2">
+                            <div className="mt-4 min-h-0 flex-1 space-y-2">
                               <Skeleton className="h-3 w-5/6" />
                               <Skeleton className="h-3 w-4/6" />
                               <Skeleton className="h-3 w-3/6" />
                             </div>
-                            <Skeleton className="mt-4 h-9 w-full rounded-md" />
+                            <div className="mt-auto shrink-0 pt-4">
+                              <Skeleton className="h-9 w-full rounded-md" />
+                            </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-4 sm:grid-cols-2 sm:items-stretch">
                         {plans
                           .filter(p => p.id !== 'free')
                           .map(plan => {
@@ -625,13 +616,13 @@ export default function UserDashboard() {
                                     handleChangePlan(plan.id);
                                   }
                                 }}
-                                className={`relative flex cursor-pointer flex-col rounded-xl border p-5 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                                className={`relative flex h-full min-h-0 cursor-pointer flex-col rounded-xl border p-5 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                                   selected
                                     ? 'border-primary bg-primary/5 shadow-sm'
                                     : 'border-border hover:border-muted-foreground/30 hover:bg-muted/50'
                                 } ${changingPlan ? 'pointer-events-none opacity-70' : ''}`}
                               >
-                                <div className="flex items-start justify-between gap-4">
+                                <div className="shrink-0 flex items-start justify-between gap-4">
                                   <div>
                                     <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
                                     <p className="mt-1 text-sm text-muted-foreground">
@@ -642,14 +633,14 @@ export default function UserDashboard() {
                                     <Badge variant="default" className="h-fit">Actual</Badge>
                                   )}
                                 </div>
-                                <div className="mt-4 grid gap-1.5">
+                                <div className="mt-4 min-h-0 flex-1 grid gap-1.5 content-start">
                                   {(Array.isArray(plan.features) ? plan.features : []).slice(0, 5).map(f => (
                                     <div key={f} className="text-xs text-muted-foreground">
                                       - {f}
                                     </div>
                                   ))}
                                 </div>
-                                <div className="mt-4">
+                                <div className="mt-auto shrink-0 pt-4">
                                   <div
                                     className={cn(
                                       buttonVariants({

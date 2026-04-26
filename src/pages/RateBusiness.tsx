@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getBusinessById, getMyReviewForBusiness, submitBusinessReview } from '@/services/api';
 import type { Business } from '@/types/domain';
 import { useToast } from '@/hooks/use-toast';
+import { isOwnBusiness } from '@/lib/business-access';
 
 export default function RateBusiness() {
   const { businessId } = useParams();
@@ -40,14 +41,15 @@ export default function RateBusiness() {
   }, [businessId]);
 
   useEffect(() => {
-    if (authLoading || !user || !businessId) return;
+    if (authLoading || !user || !businessId || !business) return;
+    if (isOwnBusiness(user.id, business)) return;
     getMyReviewForBusiness(businessId, user.id).then(review => {
       if (!review) return;
       setHasExistingReview(true);
       setRating(review.rating);
       setComment(review.comment ?? '');
     });
-  }, [authLoading, user, businessId]);
+  }, [authLoading, user, businessId, business]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -58,6 +60,14 @@ export default function RateBusiness() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (business && user && isOwnBusiness(user.id, business)) {
+      toast({
+        title: 'No disponible',
+        description: 'No puedes valorar un negocio del que eres titular.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (!businessId || rating < 1) {
       toast({ title: 'Selecciona una valoración de 1 a 5 estrellas', variant: 'destructive' });
       return;
@@ -108,7 +118,18 @@ export default function RateBusiness() {
               </CardDescription>
             </CardHeader>
 
-            {business && (
+            {business && isOwnBusiness(user.id, business) && (
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  No puedes enviar reseñas sobre un negocio del que eres titular. Comparte el enlace de valoración con
+                  tus clientes desde tu panel.
+                </p>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link to="/mi-cuenta">Ir a mi cuenta</Link>
+                </Button>
+              </CardContent>
+            )}
+            {business && !isOwnBusiness(user.id, business) && (
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="space-y-2">

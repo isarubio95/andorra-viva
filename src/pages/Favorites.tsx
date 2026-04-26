@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { getBusinesses } from '@/services/api';
+import { isOwnBusiness } from '@/lib/business-access';
 import type { Business } from '@/types/domain';
 
 export default function Favorites() {
@@ -39,7 +40,9 @@ export default function Favorites() {
     };
   }, []);
 
-  const favoriteBusinesses = allBusinesses.filter(b => favorites.has(b.id));
+  const favoriteBusinesses = allBusinesses.filter(
+    b => favorites.has(b.id) && user && !isOwnBusiness(user.id, b)
+  );
 
   if (authLoading || !user) {
     return null;
