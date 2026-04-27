@@ -12,6 +12,7 @@ dist
 documentation/build
 dist-ssr
 *.local
+package.txt
 
 # Env (credenciales locales)
 .env
