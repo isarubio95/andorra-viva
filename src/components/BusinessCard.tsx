@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Star, Heart, Medal } from 'lucide-react';
+import { BUSINESS_IMAGE_FALLBACK, resolveBusinessImageUrl } from '@/lib/business-image';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -12,7 +14,12 @@ interface BusinessCardProps {
 }
 
 export default function BusinessCard({ business, onClick }: BusinessCardProps) {
+  const [imgSrc, setImgSrc] = useState(() => resolveBusinessImageUrl(business.image_url));
   const { user } = useAuth();
+
+  useEffect(() => {
+    setImgSrc(resolveBusinessImageUrl(business.image_url));
+  }, [business.id, business.image_url]);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { toast } = useToast();
   const liked = isFavorite(business.id);
@@ -44,9 +51,10 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <img
-          src={business.image_url}
+          src={`${imgSrc}${imgSrc.startsWith('http') ? `?v=${business.id}` : ''}`}
           alt={business.name}
           loading="lazy"
+          onError={() => setImgSrc(BUSINESS_IMAGE_FALLBACK)}
           className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]"
         />
         {business.is_premium && (

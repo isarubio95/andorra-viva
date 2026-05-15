@@ -4,6 +4,7 @@ import { Heart } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BusinessCard from '@/components/BusinessCard';
+import ReviewsPanel from '@/components/ReviewsPanel';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -17,6 +18,7 @@ export default function Favorites() {
   const navigate = useNavigate();
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -66,7 +68,7 @@ export default function Favorites() {
           ) : favoriteBusinesses.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2">
               {favoriteBusinesses.map(biz => (
-                <BusinessCard key={biz.id} business={biz} onClick={() => navigate('/directorio')} />
+                <BusinessCard key={biz.id} business={biz} onClick={setSelectedBusiness} />
               ))}
             </div>
           ) : (
@@ -86,6 +88,10 @@ export default function Favorites() {
         </div>
       </main>
       <Footer />
+
+      {selectedBusiness && (
+        <ReviewsPanel business={selectedBusiness} onClose={() => setSelectedBusiness(null)} />
+      )}
     </div>
   );
 }

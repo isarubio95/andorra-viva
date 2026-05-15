@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mountain, Menu, X, LogOut, User, Store, Heart } from 'lucide-react';
+import { Mountain, Menu, X, LogOut, User, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -105,8 +105,7 @@ export default function Header() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => navigate('/favoritos')}>
-                  <Heart className="mr-2 h-4 w-4" />
-                  Mis favoritos
+                  Favoritos
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/mi-cuenta')}>
                   <User className="mr-2 h-4 w-4" />
@@ -172,16 +171,15 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            <Link
-              to="/favoritos"
-              className={`flex items-center gap-2 rounded-lg px-3 py-3 text-base font-medium transition-colors hover:bg-muted ${
-                user ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
-              onClick={() => setMobileOpen(false)}
-            >
-              <Heart className={`h-5 w-5 ${user ? 'text-destructive' : ''}`} />
-              Mis favoritos
-            </Link>
+            {user ? (
+              <Link
+                to="/favoritos"
+                className="rounded-lg px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-muted"
+                onClick={() => setMobileOpen(false)}
+              >
+                Favoritos
+              </Link>
+            ) : null}
           </nav>
 
           <div className="mt-auto border-t border-border px-4 py-4">

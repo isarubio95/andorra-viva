@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed:test-users": "node scripts/seed-test-users-and-visits.mjs"
+    "seed:test-users": "node scripts/seed-test-users-and-visits.mjs",
+    "seed:assets": "node scripts/download-seed-assets.mjs",
+    "seed:businesses": "node scripts/download-seed-assets.mjs && node scripts/seed-andorra-businesses.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

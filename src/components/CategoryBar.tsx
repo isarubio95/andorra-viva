@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UtensilsCrossed, Sparkles, Music, ShoppingBag, MountainSnow, Landmark } from 'lucide-react';
+import { UtensilsCrossed, BedDouble, Music, Map, ShoppingBag, Sparkles } from 'lucide-react';
 import catGastro from '@/assets/cat-gastronomia.jpg';
-import catWellness from '@/assets/cat-wellness.jpg';
-import catNoche from '@/assets/cat-noche.jpg';
-import catShopping from '@/assets/cat-shopping.jpg';
 import catMontana from '@/assets/cat-montana.jpg';
+import catNoche from '@/assets/cat-noche.jpg';
 import catCultura from '@/assets/cat-cultura.jpg';
+import catShopping from '@/assets/cat-shopping.jpg';
+import catWellness from '@/assets/cat-wellness.jpg';
+import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Carousel,
@@ -15,14 +16,22 @@ import {
   type CarouselApi,
 } from '@/components/ui/carousel';
 
-const categories = [
-  { label: 'Gastronomía', icon: UtensilsCrossed, image: catGastro },
-  { label: 'Wellness', icon: Sparkles, image: catWellness },
-  { label: 'Noche', icon: Music, image: catNoche },
-  { label: 'Shopping', icon: ShoppingBag, image: catShopping },
-  { label: 'Montaña', icon: MountainSnow, image: catMontana },
-  { label: 'Cultura', icon: Landmark, image: catCultura },
-];
+const CATEGORY_UI: Record<
+  (typeof BUSINESS_CATEGORIES)[number],
+  { icon: typeof UtensilsCrossed; image: string }
+> = {
+  'Gastronomía': { icon: UtensilsCrossed, image: catGastro },
+  'Alojamiento': { icon: BedDouble, image: catMontana },
+  'Ocio y entretenimiento': { icon: Music, image: catNoche },
+  'Turismo y experiencias': { icon: Map, image: catCultura },
+  'Compras': { icon: ShoppingBag, image: catShopping },
+  'Bienestar': { icon: Sparkles, image: catWellness },
+};
+
+const categories = BUSINESS_CATEGORIES.map(label => ({
+  label,
+  ...CATEGORY_UI[label],
+}));
 
 function CategoryButton({ cat, onSelect }: { cat: typeof categories[0]; onSelect: () => void }) {
   return (

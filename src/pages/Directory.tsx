@@ -13,17 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { CATEGORY_GROUP_MAP } from '@/constants/categoryGroups';
-
-const ALL_CATEGORIES = [
-  'Restaurante',
-  'SPA & Wellness',
-  'Hotel',
-  'Bar',
-  'Discoteca',
-  'Tienda',
-  'Museo',
-  'Actividades',
-];
+import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 
 const PRICE_LABELS: Record<number, string> = {
   1: '€',
@@ -71,6 +61,14 @@ export default function Directory() {
       .finally(() => setLoading(false));
   }, []);
 
+  /** Abre el detalle cuando llegamos desde favoritos u otro enlace con `?negocio=`. */
+  useEffect(() => {
+    const id = searchParams.get('negocio');
+    if (!id || businesses.length === 0) return;
+    const b = businesses.find(x => x.id === id);
+    if (b) setSelectedBusiness(b);
+  }, [searchParams, businesses]);
+
   const toggleCategory = (cat: string) => {
     setSelectedCategories(prev =>
       prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
@@ -93,7 +91,7 @@ export default function Directory() {
 
   const filtered = useMemo(() => {
     return businesses.filter(b => {
-      if (selectedCategories.length > 0 && !selectedCategories.some(c => b.category.toLowerCase().includes(c.toLowerCase()))) {
+      if (selectedCategories.length > 0 && !selectedCategories.includes(b.category)) {
         return false;
       }
       if (b.price_range < priceRange[0] || b.price_range > priceRange[1]) {
@@ -171,7 +169,7 @@ export default function Directory() {
               <div>
                 <h3 className="mb-3 text-sm font-semibold text-foreground">Categorías</h3>
                 <div className="flex flex-col gap-2">
-                  {ALL_CATEGORIES.map(cat => (
+                  {BUSINESS_CATEGORIES.map(cat => (
                     <label key={cat} className="flex items-center gap-2 text-sm text-card-foreground cursor-pointer">
                       <Checkbox
                         checked={selectedCategories.includes(cat)}
@@ -274,7 +272,19 @@ export default function Directory() {
       {selectedBusiness && (
         <ReviewsPanel
           business={selectedBusiness}
-          onClose={() => setSelectedBusiness(null)}
+          onClose={() => {
+            setSelectedBusiness(null);
+            if (searchParams.has('negocio')) {
+              setSearchParams(
+                prev => {
+                  const next = new URLSearchParams(prev);
+                  next.delete('negocio');
+                  return next;
+                },
+                { replace: true }
+              );
+            }
+          }}
         />
       )}
     </div>

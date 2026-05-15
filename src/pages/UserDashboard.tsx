@@ -6,6 +6,7 @@ import {
   getMyBusinesses,
   getPlans,
   getMyBusinessMetrics,
+  downgradeToPersonal,
   setMySubscriptionPlan,
   type BusinessMetricRow,
 } from '@/services/api';
@@ -30,6 +31,18 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { buildPublicUrl } from '@/lib/site-url';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+const FREE_PLAN_IDS = new Set(['basico', 'free']);
 
 export default function UserDashboard() {
   const {
@@ -52,6 +65,9 @@ export default function UserDashboard() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [plansLoading, setPlansLoading] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
+  const [downgradePlanOpen, setDowngradePlanOpen] = useState(false);
+  const [downgradeAccountOpen, setDowngradeAccountOpen] = useState(false);
+  const [downgradingAccount, setDowngradingAccount] = useState(false);
   const [changingRecommendedId, setChangingRecommendedId] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<BusinessMetricRow[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -94,6 +110,11 @@ export default function UserDashboard() {
   }, [user?.id, hasProAccess]);
 
   const isPro = hasProAccess;
+  const isProfessionalRole = role === 'professional';
+  const isOnPaidPlan = !!planId && !FREE_PLAN_IDS.has(planId);
+  const upgradePlans = plans.filter(p => !FREE_PLAN_IDS.has(p.id));
+  const basicPlanName = plans.find(p => p.id === 'basico')?.name ?? 'Básico';
+  const currentPlanName = plans.find(p => p.id === planId)?.name ?? planId ?? '—';
   const canManageRecommendation =
     role === 'admin' || (planId === 'premium' && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing'));
   const accountLabel =
@@ -185,10 +206,43 @@ export default function UserDashboard() {
         variant: 'destructive',
       });
     } else {
-      toast({ title: 'Plan actualizado', description: `Nuevo plan: ${nextPlanId}` });
+      const planLabel = plans.find(p => p.id === nextPlanId)?.name ?? nextPlanId;
+      toast({
+        title: 'Plan actualizado',
+        description: FREE_PLAN_IDS.has(nextPlanId)
+          ? `Ahora tienes el plan ${planLabel}.`
+          : `Nuevo plan: ${planLabel}`,
+      });
       await refreshProfile();
     }
     setChangingPlan(false);
+  };
+
+  const handleDowngradeToBasicPlan = async () => {
+    setDowngradePlanOpen(false);
+    await handleChangePlan('basico');
+  };
+
+  const handleDowngradeToPersonal = async () => {
+    if (!user?.id) return;
+    setDowngradingAccount(true);
+    const result = await downgradeToPersonal();
+    if (!result.ok) {
+      toast({
+        title: 'No se pudo cambiar el tipo de cuenta',
+        description: result.error ?? 'Error desconocido',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Cuenta actualizada',
+        description: 'Tu cuenta es ahora personal. Tus negocios siguen publicados.',
+      });
+      await refreshProfile();
+      setMainTab('perfil');
+    }
+    setDowngradingAccount(false);
+    setDowngradeAccountOpen(false);
   };
 
   const handleToggleRecommended = async (businessId: string, checked: boolean) => {
@@ -307,24 +361,52 @@ export default function UserDashboard() {
                     </div>
                     <div className="space-y-2">
                       <Label>Tipo de cuenta</Label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge
                           variant="secondary"
                           className="border-transparent bg-muted font-medium text-muted-foreground shadow-none"
                         >
                           {accountLabel}
                         </Badge>
-                        {planId && planId !== 'basico' && planId !== 'free' && (
+                        {planId && !FREE_PLAN_IDS.has(planId) && (
                           <span className="text-xs text-muted-foreground">
-                            Plan: <span className="font-medium text-foreground">{planId}</span>
-                          </span>
-                        )}
-                        {!isPro && (
-                          <span className="text-xs text-muted-foreground">
-                            ¿Tienes un negocio? <Link to="/signup" className="text-primary hover:underline">Actualiza tu cuenta</Link>
+                            Plan: <span className="font-medium text-foreground">{currentPlanName}</span>
                           </span>
                         )}
                       </div>
+                      {isProfessionalRole && (
+                        <p className="text-xs text-muted-foreground">
+                          <button
+                            type="button"
+                            disabled={downgradingAccount}
+                            onClick={() => setDowngradeAccountOpen(true)}
+                            className="underline-offset-4 transition-colors hover:text-foreground hover:underline disabled:opacity-50"
+                          >
+                            Cambiar a cuenta personal
+                          </button>
+                        </p>
+                      )}
+                      {!isPro && (
+                        <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex gap-2.5">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
+                              <Store className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">¿Tienes un negocio?</p>
+                              <p className="text-xs text-muted-foreground">
+                                Pasa a cuenta profesional para registrar negocios y ver métricas.
+                              </p>
+                            </div>
+                          </div>
+                          <Button asChild size="sm" className="w-full shrink-0 sm:w-auto">
+                            <Link to="/signup?mode=upgrade">
+                              Actualiza tu cuenta
+                              <ChevronRight className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     <Button type="submit" disabled={saving}>
                       {saving ? 'Guardando…' : 'Guardar Cambios'}
@@ -568,7 +650,7 @@ export default function UserDashboard() {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="text-sm text-muted-foreground">Plan actual</p>
-                          <p className="font-semibold text-foreground">{planId ?? '—'}</p>
+                          <p className="font-semibold text-foreground">{currentPlanName}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-muted-foreground">Estado</p>
@@ -596,9 +678,7 @@ export default function UserDashboard() {
                       </div>
                     ) : (
                       <div className="grid gap-4 sm:grid-cols-2 sm:items-stretch">
-                        {plans
-                          .filter(p => p.id !== 'free')
-                          .map(plan => {
+                        {upgradePlans.map(plan => {
                             const selected = planId === plan.id;
                             return (
                               <div
@@ -658,10 +738,74 @@ export default function UserDashboard() {
                           })}
                       </div>
                     )}
+
+                    {isOnPaidPlan && !plansLoading && (
+                      <div className="mt-6 border-t border-border/50 pt-4 text-center">
+                        <button
+                          type="button"
+                          disabled={changingPlan}
+                          onClick={() => setDowngradePlanOpen(true)}
+                          className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline disabled:pointer-events-none disabled:opacity-50"
+                        >
+                          Cambiar al plan {basicPlanName} (gratuito)
+                        </button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
+
+                <AlertDialog open={downgradePlanOpen} onOpenChange={setDowngradePlanOpen}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Cambiar al plan {basicPlanName}?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Dejarás de tener las funciones de pago (estadísticas avanzadas, insignia Premium, etc.).
+                        Tu cuenta profesional y tus negocios registrados se mantienen.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={changingPlan}>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        disabled={changingPlan}
+                        className="bg-muted text-muted-foreground hover:bg-muted/80"
+                        onClick={e => {
+                          e.preventDefault();
+                          void handleDowngradeToBasicPlan();
+                        }}
+                      >
+                        {changingPlan ? 'Cambiando…' : `Confirmar plan ${basicPlanName}`}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </TabsContent>
             )}
+
+            <AlertDialog open={downgradeAccountOpen} onOpenChange={setDowngradeAccountOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Cambiar a cuenta personal?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Dejarás de gestionar negocios y métricas desde el panel profesional.
+                    Tus negocios publicados seguirán visibles en el directorio.
+                    El plan pasará al {basicPlanName} gratuito.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={downgradingAccount}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={downgradingAccount}
+                    className="bg-muted text-muted-foreground hover:bg-muted/80"
+                    onClick={e => {
+                      e.preventDefault();
+                      void handleDowngradeToPersonal();
+                    }}
+                  >
+                    {downgradingAccount ? 'Cambiando…' : 'Confirmar cuenta personal'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {/* Seguridad Tab */}
             <TabsContent value="seguridad">

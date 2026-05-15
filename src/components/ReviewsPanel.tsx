@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { getReviewsByBusiness, trackBusinessVisit } from '@/services/api';
 import type { Business, Review } from '@/types/domain';
 import { getOrCreateVisitorKey } from '@/lib/visitor-key';
+import { BUSINESS_IMAGE_FALLBACK, resolveBusinessImageUrl } from '@/lib/business-image';
 import { useSyncOverlayWithHistory } from '@/hooks/use-sync-overlay-with-history';
 
 interface ReviewsPanelProps {
@@ -14,6 +15,7 @@ interface ReviewsPanelProps {
 
 export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [imgSrc, setImgSrc] = useState(() => resolveBusinessImageUrl(business.image_url));
 
   useSyncOverlayWithHistory(true, onClose);
 
@@ -35,7 +37,12 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
       <div className="relative z-10 flex h-full w-full max-w-lg flex-col overflow-y-auto bg-card shadow-2xl animate-in slide-in-from-right">
         {/* Header image */}
         <div className="relative h-56 flex-shrink-0">
-          <img src={business.image_url} alt={business.name} className="h-full w-full object-cover" />
+          <img
+            src={imgSrc}
+            alt={business.name}
+            onError={() => setImgSrc(BUSINESS_IMAGE_FALLBACK)}
+            className="h-full w-full object-cover"
+          />
           <button
             onClick={onClose}
             className="absolute right-4 top-4 rounded-full bg-card/80 p-2 hover:bg-card"

@@ -1,22 +1,32 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Mountain, Mail, Lock, User, Eye, EyeOff, Store, UserCircle, Check, ArrowLeft } from 'lucide-react';
+import { Mountain, Mail, Lock, User, Eye, EyeOff, Store, UserCircle, Check, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getPlans } from '@/services/api';
+import { getPlans, upgradeToProfessional } from '@/services/api';
 import type { UserRole } from '@/contexts/AuthContext';
 import type { Plan } from '@/types/domain';
+
+type SignupStep = 'role' | 'plan' | 'form' | 'business';
 
 export default function Signup() {
   const [searchParams] = useSearchParams();
   const reviewMode = searchParams.get('mode') === 'review';
+  const upgradeParam = searchParams.get('mode') === 'upgrade';
   const next = searchParams.get('next');
-  const [step, setStep] = useState<'role' | 'plan' | 'form'>(reviewMode ? 'form' : 'role');
+  const { user, role, roleLoading, hasProAccess, refreshProfile } = useAuth();
+  const upgradeFlow = upgradeParam || (!reviewMode && !!user && role === 'basic');
+  const [step, setStep] = useState<SignupStep>(() => {
+    if (reviewMode) return 'form';
+    if (upgradeParam) return 'plan';
+    return 'role';
+  });
   const [selectedRole, setSelectedRole] = useState<UserRole>('basic');
   const [selectedPlan, setSelectedPlan] = useState<string>('basico');
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -33,12 +43,61 @@ export default function Signup() {
     getPlans().then(setPlans);
   }, []);
 
+  useEffect(() => {
+    if (roleLoading) return;
+    if (upgradeFlow && !user) {
+      navigate(`/login?next=${encodeURIComponent('/signup?mode=upgrade')}`, { replace: true });
+      return;
+    }
+    if (upgradeFlow && hasProAccess) {
+      navigate('/mi-cuenta', { replace: true });
+    }
+  }, [upgradeFlow, user, roleLoading, hasProAccess, navigate]);
+
+  useEffect(() => {
+    if (upgradeFlow && user && !roleLoading) {
+      setSelectedRole('professional');
+      if (step === 'role' || step === 'form') {
+        setStep(s => (s === 'form' ? 'business' : 'plan'));
+      }
+    }
+  }, [upgradeFlow, user, roleLoading, step]);
+
+  const stepSequence: SignupStep[] = upgradeFlow
+    ? ['plan', 'business']
+    : ['role', ...(selectedRole === 'professional' ? ['plan' as const] : []), 'form'];
+
   const handleContinueFromRole = () => {
     if (selectedRole === 'professional') {
       setStep('plan');
     } else {
       setStep('form');
     }
+  };
+
+  const handleContinueFromPlan = async () => {
+    if (upgradeFlow) {
+      setLoading(true);
+      const result = await upgradeToProfessional(selectedPlan);
+      if (!result.ok) {
+        toast({
+          title: 'No se pudo actualizar la cuenta',
+          description: result.error,
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+      await refreshProfile();
+      toast({
+        title: '¡Cuenta profesional activada!',
+        description: `Plan ${plans.find(p => p.id === selectedPlan)?.name || selectedPlan}`,
+      });
+      setLoading(false);
+      setStep('business');
+      return;
+    }
+    setStep('form');
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -104,19 +163,28 @@ export default function Signup() {
   ];
 
   const goBack = () => {
-    if (step === 'form' && selectedRole === 'professional') {
+    if (step === 'business') {
+      setStep('plan');
+    } else if (step === 'form' && selectedRole === 'professional') {
       setStep('plan');
     } else if (step === 'form') {
       setStep('role');
-    } else if (step === 'plan') {
+    } else if (step === 'plan' && !upgradeFlow) {
       setStep('role');
     }
   };
 
+  if (upgradeFlow && (roleLoading || !user || hasProAccess)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Cargando…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-lg space-y-8">
-        {/* Logo */}
         <div className="flex flex-col items-center gap-3">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
@@ -128,30 +196,34 @@ export default function Signup() {
           </Link>
           <p className="text-sm text-muted-foreground">
             {reviewMode && 'Cuenta personal para valorar negocios'}
-            {!reviewMode && step === 'role' && 'Elige tu tipo de cuenta'}
-            {step === 'plan' && 'Elige tu plan profesional'}
-            {step === 'form' && (selectedRole === 'professional' ? 'Registra tu negocio' : 'Crea tu cuenta')}
+            {upgradeFlow && step === 'plan' && 'Elige tu plan profesional'}
+            {upgradeFlow && step === 'business' && 'Registra tu negocio'}
+            {!reviewMode && !upgradeFlow && step === 'role' && 'Elige tu tipo de cuenta'}
+            {!upgradeFlow && step === 'plan' && 'Elige tu plan profesional'}
+            {!upgradeFlow && step === 'form' && (selectedRole === 'professional' ? 'Crea tu cuenta profesional' : 'Crea tu cuenta')}
           </p>
-          {/* Step indicators */}
           {!reviewMode && (
             <div className="flex items-center gap-2">
-              {['role', ...(selectedRole === 'professional' ? ['plan'] : []), 'form'].map((s, i, arr) => (
+              {stepSequence.map((s, i, arr) => (
                 <div key={s} className="flex items-center gap-2">
-                  <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                    step === s ? 'bg-primary text-primary-foreground' :
-                    arr.indexOf(step) > i ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
-                  }`}>
+                  <div
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                      step === s ? 'bg-primary text-primary-foreground' :
+                      arr.indexOf(step) > i ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
                     {arr.indexOf(step) > i ? <Check className="h-3.5 w-3.5" /> : i + 1}
                   </div>
-                  {i < arr.length - 1 && <div className={`h-0.5 w-6 rounded ${arr.indexOf(step) > i ? 'bg-accent' : 'bg-muted'}`} />}
+                  {i < arr.length - 1 && (
+                    <div className={`h-0.5 w-6 rounded ${arr.indexOf(step) > i ? 'bg-accent' : 'bg-muted'}`} />
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Step 1: Role Selection */}
-        {step === 'role' && (
+        {step === 'role' && !upgradeFlow && (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               {roleCards.map(card => {
@@ -160,6 +232,7 @@ export default function Signup() {
                 return (
                   <button
                     key={card.role}
+                    type="button"
                     onClick={() => setSelectedRole(card.role)}
                     className={`flex flex-col items-start gap-3 rounded-xl border-2 p-5 text-left transition-all ${
                       isSelected
@@ -203,7 +276,6 @@ export default function Signup() {
           </div>
         )}
 
-        {/* Step 2: Plan Selection (Professional only) */}
         {step === 'plan' && (
           <div className="space-y-4">
             <div className="grid gap-4">
@@ -212,6 +284,7 @@ export default function Signup() {
                 return (
                   <button
                     key={plan.id}
+                    type="button"
                     onClick={() => setSelectedPlan(plan.id)}
                     className={`relative flex flex-col rounded-xl border-2 p-5 text-left transition-all ${
                       isSelected
@@ -255,18 +328,48 @@ export default function Signup() {
               })}
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={goBack} className="gap-1">
-                <ArrowLeft className="h-4 w-4" /> Atrás
-              </Button>
-              <Button className="flex-1" onClick={() => setStep('form')}>
-                Continuar con {plans.find(p => p.id === selectedPlan)?.name || 'Básico'}
+              {!upgradeFlow && (
+                <Button variant="outline" onClick={goBack} className="gap-1">
+                  <ArrowLeft className="h-4 w-4" /> Atrás
+                </Button>
+              )}
+              <Button className="flex-1" onClick={handleContinueFromPlan} disabled={loading}>
+                {loading ? 'Actualizando…' : `Continuar con ${plans.find(p => p.id === selectedPlan)?.name || 'Básico'}`}
               </Button>
             </div>
           </div>
         )}
 
-        {/* Step 3: Registration Form */}
-        {step === 'form' && (
+        {step === 'business' && upgradeFlow && (
+          <Card className="border-border/50 shadow-lg">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Store className="h-5 w-5" />
+              </div>
+              <CardTitle className="text-2xl">¿Tienes un negocio?</CardTitle>
+              <CardDescription>
+                Plan {plans.find(p => p.id === selectedPlan)?.name || 'Básico'} activado.
+                Regístralo ahora para aparecer en el directorio o hazlo más tarde desde tu cuenta.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button className="w-full gap-2" onClick={() => navigate('/registrar-negocio')}>
+                Registrar mi negocio
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => navigate('/mi-cuenta')}>
+                Omitir por ahora
+              </Button>
+            </CardContent>
+            <CardFooter>
+              <button type="button" onClick={goBack} className="w-full text-sm text-muted-foreground hover:text-foreground cursor-pointer">
+                ← Cambiar plan
+              </button>
+            </CardFooter>
+          </Card>
+        )}
+
+        {step === 'form' && !upgradeFlow && (
           <Card className="border-border/50 shadow-lg">
             <CardHeader className="text-center">
               <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">

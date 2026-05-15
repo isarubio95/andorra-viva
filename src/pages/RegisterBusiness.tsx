@@ -12,17 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-
-const CATEGORIES = [
-  'Restaurante',
-  'Hotel',
-  'SPA & Wellness',
-  'Actividades',
-  'Ocio Nocturno',
-  'Tienda',
-  'Transporte',
-  'Servicios',
-];
+import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 
 const LOCATIONS = [
   'Andorra la Vella',
@@ -288,7 +278,7 @@ export default function RegisterBusiness() {
                   <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger><SelectValue placeholder="Selecciona categoría" /></SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map(c => (
+                      {BUSINESS_CATEGORIES.map(c => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
                       ))}
                     </SelectContent>

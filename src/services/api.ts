@@ -154,6 +154,30 @@ export async function getPlans(): Promise<Plan[]> {
   return (data ?? []).map(normalizePlanRow);
 }
 
+/** Pasa de usuario básico a profesional y asigna el plan (RPC `upgrade_to_professional`). */
+export async function upgradeToProfessional(planId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!planId?.trim()) return { ok: false, error: 'Plan inválido' };
+
+  const { error } = await supabase.rpc('upgrade_to_professional', { p_plan_id: planId.trim() });
+
+  if (error) {
+    console.error('[auth] upgrade_to_professional:', error.message);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+/** Pasa de cuenta profesional a personal (RPC `downgrade_to_personal`). */
+export async function downgradeToPersonal(): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.rpc('downgrade_to_personal');
+
+  if (error) {
+    console.error('[auth] downgrade_to_personal:', error.message);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
 /** Actualiza el plan de la suscripción del usuario autenticado (RPC `set_my_subscription_plan`). */
 export async function setMySubscriptionPlan(planId: string): Promise<{ ok: boolean; error?: string }> {
   if (!planId?.trim()) return { ok: false, error: 'Plan inválido' };
