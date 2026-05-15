@@ -56,10 +56,7 @@ export default function Favorites() {
       <main className="container mx-auto flex-1 px-4 py-8">
         <div className="mx-auto max-w-3xl space-y-6">
           <div>
-            <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-              <Heart className="h-7 w-7 text-destructive" />
-              Mis favoritos
-            </h1>
+            <h1 className="text-2xl font-bold text-foreground">Mis favoritos</h1>
             <p className="mt-1 text-sm text-muted-foreground">Negocios que has guardado</p>
           </div>
 
