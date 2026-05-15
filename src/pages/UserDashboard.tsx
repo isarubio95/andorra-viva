@@ -28,6 +28,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { CartesianGrid, Line, LineChart, XAxis } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { buildPublicUrl } from '@/lib/site-url';
 import { useToast } from '@/hooks/use-toast';
 
 export default function UserDashboard() {
@@ -133,8 +134,7 @@ export default function UserDashboard() {
   };
 
   const getReviewUrl = (businessId: string): string => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    return `${origin}/valorar/${businessId}`;
+    return buildPublicUrl(`/valorar/${businessId}`);
   };
 
   const handleCopyReviewUrl = async (businessId: string) => {
