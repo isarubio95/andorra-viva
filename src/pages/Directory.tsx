@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { CATEGORY_GROUP_MAP } from '@/constants/categoryGroups';
 import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
+import { getAvailableSubcategories } from '@/constants/businessSubcategories';
 
 const PRICE_LABELS: Record<number, string> = {
   1: '€',
@@ -36,23 +37,42 @@ export default function Directory() {
 
   // Filters
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([1, 3]);
   const [minAge, setMinAge] = useState<number>(0);
+
+  const availableSubcategories = useMemo(
+    () => getAvailableSubcategories(selectedCategories),
+    [selectedCategories],
+  );
 
   useEffect(() => {
     const grupo = searchParams.get('grupo');
     const raw = searchParams.get('categoria');
     if (grupo && CATEGORY_GROUP_MAP[grupo]) {
       setSelectedCategories(CATEGORY_GROUP_MAP[grupo]);
-      return;
-    }
-    if (raw) {
+    } else if (raw) {
       const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
       setSelectedCategories(parts);
-      return;
+    } else {
+      setSelectedCategories([]);
     }
-    setSelectedCategories([]);
+
+    const rawSub = searchParams.get('subcategoria');
+    if (rawSub) {
+      setSelectedSubcategories(rawSub.split(',').map(s => s.trim()).filter(Boolean));
+    } else {
+      setSelectedSubcategories([]);
+    }
   }, [searchParams]);
+
+  useEffect(() => {
+    setSelectedSubcategories(prev => {
+      const allowed = new Set(getAvailableSubcategories(selectedCategories));
+      const next = prev.filter(sub => allowed.has(sub));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [selectedCategories]);
 
   useEffect(() => {
     setLoading(true);
@@ -75,23 +95,42 @@ export default function Directory() {
     );
   };
 
+  const toggleSubcategory = (sub: string) => {
+    setSelectedSubcategories(prev =>
+      prev.includes(sub) ? prev.filter(s => s !== sub) : [...prev, sub]
+    );
+  };
+
   const clearFilters = () => {
     setSelectedCategories([]);
+    setSelectedSubcategories([]);
     setPriceRange([1, 3]);
     setMinAge(0);
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
       next.delete('grupo');
       next.delete('categoria');
+      next.delete('subcategoria');
       return next;
     });
   };
 
-  const hasActiveFilters = selectedCategories.length > 0 || priceRange[0] > 1 || priceRange[1] < 3 || minAge > 0;
+  const hasActiveFilters =
+    selectedCategories.length > 0 ||
+    selectedSubcategories.length > 0 ||
+    priceRange[0] > 1 ||
+    priceRange[1] < 3 ||
+    minAge > 0;
 
   const filtered = useMemo(() => {
     return businesses.filter(b => {
       if (selectedCategories.length > 0 && !selectedCategories.includes(b.category)) {
+        return false;
+      }
+      if (
+        selectedSubcategories.length > 0 &&
+        (!b.subcategory || !selectedSubcategories.includes(b.subcategory))
+      ) {
         return false;
       }
       if (b.price_range < priceRange[0] || b.price_range > priceRange[1]) {
@@ -102,15 +141,22 @@ export default function Directory() {
       }
       return true;
     });
-  }, [businesses, selectedCategories, priceRange, minAge]);
+  }, [businesses, selectedCategories, selectedSubcategories, priceRange, minAge]);
 
   const grouped = useMemo(() => {
-    const map: Record<string, Business[]> = {};
+    const byCategory: Record<string, Record<string, Business[]>> = {};
     filtered.forEach(b => {
-      if (!map[b.category]) map[b.category] = [];
-      map[b.category].push(b);
+      const sub = b.subcategory ?? 'Sin clasificar';
+      if (!byCategory[b.category]) byCategory[b.category] = {};
+      if (!byCategory[b.category][sub]) byCategory[b.category][sub] = [];
+      byCategory[b.category][sub].push(b);
     });
-    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+    return Object.entries(byCategory)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([category, subs]) => ({
+        category,
+        subgroups: Object.entries(subs).sort(([a], [b]) => a.localeCompare(b)),
+      }));
   }, [filtered]);
 
   return (
@@ -146,6 +192,11 @@ export default function Directory() {
                   {cat} <X className="h-3 w-3" />
                 </Badge>
               ))}
+              {selectedSubcategories.map(sub => (
+                <Badge key={sub} variant="secondary" className="gap-1 cursor-pointer" onClick={() => toggleSubcategory(sub)}>
+                  {sub} <X className="h-3 w-3" />
+                </Badge>
+              ))}
               {(priceRange[0] > 1 || priceRange[1] < 3) && (
                 <Badge variant="secondary">
                   {PRICE_LABELS[priceRange[0]]} – {PRICE_LABELS[priceRange[1]]}
@@ -164,7 +215,7 @@ export default function Directory() {
         {/* Filters panel */}
         {showFilters && (
           <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
-            <div className="grid gap-8 md:grid-cols-3">
+            <div className="grid gap-8 md:grid-cols-2">
               {/* Categories */}
               <div>
                 <h3 className="mb-3 text-sm font-semibold text-foreground">Categorías</h3>
@@ -176,6 +227,22 @@ export default function Directory() {
                         onCheckedChange={() => toggleCategory(cat)}
                       />
                       {cat}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Subcategories */}
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-foreground">Subcategorías</h3>
+                <div className="flex max-h-48 flex-col gap-2 overflow-y-auto pr-1">
+                  {availableSubcategories.map(sub => (
+                    <label key={sub} className="flex items-center gap-2 text-sm text-card-foreground cursor-pointer">
+                      <Checkbox
+                        checked={selectedSubcategories.includes(sub)}
+                        onCheckedChange={() => toggleSubcategory(sub)}
+                      />
+                      {sub}
                     </label>
                   ))}
                 </div>
@@ -246,19 +313,32 @@ export default function Directory() {
             ))}
           </div>
         ) : grouped.length > 0 ? (
-          grouped.map(([category, items]) => (
-            <div key={category} className="mb-10">
-              <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-foreground">
-                {category}
-                <span className="text-sm font-normal text-muted-foreground">({items.length})</span>
-              </h2>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {items.map(biz => (
-                  <BusinessCard key={biz.id} business={biz} onClick={setSelectedBusiness} />
+          grouped.map(({ category, subgroups }) => {
+            const categoryCount = subgroups.reduce((n, [, items]) => n + items.length, 0);
+            return (
+              <div key={category} className="mb-10">
+                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-foreground">
+                  {category}
+                  <span className="text-sm font-normal text-muted-foreground">({categoryCount})</span>
+                </h2>
+                {subgroups.map(([subcategory, items]) => (
+                  <div key={subcategory} className="mb-8 last:mb-0">
+                    {subgroups.length > 1 && (
+                      <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
+                        {subcategory}
+                        <span className="ml-1 font-normal">({items.length})</span>
+                      </h3>
+                    )}
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                      {items.map(biz => (
+                        <BusinessCard key={biz.id} business={biz} onClick={setSelectedBusiness} />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <p className="py-16 text-center text-muted-foreground">
             No se encontraron negocios con los filtros seleccionados.
@@ -269,24 +349,22 @@ export default function Directory() {
 
       <Footer />
 
-      {selectedBusiness && (
-        <ReviewsPanel
-          business={selectedBusiness}
-          onClose={() => {
-            setSelectedBusiness(null);
-            if (searchParams.has('negocio')) {
-              setSearchParams(
-                prev => {
-                  const next = new URLSearchParams(prev);
-                  next.delete('negocio');
-                  return next;
-                },
-                { replace: true }
-              );
-            }
-          }}
-        />
-      )}
+      <ReviewsPanel
+        business={selectedBusiness}
+        onClose={() => {
+          setSelectedBusiness(null);
+          if (searchParams.has('negocio')) {
+            setSearchParams(
+              prev => {
+                const next = new URLSearchParams(prev);
+                next.delete('negocio');
+                return next;
+              },
+              { replace: true }
+            );
+          }
+        }}
+      />
     </div>
   );
 }

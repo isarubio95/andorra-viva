@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
+import { getSubcategoriesForCategory } from '@/constants/businessSubcategories';
 
 const LOCATIONS = [
   'Andorra la Vella',
@@ -49,6 +50,7 @@ export default function RegisterBusiness() {
   // Step 1: Basic info
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
+  const [subcategory, setSubcategory] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
 
@@ -100,7 +102,7 @@ export default function RegisterBusiness() {
 
   const validateStep = (s: Step): boolean => {
     if (s === 'info') {
-      if (!name.trim() || !category || !location || !description.trim()) {
+      if (!name.trim() || !category || !subcategory || !location || !description.trim()) {
         toast({ title: 'Completa todos los campos obligatorios', variant: 'destructive' });
         return false;
       }
@@ -167,6 +169,7 @@ export default function RegisterBusiness() {
       const row: Record<string, unknown> = {
         name: name.trim(),
         category,
+        subcategory,
         location,
         description: description.trim(),
         phone: phone.trim() || null,
@@ -275,7 +278,13 @@ export default function RegisterBusiness() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Categoría *</Label>
-                  <Select value={category} onValueChange={setCategory}>
+                  <Select
+                    value={category}
+                    onValueChange={value => {
+                      setCategory(value);
+                      setSubcategory('');
+                    }}
+                  >
                     <SelectTrigger><SelectValue placeholder="Selecciona categoría" /></SelectTrigger>
                     <SelectContent>
                       {BUSINESS_CATEGORIES.map(c => (
@@ -285,16 +294,32 @@ export default function RegisterBusiness() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Ubicación *</Label>
-                  <Select value={location} onValueChange={setLocation}>
-                    <SelectTrigger><SelectValue placeholder="Selecciona parroquia" /></SelectTrigger>
+                  <Label>Subcategoría *</Label>
+                  <Select
+                    value={subcategory}
+                    onValueChange={setSubcategory}
+                    disabled={!category}
+                  >
+                    <SelectTrigger><SelectValue placeholder={category ? 'Selecciona subcategoría' : 'Primero elige categoría'} /></SelectTrigger>
                     <SelectContent>
-                      {LOCATIONS.map(l => (
-                        <SelectItem key={l} value={l}>{l}</SelectItem>
+                      {getSubcategoriesForCategory(category).map(sub => (
+                        <SelectItem key={sub} value={sub}>{sub}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ubicación *</Label>
+                <Select value={location} onValueChange={setLocation}>
+                  <SelectTrigger><SelectValue placeholder="Selecciona parroquia" /></SelectTrigger>
+                  <SelectContent>
+                    {LOCATIONS.map(l => (
+                      <SelectItem key={l} value={l}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -489,9 +514,12 @@ export default function RegisterBusiness() {
               )}
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-xl font-bold text-foreground">{name}</h3>
-                  <Badge variant="secondary">{category}</Badge>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge variant="secondary">{category}</Badge>
+                    {subcategory && <Badge variant="outline">{subcategory}</Badge>}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

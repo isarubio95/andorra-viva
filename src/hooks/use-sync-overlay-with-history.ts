@@ -2,20 +2,27 @@ import { useEffect, useRef } from 'react';
 
 const OVERLAY_STATE_KEY = '__andorraVivaOverlay';
 
+function locationKey() {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
 /**
  * Vincula un overlay al historial del navegador: Atrás / gesto atrás en móvil
  * cierra el overlay en lugar de salir de la página.
  * Si el usuario cierra con la UI, se hace history.back() para quitar la entrada extra.
+ * Si el usuario navega a otra ruta desde el overlay, no se revierte esa navegación.
  */
 export function useSyncOverlayWithHistory(isOpen: boolean, onClose: () => void) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const closedByPopRef = useRef(false);
+  const locationWhenOpenedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
     closedByPopRef.current = false;
+    locationWhenOpenedRef.current = locationKey();
     window.history.pushState({ [OVERLAY_STATE_KEY]: true }, '', window.location.href);
 
     const handlePopState = () => {
@@ -26,7 +33,8 @@ export function useSyncOverlayWithHistory(isOpen: boolean, onClose: () => void) 
     window.addEventListener('popstate', handlePopState);
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      if (!closedByPopRef.current) {
+      const navigatedAway = locationWhenOpenedRef.current !== locationKey();
+      if (!closedByPopRef.current && !navigatedAway) {
         window.history.back();
       }
     };

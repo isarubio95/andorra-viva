@@ -4,6 +4,7 @@ export interface Business {
   id: string;
   name: string;
   category: string;
+  subcategory: string | null;
   location: string;
   rating: number;
   review_count: number;

@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import PlanComparisonGrid from '@/components/PlanComparisonGrid';
+import { sortPlansByPrice } from '@/lib/plan-display';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -278,55 +280,14 @@ export default function Signup() {
 
         {step === 'plan' && (
           <div className="space-y-4">
-            <div className="grid gap-4">
-              {plans.map(plan => {
-                const isSelected = selectedPlan === plan.id;
-                return (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => setSelectedPlan(plan.id)}
-                    className={`relative flex flex-col rounded-xl border-2 p-5 text-left transition-all ${
-                      isSelected
-                        ? 'border-primary bg-primary/5 shadow-md'
-                        : 'border-border hover:border-muted-foreground/30 hover:bg-muted/50'
-                    } ${plan.is_popular ? 'ring-1 ring-accent' : ''}`}
-                  >
-                    {plan.is_popular && (
-                      <Badge className="absolute -top-2.5 right-4 bg-accent text-accent-foreground border-0 text-xs">
-                        Más popular
-                      </Badge>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
-                        <div className="mt-1 flex items-baseline gap-1">
-                          <span className="text-2xl font-extrabold text-foreground">
-                            {plan.price === 0 ? 'Gratis' : `${plan.price}${plan.currency}`}
-                          </span>
-                          {plan.price > 0 && (
-                            <span className="text-xs text-muted-foreground">/{plan.interval}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
-                        isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'
-                      }`}>
-                        {isSelected && <Check className="h-3.5 w-3.5 text-primary-foreground" />}
-                      </div>
-                    </div>
-                    <ul className="mt-4 grid gap-1.5 sm:grid-cols-2">
-                      {plan.features.map(f => (
-                        <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <Check className="mt-0.5 h-3 w-3 flex-shrink-0 text-accent" />
-                          <span>{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </button>
-                );
-              })}
-            </div>
+            <PlanComparisonGrid
+              comparePlans={plans}
+              columns={sortPlansByPrice(plans).map(plan => ({
+                plan,
+                selected: selectedPlan === plan.id,
+                onSelect: () => setSelectedPlan(plan.id),
+              }))}
+            />
             <div className="flex gap-3">
               {!upgradeFlow && (
                 <Button variant="outline" onClick={goBack} className="gap-1">

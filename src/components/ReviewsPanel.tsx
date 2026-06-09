@@ -2,80 +2,119 @@ import { useEffect, useState } from 'react';
 import { X, Star, MapPin, Clock, Phone, MessageCircle, Navigation, CheckCircle, Medal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import { getReviewsByBusiness, trackBusinessVisit } from '@/services/api';
 import type { Business, Review } from '@/types/domain';
 import { getOrCreateVisitorKey } from '@/lib/visitor-key';
 import { BUSINESS_IMAGE_FALLBACK, resolveBusinessImageUrl } from '@/lib/business-image';
-import { useSyncOverlayWithHistory } from '@/hooks/use-sync-overlay-with-history';
 
 interface ReviewsPanelProps {
-  business: Business;
+  business: Business | null;
   onClose: () => void;
 }
 
 export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
+  const [open, setOpen] = useState(false);
+  /** Conserva el negocio visible hasta que termine la animación de cierre. */
+  const [displayedBusiness, setDisplayedBusiness] = useState<Business | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [imgSrc, setImgSrc] = useState(() => resolveBusinessImageUrl(business.image_url));
-
-  useSyncOverlayWithHistory(true, onClose);
+  const [imgSrc, setImgSrc] = useState(BUSINESS_IMAGE_FALLBACK);
 
   useEffect(() => {
-    getReviewsByBusiness(business.id).then(setReviews);
-  }, [business.id]);
+    if (!business) return;
+    setDisplayedBusiness(business);
+    setOpen(true);
+  }, [business]);
 
   useEffect(() => {
+    if (!displayedBusiness) return;
+    getReviewsByBusiness(displayedBusiness.id).then(setReviews);
+  }, [displayedBusiness?.id]);
+
+  useEffect(() => {
+    if (!displayedBusiness) return;
     const visitorKey = getOrCreateVisitorKey();
-    void trackBusinessVisit(business.id, visitorKey);
-  }, [business.id]);
+    void trackBusinessVisit(displayedBusiness.id, visitorKey);
+  }, [displayedBusiness?.id]);
+
+  useEffect(() => {
+    if (!displayedBusiness) return;
+    setImgSrc(resolveBusinessImageUrl(displayedBusiness.image_url));
+  }, [displayedBusiness?.image_url]);
+
+  const handleClosed = () => {
+    setDisplayedBusiness(null);
+    setReviews([]);
+    onClose();
+  };
+
+  if (!displayedBusiness) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+    <Drawer
+      open={open}
+      onOpenChange={setOpen}
+      onClose={handleClosed}
+      direction="right"
+      shouldScaleBackground={false}
+    >
+      <DrawerContent
+        side="right"
+        hideCloseButton
+        className="flex w-full flex-col gap-0 bg-card p-0 md:w-[min(36rem,calc(100%-2.75rem))] md:max-w-xl"
+      >
+        <DrawerTitle className="sr-only">{displayedBusiness.name}</DrawerTitle>
+        <DrawerDescription className="sr-only">
+          Detalle y reseñas del negocio
+        </DrawerDescription>
 
-      {/* Panel */}
-      <div className="relative z-10 flex h-full w-full max-w-lg flex-col overflow-y-auto bg-card shadow-2xl animate-in slide-in-from-right">
         {/* Header image */}
-        <div className="relative h-56 flex-shrink-0">
+        <div className="relative h-56 shrink-0">
           <img
             src={imgSrc}
-            alt={business.name}
+            alt={displayedBusiness.name}
             onError={() => setImgSrc(BUSINESS_IMAGE_FALLBACK)}
             className="h-full w-full object-cover"
           />
           <button
-            onClick={onClose}
+            type="button"
+            onClick={() => setOpen(false)}
             className="absolute right-4 top-4 rounded-full bg-card/80 p-2 hover:bg-card"
             aria-label="Cerrar"
           >
             <X className="h-5 w-5" />
           </button>
-          {business.is_premium && (
-            <Badge className="absolute left-4 top-4 bg-premium text-premium-foreground border-0">
+          {displayedBusiness.is_premium && (
+            <Badge className="absolute left-4 top-4 border-0 bg-premium text-premium-foreground">
               <Medal className="mr-1 h-3.5 w-3.5" />
               Recomendado
             </Badge>
           )}
         </div>
 
-        <div className="flex flex-1 flex-col gap-6 p-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-6">
           {/* Title */}
           <div>
-            <h2 className="text-2xl font-bold">{business.name}</h2>
+            <h2 className="text-2xl font-bold">{displayedBusiness.name}</h2>
             <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    className={`h-4 w-4 ${i < Math.floor(business.rating) ? 'fill-premium text-premium' : 'text-muted'}`}
+                    className={`h-4 w-4 ${i < Math.floor(displayedBusiness.rating) ? 'fill-premium text-premium' : 'text-muted'}`}
                   />
                 ))}
               </div>
-              <span className="font-medium text-foreground">{business.rating}</span>
+              <span className="font-medium text-foreground">{displayedBusiness.rating}</span>
               <span>·</span>
-              <span>({business.review_count} reseñas)</span>
+              <span>({displayedBusiness.review_count} reseñas)</span>
               <span>·</span>
-              <span>{business.category}</span>
+              <span>{displayedBusiness.subcategory ?? displayedBusiness.category}</span>
             </div>
           </div>
 
@@ -91,7 +130,7 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
               asChild
             >
               <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`}
+                href={`https://www.google.com/maps/dir/?api=1&destination=${displayedBusiness.latitude},${displayedBusiness.longitude}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Cómo llegar"
@@ -104,7 +143,7 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
           {/* Info */}
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="h-4 w-4" /> Ubicación en {business.location}, Andorra
+              <MapPin className="h-4 w-4" /> Ubicación en {displayedBusiness.location}, Andorra
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Clock className="h-4 w-4" /> Horario hoy: 10:00 - 22:00
@@ -114,15 +153,15 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
           {/* Description */}
           <div>
             <h3 className="mb-2 font-semibold">Sobre este lugar</h3>
-            <p className="text-sm text-muted-foreground">{business.description}</p>
+            <p className="text-sm text-muted-foreground">{displayedBusiness.description}</p>
           </div>
 
           {/* Services */}
-          {business.services.length > 0 && (
+          {displayedBusiness.services.length > 0 && (
             <div>
               <h3 className="mb-2 font-semibold">Servicios</h3>
               <div className="flex flex-wrap gap-2">
-                {business.services.map(s => (
+                {displayedBusiness.services.map(s => (
                   <Badge key={s} variant="secondary" className="gap-1">
                     <CheckCircle className="h-3 w-3" /> {s}
                   </Badge>
@@ -138,7 +177,7 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
               {reviews.map(review => (
                 <div key={review.id} className="rounded-lg border p-4">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">{review.user_name}</span>
+                    <span className="text-sm font-medium">{review.user_name}</span>
                     <div className="flex items-center gap-1">
                       {[...Array(5)].map((_, i) => (
                         <Star
@@ -158,7 +197,7 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </DrawerContent>
+    </Drawer>
   );
 }

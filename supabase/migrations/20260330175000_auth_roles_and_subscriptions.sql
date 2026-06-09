@@ -1,4 +1,4 @@
--- Ensure app role enum exists
+-- Esquema base (tablas referenciadas por roles, suscripciones y migraciones posteriores)
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'app_role') then
@@ -6,6 +6,75 @@ begin
   end if;
 end
 $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'business_category') then
+    create type public.business_category as enum (
+      'Restaurante',
+      'Hotel',
+      'Bar',
+      'Discoteca',
+      'Ocio Nocturno',
+      'Actividades',
+      'Museo',
+      'Transporte',
+      'Servicios',
+      'Tienda',
+      'SPA & Wellness',
+      'Spa',
+      'Gastronomía',
+      'Alojamiento',
+      'Ocio y entretenimiento',
+      'Turismo y experiencias',
+      'Compras',
+      'Bienestar'
+    );
+  end if;
+end
+$$;
+
+create table if not exists public.plans (
+  id text primary key,
+  name text not null,
+  price numeric not null,
+  currency text default '€',
+  "interval" text default 'mes',
+  features text[] default '{}',
+  is_popular boolean default false
+);
+
+insert into public.plans (id, name, price, currency, "interval", features, is_popular)
+values
+  ('free', 'Free', 0, '€', 'mes', array['Perfil básico del negocio']::text[], false),
+  ('pro', 'Pro', 29, '€', 'mes', array['Insignia premium', 'Estadísticas avanzadas']::text[], true),
+  ('enterprise', 'Enterprise', 79, '€', 'mes', array['Todo lo de Pro', 'Soporte prioritario']::text[], false)
+on conflict (id) do nothing;
+
+create table if not exists public.user_roles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references auth.users(id) on delete cascade,
+  role public.app_role not null default 'basic'
+);
+
+create table if not exists public.businesses (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  category public.business_category not null,
+  location text not null,
+  description text,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.reviews (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  user_name text not null,
+  rating integer not null check (rating >= 1 and rating <= 5),
+  comment text,
+  created_at timestamptz default now()
+);
 
 -- Ensure enum value exists for older app_role definitions
 alter type public.app_role add value if not exists 'admin';

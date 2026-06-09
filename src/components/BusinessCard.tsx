@@ -87,7 +87,7 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
       <div className="flex flex-1 flex-col gap-1 p-4">
         <h3 className="font-semibold text-card-foreground">{business.name}</h3>
         <p className="text-xs text-muted-foreground">
-          {business.location} · {business.category}
+          {business.location} · {business.subcategory ?? business.category}
         </p>
         <div className="mt-auto flex items-center justify-between pt-2">
           <div className="flex items-center gap-1">

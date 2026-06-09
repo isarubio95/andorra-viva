@@ -86,9 +86,10 @@ export default function Favorites() {
       </main>
       <Footer />
 
-      {selectedBusiness && (
-        <ReviewsPanel business={selectedBusiness} onClose={() => setSelectedBusiness(null)} />
-      )}
+      <ReviewsPanel
+        business={selectedBusiness}
+        onClose={() => setSelectedBusiness(null)}
+      />
     </div>
   );
 }

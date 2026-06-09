@@ -17,6 +17,9 @@ package.txt
 .env
 .env.*.local
 
+# Copias de seguridad de la base de datos (pueden contener datos sensibles)
+supabase/backups/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

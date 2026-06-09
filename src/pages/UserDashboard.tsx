@@ -12,6 +12,7 @@ import {
 } from '@/services/api';
 import type { Business, Plan } from '@/types/domain';
 import BusinessCard from '@/components/BusinessCard';
+import PlanComparisonGrid from '@/components/PlanComparisonGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -29,6 +30,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { CartesianGrid, Line, LineChart, XAxis } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { sortPlansByPrice, PROFESSIONAL_DASHBOARD_HIDDEN_PLAN_IDS } from '@/lib/plan-display';
 import { buildPublicUrl } from '@/lib/site-url';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -65,7 +67,8 @@ export default function UserDashboard() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [plansLoading, setPlansLoading] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
-  const [downgradePlanOpen, setDowngradePlanOpen] = useState(false);
+  const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
+  const [downgradeTargetPlanId, setDowngradeTargetPlanId] = useState<string | null>(null);
   const [downgradeAccountOpen, setDowngradeAccountOpen] = useState(false);
   const [downgradingAccount, setDowngradingAccount] = useState(false);
   const [changingRecommendedId, setChangingRecommendedId] = useState<string | null>(null);
@@ -112,13 +115,21 @@ export default function UserDashboard() {
   const isPro = hasProAccess;
   const isProfessionalRole = role === 'professional';
   const isOnPaidPlan = !!planId && !FREE_PLAN_IDS.has(planId);
-  const upgradePlans = plans.filter(p => !FREE_PLAN_IDS.has(p.id));
+  const dashboardPlans = plans.filter(p => !PROFESSIONAL_DASHBOARD_HIDDEN_PLAN_IDS.has(p.id));
   const basicPlanName = plans.find(p => p.id === 'basico')?.name ?? 'Básico';
   const currentPlanName = plans.find(p => p.id === planId)?.name ?? planId ?? '—';
+  const downgradeTargetPlanName =
+    plans.find(p => p.id === downgradeTargetPlanId)?.name ?? downgradeTargetPlanId ?? '—';
   const canManageRecommendation =
     role === 'admin' || (planId === 'premium' && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing'));
   const accountLabel =
     role === 'admin' ? 'Admin' : isPro ? 'Profesional' : 'Usuario';
+  const tabTriggerClass = cn(
+    'shrink-0 rounded-full border border-border bg-background px-4 py-2 shadow-sm',
+    'data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none',
+    'md:rounded-sm md:border-0 md:bg-transparent md:px-3 md:py-1.5 md:shadow-none',
+    'md:data-[state=active]:border-0 md:data-[state=active]:bg-background md:data-[state=active]:text-foreground md:data-[state=active]:shadow-sm',
+  );
   const currentRecommendedId = myBusinesses.find(b => b.is_recommended)?.id ?? null;
 
   const initials = displayName
@@ -218,9 +229,17 @@ export default function UserDashboard() {
     setChangingPlan(false);
   };
 
-  const handleDowngradeToBasicPlan = async () => {
-    setDowngradePlanOpen(false);
-    await handleChangePlan('basico');
+  const openDowngradeConfirm = (targetPlanId: string) => {
+    setDowngradeTargetPlanId(targetPlanId);
+    setDowngradeConfirmOpen(true);
+  };
+
+  const handleConfirmDowngrade = async () => {
+    if (!downgradeTargetPlanId) return;
+    const targetPlanId = downgradeTargetPlanId;
+    setDowngradeConfirmOpen(false);
+    setDowngradeTargetPlanId(null);
+    await handleChangePlan(targetPlanId);
   };
 
   const handleDowngradeToPersonal = async () => {
@@ -297,7 +316,7 @@ export default function UserDashboard() {
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
       <main className="container mx-auto flex-1 px-4 py-8">
-        <div className="mx-auto max-w-3xl space-y-8">
+        <div className="mx-auto max-w-4xl space-y-8">
           {/* Profile Header */}
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16 border-2 border-primary/20">
@@ -319,23 +338,22 @@ export default function UserDashboard() {
           <Tabs value={mainTab} onValueChange={setMainTab} className="space-y-6">
             <TabsList
               className={cn(
-                'h-auto min-h-10 w-full max-w-full gap-1.5 p-1',
-                'flex flex-nowrap items-stretch justify-start overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] touch-pan-x',
-                '[&>*]:shrink-0',
+                'flex h-auto w-full flex-wrap items-center justify-start gap-2 bg-transparent p-0',
+                'md:gap-0 md:rounded-md md:bg-muted md:p-1',
                 isPro
-                  ? 'md:grid md:h-10 md:grid-cols-5 md:items-center md:justify-center md:overflow-hidden md:gap-0'
-                  : 'md:grid md:h-10 md:grid-cols-2 md:items-center md:justify-center md:overflow-hidden md:gap-0'
+                  ? 'md:grid md:h-10 md:grid-cols-5 md:items-center md:justify-center'
+                  : 'md:grid md:h-10 md:grid-cols-2 md:items-center md:justify-center',
               )}
             >
-              <TabsTrigger value="perfil">Perfil</TabsTrigger>
+              <TabsTrigger value="perfil" className={tabTriggerClass}>Perfil</TabsTrigger>
               {isPro && (
                 <>
-                  <TabsTrigger value="negocios">Mis Negocios</TabsTrigger>
-                  <TabsTrigger value="metricas">Métricas</TabsTrigger>
-                  <TabsTrigger value="plan">Plan</TabsTrigger>
+                  <TabsTrigger value="negocios" className={tabTriggerClass}>Mis Negocios</TabsTrigger>
+                  <TabsTrigger value="metricas" className={tabTriggerClass}>Métricas</TabsTrigger>
+                  <TabsTrigger value="plan" className={tabTriggerClass}>Plan</TabsTrigger>
                 </>
               )}
-              <TabsTrigger value="seguridad">Seguridad</TabsTrigger>
+              <TabsTrigger value="seguridad" className={tabTriggerClass}>Seguridad</TabsTrigger>
             </TabsList>
 
             {/* Perfil Tab */}
@@ -645,106 +663,85 @@ export default function UserDashboard() {
                       Cambia tu plan profesional cuando lo necesites.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="mb-6 rounded-lg border border-border p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Plan actual</p>
-                          <p className="font-semibold text-foreground">{currentPlanName}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">Estado</p>
-                          <p className="font-medium text-foreground">{subscriptionStatus ?? '—'}</p>
-                        </div>
-                      </div>
-                    </div>
-
+                  <CardContent className="overflow-visible">
                     {plansLoading ? (
-                      <div className="grid gap-4 sm:grid-cols-2 sm:items-stretch">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                          <div key={i} className="relative flex h-full min-h-0 flex-col rounded-xl border p-5">
-                            <Skeleton className="h-5 w-28" />
-                            <Skeleton className="mt-2 h-4 w-24" />
-                            <div className="mt-4 min-h-0 flex-1 space-y-2">
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:items-stretch">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <div key={i} className="relative flex h-full min-h-0 flex-col rounded-2xl border-2 p-6">
+                            <Skeleton className="mx-auto h-12 w-12 rounded-full" />
+                            <Skeleton className="mx-auto mt-3 h-6 w-24" />
+                            <Skeleton className="mx-auto mt-2 h-8 w-20" />
+                            <div className="mt-6 min-h-0 flex-1 space-y-2">
                               <Skeleton className="h-3 w-5/6" />
                               <Skeleton className="h-3 w-4/6" />
                               <Skeleton className="h-3 w-3/6" />
                             </div>
-                            <div className="mt-auto shrink-0 pt-4">
+                            <div className="mt-6 shrink-0">
                               <Skeleton className="h-9 w-full rounded-md" />
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="grid gap-4 sm:grid-cols-2 sm:items-stretch">
-                        {upgradePlans.map(plan => {
-                            const selected = planId === plan.id;
-                            return (
+                      <PlanComparisonGrid
+                        comparePlans={dashboardPlans}
+                        columns={sortPlansByPrice(dashboardPlans).map(plan => {
+                          const isFreePlan = FREE_PLAN_IDS.has(plan.id);
+                          const isCurrentFree = !!planId && FREE_PLAN_IDS.has(planId);
+                          const isOnPremium = planId === 'premium';
+                          const isLowerTierFromPremium = isOnPremium && plan.id === 'pro';
+                          const selected = isFreePlan ? isCurrentFree : planId === plan.id;
+                          const useOutlineAction = isFreePlan || isLowerTierFromPremium;
+                          return {
+                            plan,
+                            selected,
+                            disabled: changingPlan,
+                            onSelect: () => {
+                              if (selected) return;
+                              if (isFreePlan && isOnPaidPlan) {
+                                openDowngradeConfirm('basico');
+                                return;
+                              }
+                              if (isLowerTierFromPremium) {
+                                openDowngradeConfirm('pro');
+                                return;
+                              }
+                              void handleChangePlan(plan.id);
+                            },
+                            topBadge: selected ? (
+                              <Badge className="border-0">Actual</Badge>
+                            ) : undefined,
+                            showPopularBadge: !isLowerTierFromPremium,
+                            action: (
                               <div
-                                key={plan.id}
-                                role="button"
-                                tabIndex={changingPlan ? -1 : 0}
-                                aria-disabled={changingPlan}
-                                onClick={() => {
-                                  if (!changingPlan) handleChangePlan(plan.id);
-                                }}
-                                onKeyDown={e => {
-                                  if (changingPlan) return;
-                                  if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    handleChangePlan(plan.id);
-                                  }
-                                }}
-                                className={`relative flex h-full min-h-0 cursor-pointer flex-col rounded-xl border p-5 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                                  selected
-                                    ? 'border-primary bg-primary/5 shadow-sm'
-                                    : 'border-border hover:border-muted-foreground/30 hover:bg-muted/50'
-                                } ${changingPlan ? 'pointer-events-none opacity-70' : ''}`}
+                                className={cn(
+                                  buttonVariants({
+                                    variant: selected || useOutlineAction ? 'outline' : 'default',
+                                    className: 'mt-2 w-full pointer-events-none select-none',
+                                  }),
+                                  (changingPlan || selected) && 'opacity-50',
+                                )}
                               >
-                                <div className="shrink-0 flex items-start justify-between gap-4">
-                                  <div>
-                                    <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                      {plan.price === 0 ? 'Gratis' : `${plan.price}${plan.currency}`}{plan.price > 0 ? `/${plan.interval}` : ''}
-                                    </p>
-                                  </div>
-                                  {selected && (
-                                    <Badge variant="default" className="h-fit">Actual</Badge>
-                                  )}
-                                </div>
-                                <div className="mt-4 min-h-0 flex-1 grid gap-1.5 content-start">
-                                  {(Array.isArray(plan.features) ? plan.features : []).slice(0, 5).map(f => (
-                                    <div key={f} className="text-xs text-muted-foreground">
-                                      - {f}
-                                    </div>
-                                  ))}
-                                </div>
-                                <div className="mt-auto shrink-0 pt-4">
-                                  <div
-                                    className={cn(
-                                      buttonVariants({
-                                        variant: selected ? 'outline' : 'default',
-                                        className: 'w-full pointer-events-none select-none',
-                                      }),
-                                      (changingPlan || selected) && 'opacity-50'
-                                    )}
-                                  >
-                                    {selected ? 'Plan actual' : changingPlan ? 'Cambiando…' : 'Cambiar a este plan'}
-                                  </div>
-                                </div>
+                                {selected
+                                  ? 'Plan actual'
+                                  : changingPlan
+                                    ? 'Cambiando…'
+                                    : isFreePlan
+                                      ? 'Cambiar a plan gratuito'
+                                      : 'Cambiar a este plan'}
                               </div>
-                            );
-                          })}
-                      </div>
+                            ),
+                          };
+                        })}
+                      />
                     )}
 
-                    {isOnPaidPlan && !plansLoading && (
+                    {isOnPaidPlan && !plansLoading && !dashboardPlans.some(p => FREE_PLAN_IDS.has(p.id)) && (
                       <div className="mt-6 border-t border-border/50 pt-4 text-center">
                         <button
                           type="button"
                           disabled={changingPlan}
-                          onClick={() => setDowngradePlanOpen(true)}
+                          onClick={() => openDowngradeConfirm('basico')}
                           className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline disabled:pointer-events-none disabled:opacity-50"
                         >
                           Cambiar al plan {basicPlanName} (gratuito)
@@ -754,13 +751,28 @@ export default function UserDashboard() {
                   </CardContent>
                 </Card>
 
-                <AlertDialog open={downgradePlanOpen} onOpenChange={setDowngradePlanOpen}>
+                <AlertDialog
+                  open={downgradeConfirmOpen}
+                  onOpenChange={open => {
+                    setDowngradeConfirmOpen(open);
+                    if (!open) setDowngradeTargetPlanId(null);
+                  }}
+                >
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>¿Cambiar al plan {basicPlanName}?</AlertDialogTitle>
+                      <AlertDialogTitle>¿Cambiar al plan {downgradeTargetPlanName}?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Dejarás de tener las funciones de pago (estadísticas avanzadas, insignia Premium, etc.).
-                        Tu cuenta profesional y tus negocios registrados se mantienen.
+                        {downgradeTargetPlanId === 'pro' ? (
+                          <>
+                            Dejarás de tener las funciones exclusivas de Premium (insignia Premium, negocio
+                            recomendado, etc.). Tu cuenta profesional y tus negocios registrados se mantienen.
+                          </>
+                        ) : (
+                          <>
+                            Dejarás de tener las funciones de pago (estadísticas avanzadas, insignia Premium,
+                            etc.). Tu cuenta profesional y tus negocios registrados se mantienen.
+                          </>
+                        )}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -770,10 +782,12 @@ export default function UserDashboard() {
                         className="bg-muted text-muted-foreground hover:bg-muted/80"
                         onClick={e => {
                           e.preventDefault();
-                          void handleDowngradeToBasicPlan();
+                          void handleConfirmDowngrade();
                         }}
                       >
-                        {changingPlan ? 'Cambiando…' : `Confirmar plan ${basicPlanName}`}
+                        {changingPlan
+                          ? 'Cambiando…'
+                          : `Confirmar plan ${downgradeTargetPlanName}`}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

@@ -31,6 +31,7 @@ const BUSINESSES = [
   {
     name: "Borda de l'Avi",
     category: 'Gastronomía',
+    subcategory: 'Borda y cocina de montaña',
     location: 'Canillo',
     description: `${SEED_TAG} Restaurante de cocina tradicional andorrana en el corazón de Canillo. Especialidad en carnes a la brasa y platos de montaña.`,
     latitude: 42.5669,
@@ -44,6 +45,7 @@ const BUSINESSES = [
   {
     name: "Restaurant Plat'in",
     category: 'Gastronomía',
+    subcategory: 'Restaurante',
     location: 'Escaldes-Engordany',
     description: `${SEED_TAG} Cocina mediterránea y de autor en Escaldes, con terraza y carta de vinos seleccionada.`,
     latitude: 42.5089,
@@ -58,6 +60,7 @@ const BUSINESSES = [
   {
     name: 'Hotel Plaza Andorra',
     category: 'Alojamiento',
+    subcategory: 'Hotel',
     location: 'Andorra la Vella',
     description: `${SEED_TAG} Hotel céntrico en Andorra la Vella, ideal para escapadas urbanas y compras en el centro histórico.`,
     latitude: 42.5074,
@@ -71,6 +74,7 @@ const BUSINESSES = [
   {
     name: 'Sport Hotel Hermitage & Spa',
     category: 'Alojamiento',
+    subcategory: 'Hotel',
     location: 'Soldeu',
     description: `${SEED_TAG} Hotel 5 estrellas en Soldeu, a pie de pistas de Grandvalira, con spa y gastronomía de alto nivel.`,
     latitude: 42.5765,
@@ -85,6 +89,7 @@ const BUSINESSES = [
   {
     name: 'Palau de Gel',
     category: 'Ocio y entretenimiento',
+    subcategory: 'Complejo deportivo',
     location: 'Canillo',
     description: `${SEED_TAG} Complejo deportivo y de ocio con pista de hielo, piscina, gimnasio y actividades para familias todo el año.`,
     latitude: 42.5665,
@@ -98,6 +103,7 @@ const BUSINESSES = [
   {
     name: 'Micropolis · Centre d\'oci',
     category: 'Ocio y entretenimiento',
+    subcategory: 'Centro de ocio y juegos',
     location: 'Canillo',
     description: `${SEED_TAG} Centro de ocio con bolera, karting indoor, zona infantil y restauración en la parroquia de Canillo.`,
     latitude: 42.566,
@@ -112,6 +118,7 @@ const BUSINESSES = [
   {
     name: 'Naturlandia',
     category: 'Turismo y experiencias',
+    subcategory: 'Parque de aventura y naturaleza',
     location: 'Sant Julià de Lòria',
     description: `${SEED_TAG} Parque de aventura y naturaleza en la Rabassa: tirolinas, tobogán alpino, fauna autóctona y rutas panorámicas.`,
     latitude: 42.475,
@@ -125,6 +132,7 @@ const BUSINESSES = [
   {
     name: 'Grandvalira',
     category: 'Turismo y experiencias',
+    subcategory: 'Estación de esquí y nieve',
     location: 'Soldeu',
     description: `${SEED_TAG} La estación de esquí más extensa del sur de Europa: pistas, actividades de nieve y experiencias todo el año en Soldeu y sectores vinculados.`,
     latitude: 42.576,
@@ -139,6 +147,7 @@ const BUSINESSES = [
   {
     name: 'Pyrénées Andorra',
     category: 'Compras',
+    subcategory: 'Gran superficie y duty free',
     location: 'Andorra la Vella',
     description: `${SEED_TAG} Gran superficie comercial en el centre històric d'Andorra la Vella: moda, electrónica, perfumería y productos duty free.`,
     latitude: 42.508,
@@ -152,6 +161,7 @@ const BUSINESSES = [
   {
     name: 'Illa Carlemany',
     category: 'Compras',
+    subcategory: 'Centro comercial',
     location: 'Escaldes-Engordany',
     description: `${SEED_TAG} Centro comercial y de ocio en Escaldes con boutiques, restauración, cine y aparcamiento subterráneo.`,
     latitude: 42.5095,
@@ -166,6 +176,7 @@ const BUSINESSES = [
   {
     name: 'Caldea',
     category: 'Bienestar',
+    subcategory: 'Spa termal',
     location: 'Escaldes-Engordany',
     description: `${SEED_TAG} Centro termolúdic y spa de referencia en los Pirineos: aguas termales, masajes, circuitos de relajación y vistas a la montaña.`,
     latitude: 42.5145,
@@ -179,6 +190,7 @@ const BUSINESSES = [
   {
     name: 'Inúu',
     category: 'Bienestar',
+    subcategory: 'Spa y tratamientos',
     location: 'Escaldes-Engordany',
     description: `${SEED_TAG} Espacio de bienestar y relajación vinculado al complejo Caldea: tratamientos corporales, masajes y experiencias sensoriales.`,
     latitude: 42.514,

@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { clearStoredVisitorKey, getStoredVisitorKey } from '@/lib/visitor-key';
 import type { Business, Plan, Review } from '@/types/domain';
+import { DEPRECATED_PLAN_IDS } from '@/lib/plan-display';
 
 export interface TopVisitedBusiness extends Business {
   visits_month: number;
@@ -22,6 +23,7 @@ function normalizeBusinessRow(row: unknown): Business {
   const services = Array.isArray(r.services) ? (r.services as string[]) : [];
   return {
     ...r,
+    subcategory: r.subcategory != null ? String(r.subcategory) : null,
     rating: Number(r.rating ?? 0),
     review_count: Number(r.review_count ?? 0),
     price_range: Number(r.price_range ?? 2),
@@ -151,7 +153,7 @@ export async function getPlans(): Promise<Plan[]> {
     console.error('Error fetching plans:', error);
     return [];
   }
-  return (data ?? []).map(normalizePlanRow);
+  return (data ?? []).map(normalizePlanRow).filter(p => !DEPRECATED_PLAN_IDS.has(p.id));
 }
 
 /** Pasa de usuario básico a profesional y asigna el plan (RPC `upgrade_to_professional`). */

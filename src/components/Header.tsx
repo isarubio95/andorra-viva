@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mountain, Menu, X, LogOut, User, Store } from 'lucide-react';
+import { Mountain, Menu, X, LogOut, User, Store, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
+import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '@/components/ui/drawer';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -105,6 +105,7 @@ export default function Header() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => navigate('/favoritos')}>
+                  <Heart className="mr-2 h-4 w-4" />
                   Favoritos
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/mi-cuenta')}>
@@ -151,15 +152,20 @@ export default function Header() {
         </button>
       </div>
 
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen} syncWithHistory={false}>
-        <SheetContent
+      <Drawer
+        open={mobileOpen}
+        onOpenChange={setMobileOpen}
+        direction="right"
+        shouldScaleBackground={false}
+      >
+        <DrawerContent
           side="right"
-          className="flex w-full flex-col gap-0 border-l bg-card p-0 pt-14 [&>button]:right-4 [&>button]:top-4"
+          className="flex w-full flex-col gap-0 bg-card p-0 pt-14"
         >
-          <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
-          <SheetDescription className="sr-only">
+          <DrawerTitle className="sr-only">Menú de navegación</DrawerTitle>
+          <DrawerDescription className="sr-only">
             Enlaces del sitio, favoritos y opciones de iniciar sesión o cerrar sesión.
-          </SheetDescription>
+          </DrawerDescription>
           <nav className="flex flex-1 flex-col gap-1 px-4 pb-6">
             {navLinks.map(link => (
               <Link
@@ -174,9 +180,10 @@ export default function Header() {
             {user ? (
               <Link
                 to="/favoritos"
-                className="rounded-lg px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-muted"
+                className="flex items-center rounded-lg px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-muted"
                 onClick={() => setMobileOpen(false)}
               >
+                <Heart className="mr-2 h-4 w-4" />
                 Favoritos
               </Link>
             ) : null}
@@ -226,8 +233,8 @@ export default function Header() {
               </div>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
     </header>
   );
 }

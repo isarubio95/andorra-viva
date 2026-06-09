@@ -1,125 +1,71 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UtensilsCrossed, BedDouble, Music, Map, ShoppingBag, Sparkles } from 'lucide-react';
-import catGastro from '@/assets/cat-gastronomia.jpg';
-import catMontana from '@/assets/cat-montana.jpg';
-import catNoche from '@/assets/cat-noche.jpg';
-import catCultura from '@/assets/cat-cultura.jpg';
-import catShopping from '@/assets/cat-shopping.jpg';
-import catWellness from '@/assets/cat-wellness.jpg';
-import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
-import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  type CarouselApi,
-} from '@/components/ui/carousel';
+import { BUSINESS_CATEGORIES, type BusinessCategory } from '@/constants/businessCategories';
+import { CATEGORY_MARKER_CONFIG, CATEGORY_MARKER_DEFAULT_COLOR } from '@/lib/map-category-marker';
 
-const CATEGORY_UI: Record<
-  (typeof BUSINESS_CATEGORIES)[number],
-  { icon: typeof UtensilsCrossed; image: string }
-> = {
-  'Gastronomía': { icon: UtensilsCrossed, image: catGastro },
-  'Alojamiento': { icon: BedDouble, image: catMontana },
-  'Ocio y entretenimiento': { icon: Music, image: catNoche },
-  'Turismo y experiencias': { icon: Map, image: catCultura },
-  'Compras': { icon: ShoppingBag, image: catShopping },
-  'Bienestar': { icon: Sparkles, image: catWellness },
+const HOME_CATEGORY_LABELS: Record<BusinessCategory, string> = {
+  Gastronomía: 'Dónde comer',
+  'Turismo y experiencias': 'Qué hacer',
+  Compras: 'Ir de compras',
+  Alojamiento: 'Dónde dormir',
+  'Ocio y entretenimiento': 'Ocio y entretenimiento',
+  Bienestar: 'Bienestar',
 };
 
 const categories = BUSINESS_CATEGORIES.map(label => ({
   label,
-  ...CATEGORY_UI[label],
+  displayLabel: HOME_CATEGORY_LABELS[label],
+  ...CATEGORY_MARKER_CONFIG[label],
 }));
 
-function CategoryButton({ cat, onSelect }: { cat: typeof categories[0]; onSelect: () => void }) {
+function CategoryCard({
+  cat,
+  onSelect,
+}: {
+  cat: (typeof categories)[number];
+  onSelect: () => void;
+}) {
+  const color = cat.color ?? CATEGORY_MARKER_DEFAULT_COLOR;
+  const Icon = cat.Icon;
+
   return (
     <button
       type="button"
       onClick={onSelect}
-      className="group relative overflow-hidden rounded-xl aspect-4/3 w-full cursor-pointer transition-[transform,box-shadow,translate] duration-300 ease-in-out hover:shadow-md hover:-translate-y-1"
+      className="group flex h-full w-full min-h-30 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border bg-card px-3 py-5 text-center transition-[transform,box-shadow,translate] duration-300 ease-in-out hover:-translate-y-1 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
-      <img
-        src={cat.image}
-        alt={cat.label}
-        loading="lazy"
-        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]"
+      <Icon
+        className="h-8 w-8 shrink-0 transition-transform duration-500 ease-out group-hover:scale-[1.02]"
+        style={{ color }}
+        strokeWidth={2}
+        aria-hidden
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-      <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
-        <cat.icon className="h-4 w-4 text-white/80" />
-        <span className="text-sm font-semibold text-white">{cat.label}</span>
-      </div>
+      <span className="text-sm font-medium leading-tight text-foreground">
+        {cat.displayLabel}
+      </span>
     </button>
   );
 }
 
 export default function CategoryBar() {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   const goToDirectory = useCallback(
     (grupo: string) => {
       navigate(`/directorio?grupo=${encodeURIComponent(grupo)}`);
     },
-    [navigate]
+    [navigate],
   );
-  const [api, setApi] = useState<CarouselApi>();
-  const [current, setCurrent] = useState(0);
-  const [count, setCount] = useState(0);
-
-  const onApiSelect = useCallback(() => {
-    if (!api) return;
-    setCurrent(api.selectedScrollSnap());
-  }, [api]);
-
-  useEffect(() => {
-    if (!api) return;
-    setCount(api.scrollSnapList().length);
-    setCurrent(api.selectedScrollSnap());
-    api.on('select', onApiSelect);
-    return () => { api.off('select', onApiSelect); };
-  }, [api, onApiSelect]);
 
   return (
-    <section className="container mx-auto px-4 py-10">
-      <h2 className="mb-6 text-xl font-bold">Categorías</h2>
+    <section className="container mx-auto px-4 pt-10 pb-4">
+      <h2 className="mb-6 text-xl font-bold text-foreground">¿Qué quieres hacer hoy?</h2>
 
-      {isMobile ? (
-        <div>
-          <Carousel
-            opts={{ align: 'start', loop: false }}
-            className="w-full"
-            setApi={setApi}
-          >
-            <CarouselContent className="-ml-3">
-              {categories.map(cat => (
-                <CarouselItem key={cat.label} className="pl-3 basis-[44%]">
-                  <CategoryButton cat={cat} onSelect={() => goToDirectory(cat.label)} />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
-          <div className="flex justify-center gap-1.5 mt-4">
-            {Array.from({ length: count }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => api?.scrollTo(i)}
-                className={`h-2 rounded-full transition-[width,background-color] duration-300 ease-out ${
-                  i === current ? 'w-6 bg-accent' : 'w-2 bg-muted-foreground/30'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-6 gap-4">
-          {categories.map(cat => (
-            <CategoryButton key={cat.label} cat={cat} onSelect={() => goToDirectory(cat.label)} />
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {categories.map(cat => (
+          <CategoryCard key={cat.label} cat={cat} onSelect={() => goToDirectory(cat.label)} />
+        ))}
+      </div>
     </section>
   );
 }
