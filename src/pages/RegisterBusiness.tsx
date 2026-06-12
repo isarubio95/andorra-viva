@@ -14,32 +14,23 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 import { getSubcategoriesForCategory } from '@/constants/businessSubcategories';
-
-const LOCATIONS = [
-  'Andorra la Vella',
-  'Escaldes-Engordany',
-  'Encamp',
-  'La Massana',
-  'Ordino',
-  'Canillo',
-  'Soldeu',
-  'El Tarter',
-  'Pas de la Casa',
-  'Sant Julià de Lòria',
-  'Arinsal',
-];
-
-const SERVICES_OPTIONS = [
-  'Wifi', 'Terraza', 'Parking', 'Piscina', 'Sauna', 'Gimnasio',
-  'Restaurante', 'Bar', 'Spa', 'Ski-in', 'Bodega', 'Tienda',
-  'Masajes', 'Menú del día', 'Reservas online', 'Delivery',
-  'Accesible', 'Pet-friendly', 'Niños', 'Eventos',
-];
-
+import BusinessServicesPicker from '@/components/BusinessServicesPicker';
+import BusinessHoursEditor from '@/components/BusinessHoursEditor';
+import { BUSINESS_LOCATIONS } from '@/constants/businessForm';
+import { createDefaultOpeningHours, type BusinessOpeningHours } from '@/lib/business-hours';
+import {
+  getMaxPhotosForTier,
+  getMaxServicesForTier,
+  planLabelForTier,
+  resolveProfilePlanTier,
+} from '@/lib/business-profile-plan';
 type Step = 'info' | 'details' | 'images' | 'review';
 
 export default function RegisterBusiness() {
-  const { user } = useAuth();
+  const { user, planId, role } = useAuth();
+  const planTier = resolveProfilePlanTier(planId, role);
+  const maxServices = getMaxServicesForTier(planTier);
+  const maxPhotos = getMaxPhotosForTier(planTier);
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +53,7 @@ export default function RegisterBusiness() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [latitude, setLatitude] = useState('42.5063');
   const [longitude, setLongitude] = useState('1.5218');
+  const [openingHours, setOpeningHours] = useState<BusinessOpeningHours>(createDefaultOpeningHours);
 
   // Step 3: Images
   const [images, setImages] = useState<File[]>([]);
@@ -77,21 +69,34 @@ export default function RegisterBusiness() {
   const currentIndex = steps.findIndex(s => s.key === step);
 
   const toggleService = (service: string) => {
-    setSelectedServices(prev =>
-      prev.includes(service) ? prev.filter(s => s !== service) : [...prev, service]
-    );
+    setSelectedServices(prev => {
+      if (prev.includes(service)) return prev.filter(s => s !== service);
+      if (prev.length >= maxServices) {
+        toast({
+          title: `Máximo ${maxServices} servicios`,
+          description: `Tu plan ${planLabelForTier(planTier)} permite seleccionar hasta ${maxServices}.`,
+          variant: 'destructive',
+        });
+        return prev;
+      }
+      return [...prev, service];
+    });
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (images.length + files.length > 10) {
-      toast({ title: 'Máximo 10 imágenes', variant: 'destructive' });
+    const remaining = maxPhotos - images.length;
+    if (remaining <= 0) {
+      toast({
+        title: `Máximo ${maxPhotos} fotos`,
+        description: `Tu plan ${planLabelForTier(planTier)} permite subir hasta ${maxPhotos} imágenes.`,
+        variant: 'destructive',
+      });
       return;
     }
-    const newImages = [...images, ...files];
-    setImages(newImages);
-    const newPreviews = files.map(f => URL.createObjectURL(f));
-    setPreviews(prev => [...prev, ...newPreviews]);
+    const picked = files.slice(0, remaining);
+    setImages(prev => [...prev, ...picked]);
+    setPreviews(prev => [...prev, ...picked.map(f => URL.createObjectURL(f))]);
   };
 
   const removeImage = (index: number) => {
@@ -138,7 +143,7 @@ export default function RegisterBusiness() {
     try {
       // Upload images
       const imageUrls: string[] = [];
-      for (const file of images) {
+      for (const file of images.slice(0, maxPhotos)) {
         const ext = file.name.split('.').pop();
         const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
         const { error: uploadError } = await supabase.storage
@@ -176,7 +181,7 @@ export default function RegisterBusiness() {
         website: website.trim() || null,
         price_range: parseInt(priceRange, 10),
         min_age: minAge !== '' && minAge != null ? parseInt(minAge, 10) : null,
-        services: selectedServices,
+        services: selectedServices.slice(0, maxServices),
         latitude: lat,
         longitude: lon,
         image_url: imageUrls[0] || '',
@@ -184,6 +189,7 @@ export default function RegisterBusiness() {
         rating: 0,
         review_count: 0,
         is_recommended: false,
+        opening_hours: openingHours,
       };
       if (imageUrls.length > 0) {
         row.gallery = imageUrls;
@@ -315,7 +321,7 @@ export default function RegisterBusiness() {
                 <Select value={location} onValueChange={setLocation}>
                   <SelectTrigger><SelectValue placeholder="Selecciona parroquia" /></SelectTrigger>
                   <SelectContent>
-                    {LOCATIONS.map(l => (
+                    {BUSINESS_LOCATIONS.map(l => (
                       <SelectItem key={l} value={l}>{l}</SelectItem>
                     ))}
                   </SelectContent>
@@ -389,6 +395,8 @@ export default function RegisterBusiness() {
                 </div>
               </div>
 
+              <BusinessHoursEditor value={openingHours} onChange={setOpeningHours} />
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="biz-lat">Latitud *</Label>
@@ -406,28 +414,11 @@ export default function RegisterBusiness() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Servicios disponibles</Label>
-                <div className="flex flex-wrap gap-2">
-                  {SERVICES_OPTIONS.map(service => {
-                    const isSelected = selectedServices.includes(service);
-                    return (
-                      <button
-                        key={service}
-                        type="button"
-                        onClick={() => toggleService(service)}
-                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                          isSelected
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border text-muted-foreground hover:border-muted-foreground/50'
-                        }`}
-                      >
-                        {service}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <BusinessServicesPicker
+                selectedServices={selectedServices}
+                maxServices={maxServices}
+                onToggle={toggleService}
+              />
             </CardContent>
           </Card>
         )}
@@ -440,7 +431,9 @@ export default function RegisterBusiness() {
                 <ImagePlus className="h-5 w-5 text-primary" />
                 Imágenes del negocio
               </CardTitle>
-              <CardDescription>Sube hasta 10 fotos. La primera será la imagen principal.</CardDescription>
+              <CardDescription>
+                Sube hasta {maxPhotos} fotos según tu plan. La primera será la imagen principal.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <input
@@ -476,8 +469,9 @@ export default function RegisterBusiness() {
 
               <button
                 type="button"
+                disabled={images.length >= maxPhotos}
                 onClick={() => fileInputRef.current?.click()}
-                className="flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border p-8 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5"
+                className="flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border p-8 text-muted-foreground transition-colors enabled:hover:border-primary/50 enabled:hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                   <ImagePlus className="h-6 w-6" />
@@ -489,7 +483,7 @@ export default function RegisterBusiness() {
               </button>
 
               <p className="text-xs text-muted-foreground text-center">
-                {images.length}/10 imágenes seleccionadas
+                {images.length}/{maxPhotos} imágenes seleccionadas
               </p>
             </CardContent>
           </Card>

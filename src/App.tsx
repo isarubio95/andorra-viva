@@ -14,6 +14,7 @@ import UserDashboard from "./pages/UserDashboard.tsx";
 import Favorites from "./pages/Favorites.tsx";
 import RateBusiness from "./pages/RateBusiness.tsx";
 import RegisterBusiness from "./pages/RegisterBusiness.tsx";
+import EditBusinessProfile from "./pages/EditBusinessProfile.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/favoritos" element={<Favorites />} />
               <Route path="/valorar/:businessId" element={<RateBusiness />} />
               <Route path="/registrar-negocio" element={<RegisterBusiness />} />
+              <Route path="/mi-cuenta/negocios/:businessId" element={<EditBusinessProfile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -2,6 +2,9 @@ import { useEffect, useRef } from 'react';
 
 const OVERLAY_STATE_KEY = '__andorraVivaOverlay';
 
+/** Overlay abierto con entrada extra en el historial (p. ej. drawer de vista previa). */
+export const isOverlayHistoryActive = { current: false };
+
 function locationKey() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
@@ -19,10 +22,14 @@ export function useSyncOverlayWithHistory(isOpen: boolean, onClose: () => void) 
   const locationWhenOpenedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      isOverlayHistoryActive.current = false;
+      return;
+    }
 
     closedByPopRef.current = false;
     locationWhenOpenedRef.current = locationKey();
+    isOverlayHistoryActive.current = true;
     window.history.pushState({ [OVERLAY_STATE_KEY]: true }, '', window.location.href);
 
     const handlePopState = () => {
@@ -37,6 +44,7 @@ export function useSyncOverlayWithHistory(isOpen: boolean, onClose: () => void) 
       if (!closedByPopRef.current && !navigatedAway) {
         window.history.back();
       }
+      isOverlayHistoryActive.current = false;
     };
   }, [isOpen]);
 }

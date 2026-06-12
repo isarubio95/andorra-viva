@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, BarChart3, Medal, Copy, QrCode, Download } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, BarChart3, Medal, Copy, QrCode, Download, Lock, Eye, EyeOff } from 'lucide-react';
 import QRCode from 'qrcode';
 import {
   getMyBusinesses,
@@ -43,6 +43,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const FREE_PLAN_IDS = new Set(['basico', 'free']);
 
@@ -59,6 +67,7 @@ export default function UserDashboard() {
     loading: authLoading,
   } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
   const [saving, setSaving] = useState(false);
@@ -74,7 +83,17 @@ export default function UserDashboard() {
   const [changingRecommendedId, setChangingRecommendedId] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<BusinessMetricRow[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
-  const [mainTab, setMainTab] = useState('perfil');
+  const [mainTab, setMainTab] = useState(() => {
+    const tab = (location.state as { tab?: string } | null)?.tab;
+    return tab === 'negocios' || tab === 'plan' || tab === 'metricas' || tab === 'seguridad' ? tab : 'perfil';
+  });
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordUpdatedAt, setPasswordUpdatedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -155,6 +174,79 @@ export default function UserDashboard() {
     await signOut();
     toast({ title: 'Sesión cerrada' });
     navigate('/');
+  };
+
+  const hasPasswordAuth = user?.identities?.some(identity => identity.provider === 'email') ?? false;
+
+  const resetPasswordForm = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowPasswordFields(false);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.email) return;
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: 'Las contraseñas no coinciden',
+        description: 'Verifica que la nueva contraseña y su confirmación sean iguales.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({
+        title: 'Contraseña muy corta',
+        description: 'La nueva contraseña debe tener al menos 6 caracteres.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (newPassword === currentPassword) {
+      toast({
+        title: 'Contraseña igual a la actual',
+        description: 'Elige una contraseña distinta a la que usas ahora.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setChangingPassword(true);
+
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+
+    if (verifyError) {
+      toast({
+        title: 'Contraseña actual incorrecta',
+        description: 'Comprueba la contraseña e inténtalo de nuevo.',
+        variant: 'destructive',
+      });
+      setChangingPassword(false);
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (updateError) {
+      toast({
+        title: 'No se pudo cambiar la contraseña',
+        description: updateError.message,
+        variant: 'destructive',
+      });
+    } else {
+      setPasswordUpdatedAt(new Date());
+      resetPasswordForm();
+      setChangePasswordOpen(false);
+      toast({ title: 'Contraseña actualizada correctamente' });
+    }
+
+    setChangingPassword(false);
   };
 
   const refreshMyBusinesses = async () => {
@@ -450,7 +542,7 @@ export default function UserDashboard() {
                       <div className="grid gap-4 sm:grid-cols-2">
                         {Array.from({ length: 4 }).map((_, i) => (
                           <div key={i} className="rounded-xl border bg-card overflow-hidden">
-                            <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                            <Skeleton className="aspect-4/3 w-full rounded-none" />
                             <div className="space-y-2 p-4">
                               <Skeleton className="h-4 w-2/3" />
                               <Skeleton className="h-3 w-1/2" />
@@ -474,8 +566,18 @@ export default function UserDashboard() {
                             <div key={biz.id} className="min-w-0 space-y-3 rounded-xl border p-3">
                               <BusinessCard
                                 business={biz}
-                                onClick={() => {}}
+                                onClick={() => navigate(`/mi-cuenta/negocios/${biz.id}`)}
                               />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => navigate(`/mi-cuenta/negocios/${biz.id}`)}
+                              >
+                                <Settings className="mr-2 h-4 w-4" />
+                                Editar perfil del drawer
+                              </Button>
                               <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
                                 <div className="flex items-center gap-2 text-sm">
                                   <Medal className="h-4 w-4 text-premium" />
@@ -848,10 +950,23 @@ export default function UserDashboard() {
                       <Settings className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium text-foreground">Contraseña</p>
-                        <p className="text-sm text-muted-foreground">Última actualización desconocida</p>
+                        <p className="text-sm text-muted-foreground">
+                          {passwordUpdatedAt
+                            ? `Actualizada el ${passwordUpdatedAt.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                            : hasPasswordAuth
+                              ? 'Protege tu cuenta con una contraseña segura'
+                              : 'Iniciaste sesión con un proveedor externo'}
+                        </p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">Cambiar</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!hasPasswordAuth}
+                      onClick={() => setChangePasswordOpen(true)}
+                    >
+                      Cambiar
+                    </Button>
                   </div>
 
                   <Separator />
@@ -864,6 +979,93 @@ export default function UserDashboard() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          <Dialog
+            open={changePasswordOpen}
+            onOpenChange={open => {
+              setChangePasswordOpen(open);
+              if (!open) resetPasswordForm();
+            }}
+          >
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Cambiar contraseña</DialogTitle>
+                <DialogDescription>
+                  Introduce tu contraseña actual y elige una nueva. Mínimo 6 caracteres.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="current-password">Contraseña actual</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="current-password"
+                      type={showPasswordFields ? 'text' : 'password'}
+                      value={currentPassword}
+                      onChange={e => setCurrentPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      autoComplete="current-password"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">Nueva contraseña</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="new-password"
+                      type={showPasswordFields ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      autoComplete="new-password"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirmar nueva contraseña</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="confirm-password"
+                      type={showPasswordFields ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      autoComplete="new-password"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordFields(!showPasswordFields)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showPasswordFields ? 'Ocultar contraseñas' : 'Mostrar contraseñas'}
+                    >
+                      {showPasswordFields ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={changingPassword}
+                    onClick={() => setChangePasswordOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={changingPassword}>
+                    {changingPassword ? 'Guardando…' : 'Guardar contraseña'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
       <Footer />

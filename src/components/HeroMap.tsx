@@ -1,7 +1,7 @@
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet';
-import { LocateFixed, Minus, Plus, Star } from 'lucide-react';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Map as LeafletMap } from 'leaflet';
+import { LocateFixed, MapPin, Minus, Plus, Star } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import type { Map as LeafletMap, Popup as LeafletPopup } from 'leaflet';
 import { toast } from 'sonner';
 import type { Business } from '@/types/domain';
 import { resolveBusinessImageUrl } from '@/lib/business-image';
@@ -12,6 +12,19 @@ import {
 } from '@/lib/map-category-marker';
 import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 import { getSubcategoriesForCategory } from '@/constants/businessSubcategories';
+import {
+  ANDORRA_PARISHES,
+  PARISH_MAP_CENTERS,
+  getParishForLocation,
+  type AndorraParish,
+} from '@/constants/businessForm';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import 'leaflet/dist/leaflet.css';
 
 const MAP_FILTER_PILL_LABELS: Record<string, string> = {
@@ -48,17 +61,113 @@ function MapInstanceBridge({ onReady }: { onReady: (map: LeafletMap) => void }) 
 const MAP_CONTROL_BTN =
   'flex h-10 w-10 items-center justify-center bg-background/90 text-foreground backdrop-blur-sm transition-colors hover:bg-background active:scale-95 disabled:pointer-events-none disabled:opacity-50';
 
+/** Desplaza el punto de centrado hacia la derecha para no chocar con los filtros. */
+const POPUP_CENTER_OFFSET_X = 50;
+
+function centerPopupInViewport(map: LeafletMap, popup: LeafletPopup) {
+  const alignToViewportCenter = () => {
+    const popupEl = popup.getElement();
+    if (!popupEl) return;
+
+    const viewportCenter = map.getSize().divideBy(2);
+    const mapRect = map.getContainer().getBoundingClientRect();
+    const popupRect = popupEl.getBoundingClientRect();
+
+    const popupCenterX = popupRect.left - mapRect.left + popupRect.width / 2;
+    const popupCenterY = popupRect.top - mapRect.top + popupRect.height / 2;
+
+    const dx = popupCenterX - (viewportCenter.x + POPUP_CENTER_OFFSET_X);
+    const dy = popupCenterY - viewportCenter.y;
+
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+      // panBy desplaza el centro del mapa hacia el offset indicado, por lo que
+      // mover el centro hasta la card requiere usar el delta tal cual (sin negar).
+      map.panBy([dx, dy], { animate: true, duration: 0.5 });
+    }
+  };
+
+  // Espera a que Leaflet pinte la ficha antes de medir su posición en pantalla.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(alignToViewportCenter);
+  });
+}
+
+function BusinessMapMarker({
+  biz,
+  onBusinessClick,
+}: {
+  biz: Business;
+  onBusinessClick: (business: Business) => void;
+}) {
+  const map = useMap();
+
+  return (
+    <Marker
+      position={[biz.latitude, biz.longitude]}
+      icon={getBusinessCategoryDivIcon(biz.category)}
+    >
+      <Popup
+        minWidth={200}
+        maxWidth={200}
+        className="hero-map-popup"
+        autoPan={false}
+        eventHandlers={{
+          add: event => {
+            centerPopupInViewport(map, event.target);
+          },
+        }}
+      >
+        <div>
+          <h3 className="font-bold text-sm leading-tight">{biz.name}</h3>
+          <img
+            src={resolveBusinessImageUrl(biz.image_url)}
+            alt=""
+            onError={e => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = resolveBusinessImageUrl(null);
+            }}
+            className="mt-1.5 block h-20 w-full rounded-md border border-border/70 object-cover"
+          />
+          <p className="mt-1.5 text-xs leading-snug text-muted-foreground">
+            {biz.subcategory ?? biz.category} · {biz.location}
+          </p>
+          <div className="mt-1 flex items-center gap-1">
+            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+            <span className="text-xs font-medium">{biz.rating}</span>
+            <span className="text-xs text-muted-foreground">({biz.review_count})</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onBusinessClick(biz)}
+            className="mt-2 w-full cursor-pointer rounded bg-[hsl(160,30%,25%)] px-2 py-1 text-xs font-medium text-white hover:opacity-90"
+          >
+            Ver detalles
+          </button>
+        </div>
+      </Popup>
+    </Marker>
+  );
+}
+
 export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedParish, setSelectedParish] = useState<AndorraParish | null>(null);
   const [subcategoriesOpen, setSubcategoriesOpen] = useState(false);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
   const [locating, setLocating] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+  const parishSelectTriggerRef = useRef<HTMLButtonElement>(null);
 
   const handleMapReady = useCallback((map: LeafletMap) => {
     setMapInstance(map);
+  }, []);
+
+  const handleParishSelectClose = useCallback(() => {
+    requestAnimationFrame(() => {
+      parishSelectTriggerRef.current?.blur();
+    });
   }, []);
 
   const handleZoomIn = () => {
@@ -137,13 +246,22 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
   };
 
   const visibleBusinesses = useMemo(() => {
-    if (!selectedCategory) return businesses;
-    const inCategory = businesses.filter(b => b.category === selectedCategory);
+    let result = businesses;
+    if (selectedParish) {
+      result = result.filter(b => getParishForLocation(b.location) === selectedParish);
+    }
+    if (!selectedCategory) return result;
+    const inCategory = result.filter(b => b.category === selectedCategory);
     if (selectedSubcategories.length === 0) return inCategory;
     return inCategory.filter(
       b => b.subcategory && selectedSubcategories.includes(b.subcategory),
     );
-  }, [businesses, selectedCategory, selectedSubcategories]);
+  }, [businesses, selectedParish, selectedCategory, selectedSubcategories]);
+
+  useEffect(() => {
+    if (!mapInstance || !selectedParish) return;
+    mapInstance.flyTo(PARISH_MAP_CENTERS[selectedParish], 13, { duration: 0.8 });
+  }, [mapInstance, selectedParish]);
 
   const selectedColor = selectedCategory
     ? (CATEGORY_MARKER_CONFIG[selectedCategory]?.color ?? CATEGORY_MARKER_DEFAULT_COLOR)
@@ -170,11 +288,7 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
   /** Anima el reordenamiento de las pills (FLIP) cuando cambia el orden. */
   useLayoutEffect(() => {
     const nodes = pillRefs.current;
-
-    nodes.forEach(node => {
-      node.style.transition = 'none';
-      node.style.transform = 'none';
-    });
+    const cleanups: Array<() => void> = [];
 
     const newRects = new Map<string, DOMRect>();
     nodes.forEach((node, key) => newRects.set(key, node.getBoundingClientRect()));
@@ -187,18 +301,36 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
       const dy = prev.top - next.top;
       if (dx === 0 && dy === 0) return;
 
+      node.style.transition = 'none';
       node.style.transform = `translate(${dx}px, ${dy}px)`;
+
       requestAnimationFrame(() => {
+        const onEnd = () => {
+          node.style.transition = '';
+          node.style.transform = '';
+        };
+
+        node.addEventListener('transitionend', onEnd, { once: true });
+        cleanups.push(() => {
+          node.removeEventListener('transitionend', onEnd);
+          node.style.transition = '';
+          node.style.transform = '';
+        });
+
         node.style.transition = 'transform 380ms cubic-bezier(0.22, 1, 0.36, 1)';
         node.style.transform = '';
       });
     });
 
     prevRects.current = newRects;
+
+    return () => {
+      cleanups.forEach(fn => fn());
+    };
   }, [orderedCategories]);
 
   const pillBase =
-    'pointer-events-auto inline-flex w-full min-w-[100px] items-center rounded-full border bg-background/90 px-2 py-1 text-left text-[10px] font-medium leading-tight shadow-sm backdrop-blur-sm transition-all duration-300 hover:bg-background md:min-w-[168px] md:px-2.5 md:py-1.5 md:text-[11px]';
+    'map-filter-pill pointer-events-auto inline-flex w-full min-w-[100px] items-center rounded-full border px-2 py-1 text-left text-[10px] font-medium leading-tight backdrop-blur-sm md:min-w-[168px] md:px-2.5 md:py-1.5 md:text-[11px]';
 
   const renderCategoryPill = (cat: string) => {
     const cfg = CATEGORY_MARKER_CONFIG[cat];
@@ -219,10 +351,10 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
         aria-expanded={isSelected && subcategoriesOpen}
         aria-label={cat}
         title={isSelected ? `Quitar filtro ${cat}` : cat}
-        style={isSelected ? { backgroundColor: `${color}14`, borderColor: `${color}30` } : undefined}
-        className={`${pillBase} items-center gap-1.5 md:gap-2 ${
-          isSelected ? 'text-foreground' : 'border-border/60 text-foreground'
-        } ${isDimmed ? 'scale-[0.97] opacity-35' : 'opacity-100'}`}
+        style={isSelected ? ({ '--pill-tint': color } as CSSProperties) : undefined}
+        className={`${pillBase} items-center gap-1.5 text-foreground md:gap-2 ${
+          isSelected ? 'map-filter-pill--selected' : ''
+        } ${isDimmed ? 'map-filter-pill--dimmed' : ''}`}
       >
         <span
           className="h-2.5 w-2.5 shrink-0 rounded-full border-2 border-white shadow-sm"
@@ -246,12 +378,10 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
         aria-pressed={isSubSelected}
         style={{
           animationDelay: `${index * 45}ms`,
-          ...(isSubSelected
-            ? { backgroundColor: `${subColor}14`, borderColor: `${subColor}30` }
-            : {}),
+          ...(isSubSelected ? ({ '--pill-tint': subColor } as CSSProperties) : {}),
         }}
-        className={`${pillBase} animate-subfilter-rise-in motion-reduce:animate-none ${
-          isSubSelected ? 'text-foreground' : 'border-border/60 text-foreground'
+        className={`${pillBase} animate-subfilter-rise-in text-foreground motion-reduce:animate-none ${
+          isSubSelected ? 'map-filter-pill--selected' : ''
         }`}
       >
         <span className="truncate">{sub}</span>
@@ -271,7 +401,7 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
     return (
       <div
         key={listKey}
-        className="flex shrink-0 flex-col gap-1.5 overflow-hidden border-l border-border/40 pl-1"
+        className="flex shrink-0 flex-col gap-1.5 overflow-hidden border-l border-border/40 pl-0.5"
         role="group"
         aria-label={`Subcategorías de ${selectedCategory}`}
       >
@@ -308,91 +438,96 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
           />
         )}
         {visibleBusinesses.map(biz => (
-          <Marker
-            key={biz.id}
-            position={[biz.latitude, biz.longitude]}
-            icon={getBusinessCategoryDivIcon(biz.category)}
-          >
-            <Popup minWidth={200} maxWidth={200} className="hero-map-popup">
-              <div className="w-full max-w-[200px]">
-                <h3 className="wrap-break-word font-bold text-sm leading-tight">{biz.name}</h3>
-                <img
-                  src={resolveBusinessImageUrl(biz.image_url)}
-                  alt=""
-                  onError={e => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = resolveBusinessImageUrl(null);
-                  }}
-                  className="mt-1.5 h-20 w-full rounded-md border border-border/70 object-cover"
-                />
-                <p className="mt-1.5 wrap-break-word text-xs leading-snug text-muted-foreground">
-                  {biz.subcategory ?? biz.category} · {biz.location}
-                </p>
-                <div className="mt-1 flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  <span className="text-xs font-medium">{biz.rating}</span>
-                  <span className="text-xs text-muted-foreground">({biz.review_count})</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onBusinessClick(biz)}
-                  className="mt-2 w-full cursor-pointer rounded bg-[hsl(160,30%,25%)] px-2 py-1 text-xs font-medium text-white hover:opacity-90"
-                >
-                  Ver detalles
-                </button>
-              </div>
-            </Popup>
-          </Marker>
+          <BusinessMapMarker key={biz.id} biz={biz} onBusinessClick={onBusinessClick} />
         ))}
       </MapContainer>
 
-      <div className="pointer-events-none absolute left-4 top-4 z-10 flex flex-col gap-2">
-        <div className="pointer-events-auto overflow-hidden rounded-xl border border-border/60 shadow-sm">
-          <button
-            type="button"
-            onClick={handleZoomIn}
-            disabled={!mapInstance}
-            aria-label="Acercar mapa"
-            title="Acercar"
-            className={`${MAP_CONTROL_BTN} border-b border-border/60`}
-          >
-            <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </button>
-          <button
-            type="button"
-            onClick={handleZoomOut}
-            disabled={!mapInstance}
-            aria-label="Alejar mapa"
-            title="Alejar"
-            className={MAP_CONTROL_BTN}
-          >
-            <Minus className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </button>
+      <div className="pointer-events-none absolute inset-x-0 top-4 z-10">
+        <div className="container mx-auto flex items-start justify-between gap-3 px-4">
+          <div className="pointer-events-auto flex w-fit flex-col gap-2">
+            <div className="overflow-hidden rounded-xl border border-border/60 shadow-sm">
+              <button
+                type="button"
+                onClick={handleZoomIn}
+                disabled={!mapInstance}
+                aria-label="Acercar mapa"
+                title="Acercar"
+                className={`${MAP_CONTROL_BTN} border-b border-border/60`}
+              >
+                <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
+              </button>
+              <button
+                type="button"
+                onClick={handleZoomOut}
+                disabled={!mapInstance}
+                aria-label="Alejar mapa"
+                title="Alejar"
+                className={MAP_CONTROL_BTN}
+              >
+                <Minus className="h-[18px] w-[18px]" strokeWidth={2.25} />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={handleLocate}
+              disabled={locating || !mapInstance}
+              aria-label="Ir a mi ubicación"
+              title="Mi ubicación"
+              className={`${MAP_CONTROL_BTN} rounded-xl border border-border/60 shadow-sm ${
+                locating ? 'text-primary' : ''
+              }`}
+            >
+              <LocateFixed className={`h-[18px] w-[18px] ${locating ? 'animate-pulse' : ''}`} />
+            </button>
+          </div>
+
+          <div className="pointer-events-auto w-fit max-w-[calc(100vw-5.5rem)] shrink-0">
+            <Select
+              value={selectedParish ?? 'all'}
+              onValueChange={value =>
+                setSelectedParish(value === 'all' ? null : (value as AndorraParish))
+              }
+              onOpenChange={open => {
+                if (!open) handleParishSelectClose();
+              }}
+            >
+              <SelectTrigger
+                ref={parishSelectTriggerRef}
+                aria-label="Filtrar por parroquia"
+                className="h-10 w-fit max-w-full gap-1.5 border-border/60 bg-background/90 px-2.5 text-xs shadow-sm backdrop-blur-sm sm:px-3 sm:text-sm [&>span]:line-clamp-none [&>span]:whitespace-nowrap"
+              >
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                <SelectValue placeholder="Parroquia" />
+              </SelectTrigger>
+              <SelectContent
+                align="end"
+                className="z-1000 min-w-(--radix-select-trigger-width)"
+                onCloseAutoFocus={event => {
+                  event.preventDefault();
+                  handleParishSelectClose();
+                }}
+              >
+                <SelectItem value="all">Todas</SelectItem>
+                {ANDORRA_PARISHES.map(parish => (
+                  <SelectItem key={parish} value={parish}>
+                    {parish}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={handleLocate}
-          disabled={locating || !mapInstance}
-          aria-label="Ir a mi ubicación"
-          title="Mi ubicación"
-          className={`${MAP_CONTROL_BTN} pointer-events-auto rounded-xl border border-border/60 shadow-sm ${
-            locating ? 'text-primary' : ''
-          }`}
-        >
-          <LocateFixed className={`h-[18px] w-[18px] ${locating ? 'animate-pulse' : ''}`} />
-        </button>
       </div>
 
-      <div
-        ref={filterRef}
-        className="pointer-events-none absolute bottom-4 left-4 z-10 max-h-[calc(100%-2rem)] max-w-[calc(100%-2rem)] pr-1"
-      >
-        <div className="overflow-hidden">
-          <div className={`flex gap-1 overflow-hidden ${isCollapsedWithSubs ? 'items-end' : 'items-start'}`}>
-            <div className="flex shrink-0 flex-col gap-1.5">
-              {orderedCategories.map(renderCategoryPill)}
+      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 max-h-[calc(100%-2rem)]">
+        <div className="container mx-auto h-full px-4">
+          <div ref={filterRef} className="max-w-full overflow-hidden pr-1">
+            <div className={`flex gap-0.5 overflow-hidden ${isCollapsedWithSubs ? 'items-end' : 'items-start'}`}>
+              <div className="flex shrink-0 flex-col gap-1.5">
+                {orderedCategories.map(renderCategoryPill)}
+              </div>
+              {(subcategoriesOpen || isCollapsedWithSubs) && subcategoryList}
             </div>
-            {(subcategoriesOpen || isCollapsedWithSubs) && subcategoryList}
           </div>
         </div>
       </div>

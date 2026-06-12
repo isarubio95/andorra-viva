@@ -1,5 +1,7 @@
 /** Tipos alineados con tablas Supabase `businesses`, `reviews`, `plans` (sin datos estáticos). */
 
+import type { BusinessOpeningHours } from '@/lib/business-hours';
+
 export interface Business {
   id: string;
   name: string;
@@ -21,6 +23,7 @@ export interface Business {
   gallery?: string[];
   phone?: string | null;
   website?: string | null;
+  opening_hours?: BusinessOpeningHours | null;
   created_at?: string;
 }
 

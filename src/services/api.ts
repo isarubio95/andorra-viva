@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { clearStoredVisitorKey, getStoredVisitorKey } from '@/lib/visitor-key';
 import type { Business, Plan, Review } from '@/types/domain';
+import { rewriteSupabaseStorageUrl } from '@/lib/business-image';
+import { parseOpeningHours } from '@/lib/business-hours';
 import { DEPRECATED_PLAN_IDS } from '@/lib/plan-display';
 
 export interface TopVisitedBusiness extends Business {
@@ -21,6 +23,13 @@ export interface BusinessMetricRow {
 function normalizeBusinessRow(row: unknown): Business {
   const r = row as Business & { is_premium?: boolean; services?: unknown; gallery?: unknown };
   const services = Array.isArray(r.services) ? (r.services as string[]) : [];
+  const gallery = Array.isArray(r.gallery)
+    ? (r.gallery as string[])
+        .map(url => rewriteSupabaseStorageUrl(url))
+        .filter((url): url is string => !!url)
+    : undefined;
+  const imageUrl = rewriteSupabaseStorageUrl(r.image_url) ?? r.image_url;
+
   return {
     ...r,
     subcategory: r.subcategory != null ? String(r.subcategory) : null,
@@ -29,7 +38,9 @@ function normalizeBusinessRow(row: unknown): Business {
     price_range: Number(r.price_range ?? 2),
     services,
     is_premium: !!r.is_premium,
-    gallery: Array.isArray(r.gallery) ? (r.gallery as string[]) : undefined,
+    image_url: imageUrl,
+    gallery,
+    opening_hours: parseOpeningHours((r as { opening_hours?: unknown }).opening_hours),
   };
 }
 
@@ -74,6 +85,24 @@ export async function getMyBusinesses(userId: string): Promise<Business[]> {
     return [];
   }
   return (data ?? []).map(normalizeBusinessRow);
+}
+
+export async function updateMyBusiness(
+  businessId: string,
+  payload: Record<string, unknown>,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!businessId) return { ok: false, error: 'Negocio inválido' };
+
+  const { error } = await supabase
+    .from('businesses')
+    .update(payload)
+    .eq('id', businessId);
+
+  if (error) {
+    console.error('Error updating business:', error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }
 
 export async function getBusinessById(id: string): Promise<Business | null> {

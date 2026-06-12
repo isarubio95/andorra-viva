@@ -174,7 +174,7 @@ export default function Directory() {
 
       <div className="container mx-auto px-4 py-8">
         {/* Filter toggle + active badges */}
-        <div className="mb-6 flex flex-wrap items-center gap-3">
+        <div className={`flex flex-wrap items-center gap-3 ${showFilters ? 'mb-3' : 'mb-6'}`}>
           <Button
             variant="outline"
             size="sm"

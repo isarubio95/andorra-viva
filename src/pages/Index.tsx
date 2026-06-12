@@ -161,7 +161,7 @@ export default function Index() {
         <CategoryBar />
 
         <FeaturedSection
-          title="Recomendaciones premium"
+          title="Nuestras recomendaciones"
           icon="🏅"
           loading={loading}
           businesses={premium}
