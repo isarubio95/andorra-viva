@@ -3,7 +3,7 @@ import { clearStoredVisitorKey, getStoredVisitorKey } from '@/lib/visitor-key';
 import type { Business, Plan, Review } from '@/types/domain';
 import { rewriteSupabaseStorageUrl } from '@/lib/business-image';
 import { parseOpeningHours } from '@/lib/business-hours';
-import { DEPRECATED_PLAN_IDS } from '@/lib/plan-display';
+import { DEPRECATED_PLAN_IDS, HIDDEN_PLAN_IDS } from '@/lib/plan-display';
 
 export interface TopVisitedBusiness extends Business {
   visits_month: number;
@@ -182,7 +182,9 @@ export async function getPlans(): Promise<Plan[]> {
     console.error('Error fetching plans:', error);
     return [];
   }
-  return (data ?? []).map(normalizePlanRow).filter(p => !DEPRECATED_PLAN_IDS.has(p.id));
+  return (data ?? [])
+    .map(normalizePlanRow)
+    .filter(p => !DEPRECATED_PLAN_IDS.has(p.id) && !HIDDEN_PLAN_IDS.has(p.id));
 }
 
 /** Pasa de usuario básico a profesional y asigna el plan (RPC `upgrade_to_professional`). */

@@ -198,8 +198,14 @@
 
   --radius: 0.75rem;
 
-  --premium: hsl(42, 100%, 74%);
-  --premium-foreground: hsl(40 75% 18%);
+  --premium: hsl(43 78% 48%);
+  --premium-foreground: hsl(35 55% 11%);
+
+  --recommended-gold-dark: #8a6d3b;
+  --recommended-gold-mid: #d4af37;
+  --recommended-gold-light: #f9e89e;
+  --recommended-gold-rich: #e6b800;
+  --recommended-gold-text: #1a1205;
 
   --hero-gradient-start: hsl(160 25% 30%);
   --hero-gradient-end: hsl(150 15% 55%);
@@ -294,6 +300,23 @@
   z-index: 0;
 }
 
+#mapa::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, hsl(150 22% 96% / 0.18) 0%, transparent 14%),
+    linear-gradient(to top, hsl(150 22% 96% / 0.22) 0%, transparent 18%);
+}
+
+.dark #mapa::after {
+  background:
+    linear-gradient(to bottom, hsl(160 20% 8% / 0.28) 0%, transparent 14%),
+    linear-gradient(to top, hsl(160 20% 8% / 0.32) 0%, transparent 18%);
+}
+
 .leaflet-control-zoom {
   display: none !important;
 }
@@ -313,6 +336,34 @@
   margin: 0 !important;
   overflow-wrap: break-word;
   word-break: normal;
+}
+
+/* Distintivo "Recomendado" — dorado metálico con alto contraste. */
+.recommended-badge {
+  border: 1px solid color-mix(in srgb, var(--recommended-gold-dark) 75%, #000);
+  background: linear-gradient(
+    145deg,
+    #7a612f 0%,
+    #b8942e 18%,
+    #f5e6a8 42%,
+    #e2b820 58%,
+    #c9a227 76%,
+    #8a6d3b 100%
+  );
+  color: var(--recommended-gold-text);
+  box-shadow:
+    0 2px 6px rgb(26 18 5 / 0.22),
+    inset 0 1px 0 rgb(255 248 220 / 0.55),
+    inset 0 -1px 0 rgb(58 42 12 / 0.25);
+  text-shadow: 0 1px 0 rgb(255 248 220 / 0.35);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.recommended-badge svg {
+  color: var(--recommended-gold-text);
+  filter: drop-shadow(0 1px 0 rgb(255 248 220 / 0.25));
 }
 
 @utility container {

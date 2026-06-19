@@ -30,7 +30,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { CartesianGrid, Line, LineChart, XAxis } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import { sortPlansByPrice, PROFESSIONAL_DASHBOARD_HIDDEN_PLAN_IDS } from '@/lib/plan-display';
+import { getPlanTheme, sortPlansByPrice, PROFESSIONAL_DASHBOARD_HIDDEN_PLAN_IDS } from '@/lib/plan-display';
 import { buildPublicUrl } from '@/lib/site-url';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -53,6 +53,19 @@ import {
 } from '@/components/ui/dialog';
 
 const FREE_PLAN_IDS = new Set(['basico', 'free']);
+
+const PLAN_RANK: Record<string, number> = {
+  basico: 0,
+  free: 0,
+  basic: 1,
+  pro: 2,
+  premium: 3,
+};
+
+function isPlanDowngrade(fromPlanId: string | null | undefined, toPlanId: string): boolean {
+  if (!fromPlanId) return false;
+  return (PLAN_RANK[fromPlanId] ?? 0) > (PLAN_RANK[toPlanId] ?? 0);
+}
 
 export default function UserDashboard() {
   const {
@@ -146,8 +159,6 @@ export default function UserDashboard() {
   const tabTriggerClass = cn(
     'shrink-0 rounded-full border border-border bg-background px-4 py-2 shadow-sm',
     'data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none',
-    'md:rounded-sm md:border-0 md:bg-transparent md:px-3 md:py-1.5 md:shadow-none',
-    'md:data-[state=active]:border-0 md:data-[state=active]:bg-background md:data-[state=active]:text-foreground md:data-[state=active]:shadow-sm',
   );
   const currentRecommendedId = myBusinesses.find(b => b.is_recommended)?.id ?? null;
 
@@ -428,21 +439,13 @@ export default function UserDashboard() {
           </div>
 
           <Tabs value={mainTab} onValueChange={setMainTab} className="space-y-6">
-            <TabsList
-              className={cn(
-                'flex h-auto w-full flex-wrap items-center justify-start gap-2 bg-transparent p-0',
-                'md:gap-0 md:rounded-md md:bg-muted md:p-1',
-                isPro
-                  ? 'md:grid md:h-10 md:grid-cols-5 md:items-center md:justify-center'
-                  : 'md:grid md:h-10 md:grid-cols-2 md:items-center md:justify-center',
-              )}
-            >
+            <TabsList className="flex h-auto w-full flex-wrap items-center justify-start gap-2 bg-transparent p-0">
               <TabsTrigger value="perfil" className={tabTriggerClass}>Perfil</TabsTrigger>
               {isPro && (
                 <>
                   <TabsTrigger value="negocios" className={tabTriggerClass}>Mis Negocios</TabsTrigger>
                   <TabsTrigger value="metricas" className={tabTriggerClass}>Métricas</TabsTrigger>
-                  <TabsTrigger value="plan" className={tabTriggerClass}>Plan</TabsTrigger>
+                  <TabsTrigger value="plan" className={tabTriggerClass}>Planes</TabsTrigger>
                 </>
               )}
               <TabsTrigger value="seguridad" className={tabTriggerClass}>Seguridad</TabsTrigger>
@@ -790,22 +793,17 @@ export default function UserDashboard() {
                         columns={sortPlansByPrice(dashboardPlans).map(plan => {
                           const isFreePlan = FREE_PLAN_IDS.has(plan.id);
                           const isCurrentFree = !!planId && FREE_PLAN_IDS.has(planId);
-                          const isOnPremium = planId === 'premium';
-                          const isLowerTierFromPremium = isOnPremium && plan.id === 'pro';
                           const selected = isFreePlan ? isCurrentFree : planId === plan.id;
-                          const useOutlineAction = isFreePlan || isLowerTierFromPremium;
+                          const isDowngradeTarget = isPlanDowngrade(planId, plan.id);
+                          const theme = getPlanTheme(plan.id);
                           return {
                             plan,
                             selected,
                             disabled: changingPlan,
                             onSelect: () => {
                               if (selected) return;
-                              if (isFreePlan && isOnPaidPlan) {
-                                openDowngradeConfirm('basico');
-                                return;
-                              }
-                              if (isLowerTierFromPremium) {
-                                openDowngradeConfirm('pro');
+                              if (isDowngradeTarget) {
+                                openDowngradeConfirm(plan.id);
                                 return;
                               }
                               void handleChangePlan(plan.id);
@@ -813,13 +811,16 @@ export default function UserDashboard() {
                             topBadge: selected ? (
                               <Badge className="border-0">Actual</Badge>
                             ) : undefined,
-                            showPopularBadge: !isLowerTierFromPremium,
+                            showPopularBadge: !selected,
                             action: (
                               <div
                                 className={cn(
                                   buttonVariants({
-                                    variant: selected || useOutlineAction ? 'outline' : 'default',
-                                    className: 'mt-2 w-full pointer-events-none select-none',
+                                    variant: selected || isDowngradeTarget ? 'outline' : 'default',
+                                    className: cn(
+                                      'w-full rounded-full pointer-events-none select-none',
+                                      !selected && !isDowngradeTarget && theme.buttonClass,
+                                    ),
                                   }),
                                   (changingPlan || selected) && 'opacity-50',
                                 )}
@@ -830,7 +831,7 @@ export default function UserDashboard() {
                                     ? 'Cambiando…'
                                     : isFreePlan
                                       ? 'Cambiar a plan gratuito'
-                                      : 'Cambiar a este plan'}
+                                      : `Elegir ${plan.name}`}
                               </div>
                             ),
                           };
@@ -868,6 +869,11 @@ export default function UserDashboard() {
                           <>
                             Dejarás de tener las funciones exclusivas de Premium (insignia Premium, negocio
                             recomendado, etc.). Tu cuenta profesional y tus negocios registrados se mantienen.
+                          </>
+                        ) : downgradeTargetPlanId === 'basic' ? (
+                          <>
+                            Dejarás de tener las funciones de Pro o Premium. Tu cuenta profesional y tus negocios
+                            registrados se mantienen.
                           </>
                         ) : (
                           <>

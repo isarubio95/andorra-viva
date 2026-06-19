@@ -58,7 +58,7 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]"
         />
         {business.is_premium && (
-          <Badge className="absolute right-3 top-3 bg-premium text-premium-foreground border-0 text-xs font-bold">
+          <Badge className="recommended-badge absolute right-3 top-3 border-0 text-xs">
             <Medal className="mr-1 h-3.5 w-3.5" />
             RECOMENDADO
           </Badge>

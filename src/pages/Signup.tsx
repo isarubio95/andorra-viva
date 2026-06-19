@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import PlanComparisonGrid from '@/components/PlanComparisonGrid';
 import { sortPlansByPrice } from '@/lib/plan-display';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -186,7 +187,7 @@ export default function Signup() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-transparent px-4 py-8">
-      <div className="w-full max-w-lg space-y-8">
+      <div className={cn('w-full space-y-8', step === 'plan' ? 'max-w-7xl' : 'max-w-lg')}>
         <div className="flex flex-col items-center gap-3">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">

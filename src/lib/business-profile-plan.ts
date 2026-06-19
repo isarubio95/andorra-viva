@@ -1,4 +1,4 @@
-export type ProfilePlanTier = 'basico' | 'pro' | 'premium';
+export type ProfilePlanTier = 'basico' | 'basic' | 'pro' | 'premium';
 
 export type ProfileFieldGroup = 'essential' | 'contact' | 'services' | 'gallery' | 'actions' | 'details';
 
@@ -13,20 +13,23 @@ const GROUP_MIN_TIER: Record<ProfileFieldGroup, ProfilePlanTier> = {
 
 export const PROFILE_SERVICE_LIMITS: Record<ProfilePlanTier, number> = {
   basico: 4,
+  basic: 5,
   pro: 7,
   premium: 12,
 };
 
 export const PROFILE_PHOTO_LIMITS: Record<ProfilePlanTier, number> = {
   basico: 3,
-  pro: 5,
-  premium: 7,
+  basic: 3,
+  pro: 6,
+  premium: 10,
 };
 
 const TIER_RANK: Record<ProfilePlanTier, number> = {
   basico: 0,
-  pro: 1,
-  premium: 2,
+  basic: 1,
+  pro: 2,
+  premium: 3,
 };
 
 export function resolveProfilePlanTier(
@@ -36,6 +39,7 @@ export function resolveProfilePlanTier(
   if (role === 'admin') return 'premium';
   if (planId === 'premium') return 'premium';
   if (planId === 'pro') return 'pro';
+  if (planId === 'basic') return 'basic';
   return 'basico';
 }
 
@@ -61,13 +65,16 @@ export function planLabelForTier(tier: ProfilePlanTier): string {
       return 'Premium';
     case 'pro':
       return 'Pro';
+    case 'basic':
+      return 'Basic';
     default:
       return 'Básico';
   }
 }
 
 export function getNextPlanTier(tier: ProfilePlanTier): ProfilePlanTier | null {
-  if (tier === 'basico') return 'pro';
+  if (tier === 'basico') return 'basic';
+  if (tier === 'basic') return 'pro';
   if (tier === 'pro') return 'premium';
   return null;
 }

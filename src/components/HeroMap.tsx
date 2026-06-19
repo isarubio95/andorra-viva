@@ -417,13 +417,13 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
         zoom={12}
         scrollWheelZoom
         zoomControl={false}
-        className="h-[50vh] w-full md:h-[60vh]"
+        className="hero-map h-[50vh] w-full md:h-[60vh]"
       >
         <AttributionPrefixCleaner />
         <MapInstanceBridge onReady={handleMapReady} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
         {userPosition && (
           <CircleMarker

@@ -172,7 +172,7 @@ export default function BusinessProfileView({
         </Carousel>
 
         {showPremiumBadge && (
-          <Badge className="pointer-events-none absolute left-4 top-4 z-10 border-0 bg-premium text-premium-foreground">
+          <Badge className="recommended-badge pointer-events-none absolute left-4 top-4 z-10 border-0">
             <Medal className="mr-1 h-3.5 w-3.5" />
             Recomendado
           </Badge>

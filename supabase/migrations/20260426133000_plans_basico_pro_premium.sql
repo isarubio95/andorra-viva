@@ -15,7 +15,7 @@ values
   (
     'premium',
     'Premium',
-    79,
+    29,
     '€',
     'mes',
     array[
@@ -36,7 +36,7 @@ on conflict (id) do update set
 
 update public.plans set
   name = 'Pro',
-  price = 29,
+  price = 19,
   currency = '€',
   "interval" = 'mes',
   features = array[
