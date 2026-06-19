@@ -51,7 +51,7 @@ export default function Favorites() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-transparent">
       <Header />
       <main className="container mx-auto flex-1 px-4 py-8">
         <div className="mx-auto max-w-3xl space-y-6">

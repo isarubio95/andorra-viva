@@ -218,7 +218,7 @@ export default function RegisterBusiness() {
   };
 
   return (
-    <div className="flex min-h-screen items-start justify-center bg-background px-4 py-8">
+    <div className="flex min-h-screen items-start justify-center bg-transparent px-4 py-8">
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}
         <div className="flex flex-col items-center gap-3 text-center">

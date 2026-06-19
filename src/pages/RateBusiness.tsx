@@ -95,7 +95,7 @@ export default function RateBusiness() {
   if (authLoading || !user) return null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-transparent">
       <Header />
       <main className="container mx-auto flex-1 px-4 py-8">
         <div className="mx-auto w-full max-w-xl space-y-4">

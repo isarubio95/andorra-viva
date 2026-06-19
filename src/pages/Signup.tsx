@@ -178,14 +178,14 @@ export default function Signup() {
 
   if (upgradeFlow && (roleLoading || !user || hasProAccess)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-transparent">
         <p className="text-sm text-muted-foreground">Cargando…</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
+    <div className="flex min-h-screen items-center justify-center bg-transparent px-4 py-8">
       <div className="w-full max-w-lg space-y-8">
         <div className="flex flex-col items-center gap-3">
           <Link to="/" className="flex items-center gap-2">

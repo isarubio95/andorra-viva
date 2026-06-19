@@ -405,7 +405,7 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-transparent">
       <Header />
       <main className="container mx-auto flex-1 px-4 py-8">
         <div className="mx-auto max-w-4xl space-y-8">

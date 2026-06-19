@@ -553,7 +553,7 @@ export default function EditBusinessProfile() {
 
   if (authLoading || loading || !user) {
     return (
-      <div className="flex min-h-screen flex-col bg-background">
+      <div className="flex min-h-screen flex-col bg-transparent">
         <Header />
         <main className="container mx-auto flex-1 px-4 py-8">
           <Skeleton className="mb-6 h-8 w-64" />
@@ -568,7 +568,7 @@ export default function EditBusinessProfile() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-transparent">
       <Header />
       <main className="container mx-auto flex-1 px-4 py-8 pb-24 lg:pb-8">
         <div className="mx-auto max-w-6xl space-y-6">

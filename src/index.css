@@ -251,6 +251,41 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    position: relative;
+    background-color: hsl(150 22% 96%);
+    background-image:
+      radial-gradient(44rem 34rem at 6% -10%, hsl(145 72% 46% / 0.22), transparent 56%),
+      radial-gradient(42rem 40rem at 104% 4%, hsl(170 60% 34% / 0.20), transparent 56%),
+      radial-gradient(52rem 46rem at 94% 110%, hsl(150 66% 46% / 0.16), transparent 60%),
+      radial-gradient(40rem 34rem at -6% 104%, hsl(42 92% 60% / 0.12), transparent 60%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  /* Patrón de rejilla de puntos fino y fijo, estilo producto. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(hsl(160 28% 26% / 0.06) 1px, transparent 1.6px);
+    background-size: 22px 22px;
+    -webkit-mask-image: radial-gradient(120% 120% at 50% 0%, #000 35%, transparent 78%);
+    mask-image: radial-gradient(120% 120% at 50% 0%, #000 35%, transparent 78%);
+  }
+
+  .dark body {
+    background-color: hsl(160 20% 8%);
+    background-image:
+      radial-gradient(44rem 34rem at 6% -10%, hsl(145 72% 46% / 0.20), transparent 56%),
+      radial-gradient(42rem 40rem at 104% 4%, hsl(170 60% 40% / 0.18), transparent 56%),
+      radial-gradient(52rem 46rem at 94% 110%, hsl(150 66% 46% / 0.14), transparent 60%),
+      radial-gradient(40rem 34rem at -6% 104%, hsl(42 90% 58% / 0.10), transparent 60%);
+  }
+
+  .dark body::before {
+    background-image: radial-gradient(hsl(150 40% 70% / 0.08) 1px, transparent 1.6px);
   }
 }
 

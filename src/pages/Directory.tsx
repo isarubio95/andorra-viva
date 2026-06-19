@@ -160,7 +160,7 @@ export default function Directory() {
   }, [filtered]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-transparent">
       <div className="flex flex-1 flex-col">
       <Header />
 
