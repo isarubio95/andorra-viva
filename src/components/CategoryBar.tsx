@@ -31,6 +31,7 @@ import {
   Wine,
 } from 'lucide-react';
 import type { BusinessCategory } from '@/constants/businessCategories';
+import { CATEGORY_THEMES, type CategoryTheme } from '@/constants/categoryDisplay';
 
 type SubcategoryLink = {
   /** Debe coincidir EXACTO con una subcategoría canónica (`businessSubcategories.ts`). */
@@ -40,27 +41,17 @@ type SubcategoryLink = {
   Icon: LucideIcon;
 };
 
-type CategoryCardConfig = {
+type CategoryCardConfig = CategoryTheme & {
   category: BusinessCategory;
-  displayLabel: string;
   Icon: LucideIcon;
-  /** Imagen de fondo representativa (en `public/categories`). */
-  image: string;
-  /** Degradado de la cabecera (de arriba a abajo). */
-  gradient: { from: string; via: string; to: string };
-  /** Color de los iconos de subcategoría en el pie. */
-  accent: string;
   subcategories: SubcategoryLink[];
 };
 
 const CATEGORY_CARDS: CategoryCardConfig[] = [
   {
     category: 'Gastronomía',
-    displayLabel: 'Dónde comer',
+    ...CATEGORY_THEMES['Gastronomía'],
     Icon: UtensilsCrossed,
-    image: '/categories/cat-gastronomia.png',
-    gradient: { from: '#7f1d1d', via: '#b91c1c', to: '#450a0a' },
-    accent: '#c2410c',
     subcategories: [
       { subcategory: 'Restaurante', displayLabel: 'Restaurantes', Icon: UtensilsCrossed },
       { subcategory: 'Cafetería y brunch', displayLabel: 'Cafeterías', Icon: Coffee },
@@ -70,11 +61,8 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
   },
   {
     category: 'Alojamiento',
-    displayLabel: 'Dónde dormir',
+    ...CATEGORY_THEMES.Alojamiento,
     Icon: Bed,
-    image: '/categories/cat-alojamiento.png',
-    gradient: { from: '#1e3a8a', via: '#1d4ed8', to: '#0c1f4d' },
-    accent: '#1d4ed8',
     subcategories: [
       { subcategory: 'Hotel', displayLabel: 'Hoteles', Icon: Hotel },
       { subcategory: 'Apartamento turístico', displayLabel: 'Apartamentos', Icon: Building2 },
@@ -84,11 +72,8 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
   },
   {
     category: 'Ocio y entretenimiento',
-    displayLabel: 'Ocio',
+    ...CATEGORY_THEMES['Ocio y entretenimiento'],
     Icon: Ticket,
-    image: '/categories/cat-ocio.png',
-    gradient: { from: '#4c1d95', via: '#6d28d9', to: '#2e1065' },
-    accent: '#6d28d9',
     subcategories: [
       { subcategory: 'Eventos y salas', displayLabel: 'Eventos', Icon: CalendarDays },
       { subcategory: 'Cine y espectáculos', displayLabel: 'Espectáculos', Icon: Clapperboard },
@@ -98,11 +83,8 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
   },
   {
     category: 'Turismo y experiencias',
-    displayLabel: 'Experiencias',
+    ...CATEGORY_THEMES['Turismo y experiencias'],
     Icon: Mountain,
-    image: '/categories/cat-experiencias.png',
-    gradient: { from: '#064e3b', via: '#047857', to: '#022c22' },
-    accent: '#047857',
     subcategories: [
       { subcategory: 'Actividades al aire libre', displayLabel: 'Actividades', Icon: Bike },
       { subcategory: 'Estación de esquí y nieve', displayLabel: 'Esquí & nieve', Icon: Snowflake },
@@ -112,11 +94,8 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
   },
   {
     category: 'Compras',
-    displayLabel: 'Shopping',
+    ...CATEGORY_THEMES.Compras,
     Icon: ShoppingBag,
-    image: '/categories/cat-compras.png',
-    gradient: { from: '#831843', via: '#be185d', to: '#500724' },
-    accent: '#be185d',
     subcategories: [
       { subcategory: 'Centro comercial', displayLabel: 'Tiendas', Icon: Store },
       { subcategory: 'Moda y complementos', displayLabel: 'Moda', Icon: Shirt },
@@ -126,11 +105,8 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
   },
   {
     category: 'Bienestar',
-    displayLabel: 'Wellness',
+    ...CATEGORY_THEMES.Bienestar,
     Icon: Heart,
-    image: '/categories/cat-bienestar.png',
-    gradient: { from: '#134e4a', via: '#0e7490', to: '#042f2e' },
-    accent: '#0e7490',
     subcategories: [
       { subcategory: 'Spa termal', displayLabel: 'Spas', Icon: Flower2 },
       { subcategory: 'Masajes y terapias', displayLabel: 'Masajes', Icon: HandHeart },

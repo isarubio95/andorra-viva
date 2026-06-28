@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { CATEGORY_GROUP_MAP } from '@/constants/categoryGroups';
 import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
+import { categoryHeroBackground, getCategoryTheme } from '@/constants/categoryDisplay';
 import { getAvailableSubcategories } from '@/constants/businessSubcategories';
 
 const PRICE_LABELS: Record<number, string> = {
@@ -159,16 +160,47 @@ export default function Directory() {
       }));
   }, [filtered]);
 
+  const activeCategory =
+    selectedCategories.length === 1 ? selectedCategories[0] : null;
+  const activeCategoryTheme = activeCategory ? getCategoryTheme(activeCategory) : null;
+
   return (
     <div className="flex min-h-screen flex-col bg-transparent">
       <div className="flex flex-1 flex-col">
       <Header />
 
       {/* Hero */}
-      <div className="bg-primary px-4 py-12 text-center">
-        <h1 className="text-3xl font-extrabold text-primary-foreground">Directorio de Negocios</h1>
-        <p className="mt-2 text-sm text-primary-foreground/70">
-          Explora todos los negocios de Andorra en un solo lugar
+      <div
+        className={
+          activeCategoryTheme
+            ? 'relative overflow-hidden px-4 py-12 text-center text-white'
+            : 'bg-primary px-4 py-12 text-center'
+        }
+        style={
+          activeCategoryTheme
+            ? { background: categoryHeroBackground(activeCategoryTheme.gradient, activeCategoryTheme.accent) }
+            : undefined
+        }
+      >
+        <h1
+          className={
+            activeCategoryTheme
+              ? 'text-3xl font-extrabold'
+              : 'text-3xl font-extrabold text-primary-foreground'
+          }
+        >
+          {activeCategoryTheme?.displayLabel ?? 'Directorio de Negocios'}
+        </h1>
+        <p
+          className={
+            activeCategoryTheme
+              ? 'mt-2 text-sm text-white/75'
+              : 'mt-2 text-sm text-primary-foreground/70'
+          }
+        >
+          {activeCategoryTheme
+            ? `Explora ${activeCategory.toLowerCase()} en Andorra`
+            : 'Explora todos los negocios de Andorra en un solo lugar'}
         </p>
       </div>
 
