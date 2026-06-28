@@ -311,7 +311,7 @@ export default function Signup() {
               <CardTitle className="text-2xl">¿Tienes un negocio?</CardTitle>
               <CardDescription>
                 Plan {plans.find(p => p.id === selectedPlan)?.name || 'Básico'} activado.
-                Regístralo ahora para aparecer en el directorio o hazlo más tarde desde tu cuenta.
+                Registra tu negocio (uno por plan) para aparecer en el directorio o hazlo más tarde desde tu cuenta.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">

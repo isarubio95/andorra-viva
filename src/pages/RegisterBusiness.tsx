@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mountain, Store, MapPin, Phone, Globe, DollarSign, Clock, ImagePlus, X, ArrowLeft, ArrowRight, Check, Users, FileText, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -24,6 +24,7 @@ import {
   planLabelForTier,
   resolveProfilePlanTier,
 } from '@/lib/business-profile-plan';
+import { getMyBusinesses } from '@/services/api';
 type Step = 'info' | 'details' | 'images' | 'review';
 
 export default function RegisterBusiness() {
@@ -37,6 +38,34 @@ export default function RegisterBusiness() {
 
   const [step, setStep] = useState<Step>('info');
   const [loading, setLoading] = useState(false);
+  const [checkingExisting, setCheckingExisting] = useState(true);
+  const [hasExistingBusiness, setHasExistingBusiness] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setCheckingExisting(false);
+      return;
+    }
+
+    let cancelled = false;
+    getMyBusinesses(user.id).then(businesses => {
+      if (cancelled) return;
+      if (businesses.length > 0) {
+        setHasExistingBusiness(true);
+        toast({
+          title: 'Ya tienes un negocio registrado',
+          description: 'Cada plan permite un solo negocio. Edítalo desde tu cuenta.',
+          variant: 'destructive',
+        });
+        navigate('/mi-cuenta', { replace: true });
+      }
+      setCheckingExisting(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, navigate, toast]);
 
   // Step 1: Basic info
   const [name, setName] = useState('');
@@ -137,6 +166,14 @@ export default function RegisterBusiness() {
       toast({ title: 'Debes iniciar sesión', variant: 'destructive' });
       return;
     }
+    if (hasExistingBusiness) {
+      toast({
+        title: 'Ya tienes un negocio registrado',
+        description: 'Cada plan permite un solo negocio.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setLoading(true);
 
@@ -216,6 +253,14 @@ export default function RegisterBusiness() {
     '2': '€€ — Moderado',
     '3': '€€€ — Premium',
   };
+
+  if (checkingExisting) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <p className="text-sm text-muted-foreground">Comprobando tu cuenta…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-start justify-center bg-transparent px-4 py-8">

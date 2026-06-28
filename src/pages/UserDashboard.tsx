@@ -217,6 +217,7 @@ export default function UserDashboard() {
     'data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none',
   );
   const currentRecommendedId = myBusinesses.find(b => b.is_recommended)?.id ?? null;
+  const myBusiness = myBusinesses[0] ?? null;
   const businessToDelete = deleteBusinessId
     ? myBusinesses.find(b => b.id === deleteBusinessId) ?? null
     : null;
@@ -529,7 +530,7 @@ export default function UserDashboard() {
               <TabsTrigger value="perfil" className={tabTriggerClass}>Perfil</TabsTrigger>
               {isPro && (
                 <>
-                  <TabsTrigger value="negocios" className={tabTriggerClass}>Mis Negocios</TabsTrigger>
+                  <TabsTrigger value="negocios" className={tabTriggerClass}>Mi Negocio</TabsTrigger>
                   <TabsTrigger value="metricas" className={tabTriggerClass}>Métricas</TabsTrigger>
                   <TabsTrigger value="plan" className={tabTriggerClass}>Planes</TabsTrigger>
                 </>
@@ -615,120 +616,117 @@ export default function UserDashboard() {
               </Card>
             </TabsContent>
 
-            {/* Professional: Negocios Tab */}
+            {/* Professional: Mi Negocio Tab */}
             {isPro && (
               <TabsContent value="negocios">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Store className="h-5 w-5" />
-                      Mis Negocios
+                      Mi Negocio
                     </CardTitle>
-                    <CardDescription>Gestiona los negocios que has registrado</CardDescription>
+                    <CardDescription>Gestiona el negocio de tu plan (un negocio por suscripción)</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="w-full">
                     {myBusinessesLoading ? (
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                          <div key={i} className="rounded-xl border bg-card overflow-hidden">
-                            <Skeleton className="aspect-4/3 w-full rounded-none" />
-                            <div className="space-y-2 p-4">
-                              <Skeleton className="h-4 w-2/3" />
-                              <Skeleton className="h-3 w-1/2" />
-                              <div className="pt-2">
-                                <Skeleton className="h-4 w-20" />
-                              </div>
+                      <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="mx-auto w-full max-w-sm shrink-0 overflow-hidden rounded-xl border bg-card lg:mx-0">
+                          <Skeleton className="aspect-4/3 w-full rounded-none" />
+                          <div className="space-y-2 p-4">
+                            <Skeleton className="h-4 w-2/3" />
+                            <Skeleton className="h-3 w-1/2" />
+                          </div>
+                        </div>
+                        <div className="mx-auto w-full max-w-sm shrink-0 space-y-3 lg:mx-0">
+                          <Skeleton className="h-12 w-full rounded-lg" />
+                          <Skeleton className="h-40 w-full rounded-lg" />
+                        </div>
+                      </div>
+                    ) : myBusiness ? (
+                      <div className="w-full space-y-4">
+                        <div className="w-full rounded-lg border border-border p-3 text-sm text-muted-foreground">
+                          <p className="font-medium text-foreground">Distintivo recomendado</p>
+                          <p>Requiere plan Premium activo o en prueba.</p>
+                        </div>
+                        <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="mx-auto w-full max-w-sm shrink-0 space-y-3 lg:mx-0">
+                            <BusinessCard
+                              business={myBusiness}
+                              onClick={() => navigate(`/mi-cuenta/negocios/${myBusiness.id}`)}
+                            />
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="min-w-0 flex-1 gap-1.5"
+                                onClick={() => navigate(`/mi-cuenta/negocios/${myBusiness.id}`)}
+                              >
+                                <Pencil className="h-4 w-4 shrink-0" />
+                                Editar negocio
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="shrink-0 gap-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => setDeleteBusinessId(myBusiness.id)}
+                              >
+                                <Trash2 className="h-4 w-4 shrink-0" />
+                                Eliminar negocio
+                              </Button>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : myBusinesses.length > 0 ? (
-                      <div className="space-y-4">
-                        <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">
-                          <p className="font-medium text-foreground">Distintivo recomendado</p>
-                          <p>
-                            Solo puedes destacar un negocio. Requiere plan Premium activo o en prueba.
-                          </p>
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          {myBusinesses.map(biz => (
-                            <div key={biz.id} className="min-w-0 space-y-3 rounded-xl border p-3">
-                              <BusinessCard
-                                business={biz}
-                                onClick={() => navigate(`/mi-cuenta/negocios/${biz.id}`)}
+                          <div className="mx-auto w-full max-w-sm shrink-0 space-y-3 lg:mx-0">
+                            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                              <div className="flex items-center gap-2 text-sm">
+                                <Medal className="h-4 w-4 text-premium" />
+                                <span className="font-medium text-foreground">Recomendado</span>
+                                {currentRecommendedId === myBusiness.id && (
+                                  <Badge variant="secondary">Activo</Badge>
+                                )}
+                              </div>
+                              <Switch
+                                checked={myBusiness.is_recommended}
+                                disabled={
+                                  !!changingRecommendedId ||
+                                  !canManageRecommendation ||
+                                  (!!currentRecommendedId && currentRecommendedId !== myBusiness.id && !myBusiness.is_recommended)
+                                }
+                                onCheckedChange={(checked) => handleToggleRecommended(myBusiness.id, checked)}
+                                aria-label={`Marcar ${myBusiness.name} como recomendado`}
                               />
-                              <div className="flex items-center gap-2">
+                            </div>
+                            <div className="rounded-lg border border-border p-3">
+                              <div className="mb-2 flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
+                                <QrCode className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                <span className="min-w-0">QR de valoraciones</span>
+                              </div>
+                              <p className="mb-3 max-w-full break-all rounded-md bg-muted/60 px-2 py-1 text-xs text-muted-foreground">
+                                {getReviewUrl(myBusiness.id)}
+                              </p>
+                              <div className="flex flex-col gap-2">
                                 <Button
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  className="min-w-0 flex-1 gap-1.5"
-                                  onClick={() => navigate(`/mi-cuenta/negocios/${biz.id}`)}
+                                  className="w-full min-w-0 cursor-pointer justify-center"
+                                  onClick={() => handleCopyReviewUrl(myBusiness.id)}
                                 >
-                                  <Pencil className="h-4 w-4 shrink-0" />
-                                  Editar negocio
+                                  <Copy className="mr-2 h-4 w-4 shrink-0" />
+                                  Copiar enlace
                                 </Button>
                                 <Button
                                   type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="shrink-0 gap-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                  onClick={() => setDeleteBusinessId(biz.id)}
+                                  className="w-full min-w-0 cursor-pointer justify-center"
+                                  onClick={() => handleDownloadReviewQr(myBusiness)}
                                 >
-                                  <Trash2 className="h-4 w-4 shrink-0" />
-                                  Eliminar negocio
+                                  <Download className="mr-2 h-4 w-4 shrink-0" />
+                                  Descargar QR
                                 </Button>
                               </div>
-                              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Medal className="h-4 w-4 text-premium" />
-                                  <span className="font-medium text-foreground">Recomendado</span>
-                                  {currentRecommendedId === biz.id && (
-                                    <Badge variant="secondary">Activo</Badge>
-                                  )}
-                                </div>
-                                <Switch
-                                  checked={biz.is_recommended}
-                                  disabled={
-                                    !!changingRecommendedId ||
-                                    !canManageRecommendation ||
-                                    (!!currentRecommendedId && currentRecommendedId !== biz.id && !biz.is_recommended)
-                                  }
-                                  onCheckedChange={(checked) => handleToggleRecommended(biz.id, checked)}
-                                  aria-label={`Marcar ${biz.name} como recomendado`}
-                                />
-                              </div>
-                              <div className="min-w-0 rounded-lg border border-border p-3">
-                                <div className="mb-2 flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
-                                  <QrCode className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                  <span className="min-w-0">QR de valoraciones</span>
-                                </div>
-                                <p className="mb-3 max-w-full break-all rounded-md bg-muted/60 px-2 py-1 text-xs text-muted-foreground">
-                                  {getReviewUrl(biz.id)}
-                                </p>
-                                <div className="flex flex-col gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full min-w-0 cursor-pointer justify-center"
-                                    onClick={() => handleCopyReviewUrl(biz.id)}
-                                  >
-                                    <Copy className="mr-2 h-4 w-4 shrink-0" />
-                                    Copiar enlace
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    className="w-full min-w-0 cursor-pointer justify-center"
-                                    onClick={() => handleDownloadReviewQr(biz)}
-                                  >
-                                    <Download className="mr-2 h-4 w-4 shrink-0" />
-                                    Descargar QR
-                                  </Button>
-                                </div>
-                              </div>
                             </div>
-                          ))}
+                          </div>
                         </div>
                         {!canManageRecommendation && (
                           <p className="text-xs text-muted-foreground">
@@ -737,13 +735,13 @@ export default function UserDashboard() {
                         )}
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center gap-4 py-8 text-center">
+                      <div className="flex w-full flex-col items-center gap-4 py-8 text-center">
                         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                           <Store className="h-8 w-8 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="font-medium text-foreground">No tienes negocios registrados</p>
-                          <p className="text-sm text-muted-foreground">Registra tu primer negocio para aparecer en el directorio</p>
+                          <p className="font-medium text-foreground">No tienes un negocio registrado</p>
+                          <p className="text-sm text-muted-foreground">Registra tu negocio para aparecer en el directorio</p>
                         </div>
                         <Button onClick={() => navigate('/registrar-negocio')}>
                           <Store className="mr-2 h-4 w-4" />
