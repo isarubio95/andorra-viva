@@ -679,9 +679,18 @@ export default function UserDashboard() {
                           </div>
                           <div className="mx-auto w-full max-w-sm shrink-0 space-y-3 lg:mx-0">
                             <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                              <div className="flex items-center gap-2 text-sm">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                                 <Medal className="h-4 w-4 text-premium" />
                                 <span className="font-medium text-foreground">Recomendado</span>
+                                {planId !== 'premium' && role !== 'admin' && (
+                                  <button
+                                    type="button"
+                                    className="text-xs font-normal text-primary hover:underline cursor-pointer"
+                                    onClick={() => navigateAccountDashboardTab(navigate, 'plan')}
+                                  >
+                                    (solo plan premium)
+                                  </button>
+                                )}
                                 {currentRecommendedId === myBusiness.id && (
                                   <Badge variant="secondary">Activo</Badge>
                                 )}

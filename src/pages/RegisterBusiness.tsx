@@ -16,7 +16,9 @@ import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 import { getSubcategoriesForCategory } from '@/constants/businessSubcategories';
 import BusinessServicesPicker from '@/components/BusinessServicesPicker';
 import BusinessHoursEditor from '@/components/BusinessHoursEditor';
+import BusinessAddressPicker, { type BusinessAddressValue } from '@/components/BusinessAddressPicker';
 import { BUSINESS_LOCATIONS } from '@/constants/businessForm';
+import { isAddressConfirmed, formatStoredAddress, addressMatchesSelectedLocation } from '@/lib/geocoding';
 import { createDefaultOpeningHours, type BusinessOpeningHours } from '@/lib/business-hours';
 import {
   getMaxPhotosForTier,
@@ -72,6 +74,14 @@ export default function RegisterBusiness() {
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [location, setLocation] = useState('');
+  const [addressValue, setAddressValue] = useState<BusinessAddressValue>({
+    address: '',
+    portal: '',
+    floor: '',
+    lat: null,
+    lng: null,
+  });
+  const [addressTouched, setAddressTouched] = useState(false);
   const [description, setDescription] = useState('');
 
   // Step 2: Details
@@ -80,8 +90,6 @@ export default function RegisterBusiness() {
   const [priceRange, setPriceRange] = useState('2');
   const [minAge, setMinAge] = useState('');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [latitude, setLatitude] = useState('42.5063');
-  const [longitude, setLongitude] = useState('1.5218');
   const [openingHours, setOpeningHours] = useState<BusinessOpeningHours>(createDefaultOpeningHours);
 
   // Step 3: Images
@@ -134,24 +142,40 @@ export default function RegisterBusiness() {
     setPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const validateStep = (s: Step): boolean => {
+  const validateStep = async (s: Step): Promise<boolean> => {
     if (s === 'info') {
       if (!name.trim() || !category || !subcategory || !location || !description.trim()) {
         toast({ title: 'Completa todos los campos obligatorios', variant: 'destructive' });
         return false;
       }
-    }
-    if (s === 'details') {
-      if (!latitude || !longitude) {
-        toast({ title: 'Las coordenadas son obligatorias', variant: 'destructive' });
+      if (!isAddressConfirmed(addressValue)) {
+        setAddressTouched(true);
+        toast({
+          title: 'Confirma la dirección',
+          description: 'Busca tu calle y selecciónala de la lista de sugerencias.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+      const matchesParish = await addressMatchesSelectedLocation(
+        { lat: addressValue.lat!, lng: addressValue.lng! },
+        location,
+      );
+      if (!matchesParish) {
+        setAddressTouched(true);
+        toast({
+          title: 'Dirección fuera de la parroquia',
+          description: `La dirección seleccionada no pertenece a ${location}.`,
+          variant: 'destructive',
+        });
         return false;
       }
     }
     return true;
   };
 
-  const goNext = () => {
-    if (!validateStep(step)) return;
+  const goNext = async () => {
+    if (!(await validateStep(step))) return;
     const next = steps[currentIndex + 1];
     if (next) setStep(next.key);
   };
@@ -199,13 +223,34 @@ export default function RegisterBusiness() {
         imageUrls.push(urlData.publicUrl);
       }
 
-      const lat = parseFloat(latitude);
-      const lon = parseFloat(longitude);
-      if (Number.isNaN(lat) || Number.isNaN(lon)) {
-        toast({ title: 'Coordenadas no válidas', variant: 'destructive' });
+      if (!isAddressConfirmed(addressValue)) {
+        setAddressTouched(true);
+        toast({
+          title: 'Confirma la dirección',
+          description: 'Busca tu calle y selecciónala de la lista de sugerencias.',
+          variant: 'destructive',
+        });
         setLoading(false);
         return;
       }
+
+      const matchesParish = await addressMatchesSelectedLocation(
+        { lat: addressValue.lat!, lng: addressValue.lng! },
+        location,
+      );
+      if (!matchesParish) {
+        setAddressTouched(true);
+        toast({
+          title: 'Dirección fuera de la parroquia',
+          description: `La dirección seleccionada no pertenece a ${location}.`,
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      const lat = addressValue.lat!;
+      const lon = addressValue.lng!;
 
       // Insert business (sin enviar gallery vacío: algunos esquemas/PostgREST lo rechazan con 400)
       const row: Record<string, unknown> = {
@@ -213,6 +258,7 @@ export default function RegisterBusiness() {
         category,
         subcategory,
         location,
+        address: formatStoredAddress(addressValue),
         description: description.trim(),
         phone: phone.trim() || null,
         website: website.trim() || null,
@@ -362,7 +408,7 @@ export default function RegisterBusiness() {
               </div>
 
               <div className="space-y-2">
-                <Label>Ubicación *</Label>
+                <Label>Parroquia / localidad *</Label>
                 <Select value={location} onValueChange={setLocation}>
                   <SelectTrigger><SelectValue placeholder="Selecciona parroquia" /></SelectTrigger>
                   <SelectContent>
@@ -372,6 +418,14 @@ export default function RegisterBusiness() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <BusinessAddressPicker
+                value={addressValue}
+                onChange={setAddressValue}
+                parish={location}
+                onParishSuggest={setLocation}
+                showError={addressTouched}
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="biz-desc">Descripción *</Label>
@@ -441,23 +495,6 @@ export default function RegisterBusiness() {
               </div>
 
               <BusinessHoursEditor value={openingHours} onChange={setOpeningHours} />
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="biz-lat">Latitud *</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="biz-lat" type="number" step="any" placeholder="42.5063" value={latitude} onChange={e => setLatitude(e.target.value)} className="pl-10" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="biz-lng">Longitud *</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="biz-lng" type="number" step="any" placeholder="1.5218" value={longitude} onChange={e => setLongitude(e.target.value)} className="pl-10" />
-                  </div>
-                </div>
-              </div>
 
               <BusinessServicesPicker
                 selectedServices={selectedServices}
@@ -563,7 +600,7 @@ export default function RegisterBusiness() {
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <MapPin className="h-4 w-4" />
-                  {location}
+                  {isAddressConfirmed(addressValue) ? formatStoredAddress(addressValue) : location}
                 </div>
 
                 <p className="text-sm text-foreground/80">{description}</p>

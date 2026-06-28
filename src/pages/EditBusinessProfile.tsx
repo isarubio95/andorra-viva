@@ -34,8 +34,10 @@ import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 import { getSubcategoriesForCategory } from '@/constants/businessSubcategories';
 import BusinessServicesPicker from '@/components/BusinessServicesPicker';
 import BusinessHoursEditor from '@/components/BusinessHoursEditor';
+import BusinessAddressPicker, { type BusinessAddressValue } from '@/components/BusinessAddressPicker';
 import SortablePhotoGrid from '@/components/SortablePhotoGrid';
 import { BUSINESS_LOCATIONS } from '@/constants/businessForm';
+import { isAddressConfirmed, formatStoredAddress, parseStoredAddress, addressMatchesSelectedLocation } from '@/lib/geocoding';
 import {
   getMaxPhotosForTier,
   getMaxServicesForTier,
@@ -106,12 +108,17 @@ function resolveStoredOpeningHours(
   return hours ?? createDefaultOpeningHours();
 }
 
-function coordsMatch(formValue: string, stored: number | null | undefined): boolean {
-  const parsed = parseFloat(formValue);
-  if (stored == null || Number.isNaN(parsed)) {
-    return formValue === String(stored);
+function coordsChanged(
+  currentLat: number | null,
+  currentLng: number | null,
+  storedLat: number | null | undefined,
+  storedLng: number | null | undefined,
+): boolean {
+  if (currentLat == null || currentLng == null) {
+    return storedLat != null || storedLng != null;
   }
-  return parsed === stored;
+  if (storedLat == null || storedLng == null) return true;
+  return currentLat !== storedLat || currentLng !== storedLng;
 }
 
 function LockedSection({
@@ -161,14 +168,20 @@ export default function EditBusinessProfile() {
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [location, setLocation] = useState('');
+  const [addressValue, setAddressValue] = useState<BusinessAddressValue>({
+    address: '',
+    portal: '',
+    floor: '',
+    lat: null,
+    lng: null,
+  });
+  const [addressTouched, setAddressTouched] = useState(false);
   const [description, setDescription] = useState('');
   const [phone, setPhone] = useState('');
   const [website, setWebsite] = useState('');
   const [priceRange, setPriceRange] = useState('2');
   const [minAge, setMinAge] = useState('');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [latitude, setLatitude] = useState('42.5063');
-  const [longitude, setLongitude] = useState('1.5218');
   const [photos, setPhotos] = useState<EditablePhoto[]>([]);
   const [openingHours, setOpeningHours] = useState<BusinessOpeningHours>(createDefaultOpeningHours);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -211,14 +224,18 @@ export default function EditBusinessProfile() {
         setCategory(row.category);
         setSubcategory(row.subcategory ?? '');
         setLocation(row.location);
+        const parsedAddress = parseStoredAddress(row.address);
+        setAddressValue({
+          ...parsedAddress,
+          lat: row.latitude,
+          lng: row.longitude,
+        });
         setDescription(row.description);
         setPhone(row.phone ?? '');
         setWebsite(row.website ?? '');
         setPriceRange(String(row.price_range || 2));
         setMinAge(row.min_age != null ? String(row.min_age) : '');
         setSelectedServices(row.services ?? []);
-        setLatitude(String(row.latitude));
-        setLongitude(String(row.longitude));
         const gallery = row.gallery?.length ? row.gallery : row.image_url ? [row.image_url] : [];
         setPhotos(gallery.map(url => ({ id: createPhotoId(), kind: 'existing', url })));
         setOpeningHours(resolveStoredOpeningHours(row.opening_hours));
@@ -253,6 +270,7 @@ export default function EditBusinessProfile() {
       category,
       subcategory: subcategory || null,
       location,
+      address: formatStoredAddress(addressValue) || null,
       description,
       phone: isProfileGroupAvailable(planTier, 'contact') ? phone.trim() || null : null,
       website: isProfileGroupAvailable(planTier, 'contact') ? website.trim() || null : null,
@@ -262,8 +280,8 @@ export default function EditBusinessProfile() {
         isProfileGroupAvailable(planTier, 'details') && minAge !== ''
           ? parseInt(minAge, 10)
           : null,
-      latitude: parseFloat(latitude) || business?.latitude || 42.5063,
-      longitude: parseFloat(longitude) || business?.longitude || 1.5218,
+      latitude: addressValue.lat ?? business?.latitude ?? 42.5063,
+      longitude: addressValue.lng ?? business?.longitude ?? 1.5218,
       image_url: mainImage,
       gallery,
       rating: business?.rating ?? 0,
@@ -285,8 +303,7 @@ export default function EditBusinessProfile() {
     selectedServices,
     priceRange,
     minAge,
-    latitude,
-    longitude,
+    addressValue,
     previewImages,
     planTier,
     showPremiumPreview,
@@ -318,8 +335,8 @@ export default function EditBusinessProfile() {
     if ((subcategory || null) !== (business.subcategory ?? null)) return true;
     if (location !== business.location) return true;
     if (description.trim() !== business.description.trim()) return true;
-    if (!coordsMatch(latitude, business.latitude)) return true;
-    if (!coordsMatch(longitude, business.longitude)) return true;
+    if (formatStoredAddress(addressValue) !== (business.address?.trim() || '')) return true;
+    if (coordsChanged(addressValue.lat, addressValue.lng, business.latitude, business.longitude)) return true;
     if (!openingHoursEqual(openingHours, resolveStoredOpeningHours(business.opening_hours))) return true;
 
     if (isProfileGroupAvailable(planTier, 'contact')) {
@@ -344,8 +361,7 @@ export default function EditBusinessProfile() {
     subcategory,
     location,
     description,
-    latitude,
-    longitude,
+    addressValue,
     phone,
     website,
     selectedServices,
@@ -431,7 +447,7 @@ export default function EditBusinessProfile() {
     return data.publicUrl;
   };
 
-  const syncBusinessBaseline = (allImages: string[], lat: number, lon: number) => {
+  const syncBusinessBaseline = (allImages: string[], lat: number, lon: number, address: string | null) => {
     if (!business) return;
     setBusiness({
       ...business,
@@ -439,6 +455,7 @@ export default function EditBusinessProfile() {
       category,
       subcategory: subcategory || null,
       location,
+      address,
       description: description.trim(),
       phone: isProfileGroupAvailable(planTier, 'contact') ? phone.trim() || null : business.phone,
       website: isProfileGroupAvailable(planTier, 'contact') ? website.trim() || null : business.website,
@@ -468,6 +485,41 @@ export default function EditBusinessProfile() {
       return false;
     }
 
+    const hasStoredAddress = Boolean(business.address?.trim());
+    const hasAddressInput = formatStoredAddress(addressValue).length > 0;
+    if (!isAddressConfirmed(addressValue) && (hasStoredAddress || hasAddressInput)) {
+      setAddressTouched(true);
+      toast({
+        title: 'Confirma la dirección',
+        description: 'Busca tu calle y selecciónala de la lista de sugerencias.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (isAddressConfirmed(addressValue)) {
+      const matchesParish = await addressMatchesSelectedLocation(
+        { lat: addressValue.lat!, lng: addressValue.lng! },
+        location,
+      );
+      if (!matchesParish) {
+        setAddressTouched(true);
+        toast({
+          title: 'Dirección fuera de la parroquia',
+          description: `La dirección seleccionada no pertenece a ${location}.`,
+          variant: 'destructive',
+        });
+        return false;
+      }
+    }
+
+    const lat = addressValue.lat ?? business.latitude;
+    const lon = addressValue.lng ?? business.longitude;
+    if (Number.isNaN(lat) || Number.isNaN(lon)) {
+      toast({ title: 'Ubicación no válida', description: 'Confirma la dirección de tu negocio.', variant: 'destructive' });
+      return false;
+    }
+
     if (selectedServices.length > maxServices) {
       toast({
         title: `Máximo ${maxServices} servicios`,
@@ -483,13 +535,6 @@ export default function EditBusinessProfile() {
         description: `Tu plan ${planLabelForTier(planTier)} permite ${maxPhotos}. Quita ${totalPhotos - maxPhotos} para guardar.`,
         variant: 'destructive',
       });
-      return false;
-    }
-
-    const lat = parseFloat(latitude);
-    const lon = parseFloat(longitude);
-    if (Number.isNaN(lat) || Number.isNaN(lon)) {
-      toast({ title: 'Coordenadas no válidas', variant: 'destructive' });
       return false;
     }
 
@@ -511,6 +556,7 @@ export default function EditBusinessProfile() {
         category,
         subcategory: subcategory || null,
         location,
+        address: formatStoredAddress(addressValue) || business.address || null,
         description: description.trim(),
         latitude: lat,
         longitude: lon,
@@ -541,7 +587,7 @@ export default function EditBusinessProfile() {
         return false;
       }
 
-      syncBusinessBaseline(allImages, lat, lon);
+      syncBusinessBaseline(allImages, lat, lon, formatStoredAddress(addressValue) || business.address || null);
       toast({ title: 'Perfil actualizado', description: 'Los cambios ya son visibles en el directorio.' });
       if (navigateAfterSave) {
         leaveGuard.allowNextNavigation();
@@ -673,7 +719,7 @@ export default function EditBusinessProfile() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Ubicación *</Label>
+                    <Label>Parroquia / localidad *</Label>
                     <Select value={location} onValueChange={setLocation}>
                       <SelectTrigger><SelectValue placeholder="Parroquia" /></SelectTrigger>
                       <SelectContent>
@@ -683,6 +729,16 @@ export default function EditBusinessProfile() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <BusinessAddressPicker
+                    id="edit-address"
+                    value={addressValue}
+                    onChange={setAddressValue}
+                    parish={location}
+                    onParishSuggest={setLocation}
+                    showError={addressTouched}
+                  />
+
                   <div className="space-y-2">
                     <Label htmlFor="edit-desc">Descripción *</Label>
                     <Textarea
@@ -693,16 +749,6 @@ export default function EditBusinessProfile() {
                       maxLength={500}
                     />
                     <p className="text-right text-xs text-muted-foreground">{description.length}/500</p>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-lat">Latitud</Label>
-                      <Input id="edit-lat" type="number" step="any" value={latitude} onChange={e => setLatitude(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-lng">Longitud</Label>
-                      <Input id="edit-lng" type="number" step="any" value={longitude} onChange={e => setLongitude(e.target.value)} />
-                    </div>
                   </div>
                 </CardContent>
               </Card>

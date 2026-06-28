@@ -8,6 +8,7 @@ export interface Business {
   category: string;
   subcategory: string | null;
   location: string;
+  address?: string | null;
   rating: number;
   review_count: number;
   image_url: string;

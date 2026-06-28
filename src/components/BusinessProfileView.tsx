@@ -230,7 +230,9 @@ export default function BusinessProfileView({
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="h-4 w-4 shrink-0" />
-            Ubicación en {business.location || '—'}, Andorra
+            {business.address?.trim()
+              ? business.address
+              : `Ubicación en ${business.location || '—'}, Andorra`}
           </div>
           {showContact && business.website && (
             <div className="flex items-center gap-2 text-muted-foreground">
