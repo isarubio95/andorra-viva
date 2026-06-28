@@ -89,7 +89,7 @@ const BUSINESSES = [
   {
     name: 'Palau de Gel',
     category: 'Ocio y entretenimiento',
-    subcategory: 'Complejo deportivo',
+    subcategory: 'Eventos y salas',
     location: 'Canillo',
     description: `${SEED_TAG} Complejo deportivo y de ocio con pista de hielo, piscina, gimnasio y actividades para familias todo el año.`,
     latitude: 42.5665,
@@ -103,7 +103,7 @@ const BUSINESSES = [
   {
     name: 'Micropolis · Centre d\'oci',
     category: 'Ocio y entretenimiento',
-    subcategory: 'Centro de ocio y juegos',
+    subcategory: 'Eventos y salas',
     location: 'Canillo',
     description: `${SEED_TAG} Centro de ocio con bolera, karting indoor, zona infantil y restauración en la parroquia de Canillo.`,
     latitude: 42.566,
@@ -147,7 +147,7 @@ const BUSINESSES = [
   {
     name: 'Pyrénées Andorra',
     category: 'Compras',
-    subcategory: 'Gran superficie y duty free',
+    subcategory: 'Centro comercial',
     location: 'Andorra la Vella',
     description: `${SEED_TAG} Gran superficie comercial en el centre històric d'Andorra la Vella: moda, electrónica, perfumería y productos duty free.`,
     latitude: 42.508,
@@ -190,7 +190,7 @@ const BUSINESSES = [
   {
     name: 'Inúu',
     category: 'Bienestar',
-    subcategory: 'Spa y tratamientos',
+    subcategory: 'Spa termal',
     location: 'Escaldes-Engordany',
     description: `${SEED_TAG} Espacio de bienestar y relajación vinculado al complejo Caldea: tratamientos corporales, masajes y experiencias sensoriales.`,
     latitude: 42.514,

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, BarChart3, Medal, Copy, QrCode, Download, Lock, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { User, Mail, Shield, LogOut, Store, Settings, ChevronRight, BarChart3, Medal, Copy, QrCode, Download, Lock, Eye, EyeOff, Pencil, Trash2 } from 'lucide-react';
 import QRCode from 'qrcode';
 import {
   getMyBusinesses,
@@ -8,6 +8,7 @@ import {
   getMyBusinessMetrics,
   downgradeToPersonal,
   setMySubscriptionPlan,
+  deleteMyBusiness,
   type BusinessMetricRow,
 } from '@/services/api';
 import type { Business, Plan } from '@/types/domain';
@@ -32,6 +33,12 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { getPlanTheme, sortPlansByPrice, PROFESSIONAL_DASHBOARD_HIDDEN_PLAN_IDS } from '@/lib/plan-display';
 import { buildPublicUrl } from '@/lib/site-url';
+import {
+  isCurrentAccountDashboardTab,
+  isProOnlyAccountDashboardTab,
+  navigateAccountDashboardTab,
+  parseAccountDashboardTab,
+} from '@/lib/account-dashboard';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -78,9 +85,11 @@ export default function UserDashboard() {
     refreshProfile,
     subscriptionStatus,
     loading: authLoading,
+    roleLoading,
   } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
   const [saving, setSaving] = useState(false);
@@ -94,12 +103,59 @@ export default function UserDashboard() {
   const [downgradeAccountOpen, setDowngradeAccountOpen] = useState(false);
   const [downgradingAccount, setDowngradingAccount] = useState(false);
   const [changingRecommendedId, setChangingRecommendedId] = useState<string | null>(null);
+  const [deleteBusinessId, setDeleteBusinessId] = useState<string | null>(null);
+  const [deletingBusiness, setDeletingBusiness] = useState(false);
   const [metrics, setMetrics] = useState<BusinessMetricRow[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
-  const [mainTab, setMainTab] = useState(() => {
-    const tab = (location.state as { tab?: string } | null)?.tab;
-    return tab === 'negocios' || tab === 'plan' || tab === 'metricas' || tab === 'seguridad' ? tab : 'perfil';
-  });
+
+  const mainTab = useMemo(
+    () => parseAccountDashboardTab(searchParams.get('tab')),
+    [searchParams],
+  );
+  const lastTabNavigationRef = useRef<string | null>(null);
+
+  const handleMainTabChange = (value: string) => {
+    const tab = parseAccountDashboardTab(value);
+    // Radix Tabs (activación automática) dispara onValueChange dos veces por clic
+    // (foco + pulsación). Comparamos contra la URL en vivo —que history.push actualiza
+    // de forma síncrona— y contra una ref para no empujar entradas duplicadas al historial.
+    if (lastTabNavigationRef.current === tab) return;
+    if (isCurrentAccountDashboardTab(window.location.pathname, window.location.search, tab)) {
+      return;
+    }
+    lastTabNavigationRef.current = tab;
+    navigateAccountDashboardTab(navigate, tab);
+  };
+
+  useEffect(() => {
+    lastTabNavigationRef.current = null;
+  }, [mainTab]);
+
+  useEffect(() => {
+    if (location.pathname !== '/mi-cuenta') return;
+
+    const stateTab = (location.state as { tab?: string } | null)?.tab;
+    if (!stateTab) return;
+
+    const queryTab = searchParams.get('tab');
+
+    if (!queryTab) {
+      navigateAccountDashboardTab(navigate, parseAccountDashboardTab(stateTab), { replace: true });
+      return;
+    }
+
+    navigate(
+      { pathname: '/mi-cuenta', search: location.search },
+      { replace: true, state: null },
+    );
+  }, [location.pathname, location.search, location.state, navigate, searchParams]);
+
+  useEffect(() => {
+    if (authLoading || roleLoading) return;
+    if (hasProAccess || !isProOnlyAccountDashboardTab(mainTab)) return;
+    navigateAccountDashboardTab(navigate, 'perfil', { replace: true });
+  }, [authLoading, roleLoading, hasProAccess, mainTab, navigate]);
+
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -161,6 +217,9 @@ export default function UserDashboard() {
     'data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none',
   );
   const currentRecommendedId = myBusinesses.find(b => b.is_recommended)?.id ?? null;
+  const businessToDelete = deleteBusinessId
+    ? myBusinesses.find(b => b.id === deleteBusinessId) ?? null
+    : null;
 
   const initials = displayName
     .split(' ')
@@ -268,6 +327,33 @@ export default function UserDashboard() {
     setMyBusinessesLoading(false);
   };
 
+  const handleDeleteBusiness = async () => {
+    if (!deleteBusinessId) return;
+    setDeletingBusiness(true);
+    const result = await deleteMyBusiness(deleteBusinessId);
+    if (!result.ok) {
+      toast({
+        title: 'No se pudo eliminar el negocio',
+        description: result.error ?? 'Error desconocido',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Negocio eliminado',
+        description: 'Ya no aparecerá en el directorio.',
+      });
+      setDeleteBusinessId(null);
+      await refreshMyBusinesses();
+      if (user?.id && hasProAccess) {
+        setMetricsLoading(true);
+        getMyBusinessMetrics(30)
+          .then(setMetrics)
+          .finally(() => setMetricsLoading(false));
+      }
+    }
+    setDeletingBusiness(false);
+  };
+
   const getReviewUrl = (businessId: string): string => {
     return buildPublicUrl(`/valorar/${businessId}`);
   };
@@ -361,7 +447,7 @@ export default function UserDashboard() {
         description: 'Tu cuenta es ahora personal. Tus negocios siguen publicados.',
       });
       await refreshProfile();
-      setMainTab('perfil');
+      navigateAccountDashboardTab(navigate, 'perfil', { replace: true });
     }
     setDowngradingAccount(false);
     setDowngradeAccountOpen(false);
@@ -438,7 +524,7 @@ export default function UserDashboard() {
             </div>
           </div>
 
-          <Tabs value={mainTab} onValueChange={setMainTab} className="space-y-6">
+          <Tabs value={mainTab} onValueChange={handleMainTabChange} className="space-y-6">
             <TabsList className="flex h-auto w-full flex-wrap items-center justify-start gap-2 bg-transparent p-0">
               <TabsTrigger value="perfil" className={tabTriggerClass}>Perfil</TabsTrigger>
               {isPro && (
@@ -571,16 +657,28 @@ export default function UserDashboard() {
                                 business={biz}
                                 onClick={() => navigate(`/mi-cuenta/negocios/${biz.id}`)}
                               />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => navigate(`/mi-cuenta/negocios/${biz.id}`)}
-                              >
-                                <Settings className="mr-2 h-4 w-4" />
-                                Editar perfil del drawer
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="min-w-0 flex-1 gap-1.5"
+                                  onClick={() => navigate(`/mi-cuenta/negocios/${biz.id}`)}
+                                >
+                                  <Pencil className="h-4 w-4 shrink-0" />
+                                  Editar negocio
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="shrink-0 gap-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                  onClick={() => setDeleteBusinessId(biz.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 shrink-0" />
+                                  Eliminar negocio
+                                </Button>
+                              </div>
                               <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
                                 <div className="flex items-center gap-2 text-sm">
                                   <Medal className="h-4 w-4 text-premium" />
@@ -924,6 +1022,37 @@ export default function UserDashboard() {
                     }}
                   >
                     {downgradingAccount ? 'Cambiando…' : 'Confirmar cuenta personal'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog
+              open={!!deleteBusinessId}
+              onOpenChange={open => {
+                if (!open && !deletingBusiness) setDeleteBusinessId(null);
+              }}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Eliminar este negocio?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {businessToDelete
+                      ? `Se eliminará «${businessToDelete.name}» del directorio de forma permanente, junto con sus valoraciones y métricas. Esta acción no se puede deshacer.`
+                      : 'Se eliminará el negocio del directorio de forma permanente. Esta acción no se puede deshacer.'}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deletingBusiness}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={deletingBusiness}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={e => {
+                      e.preventDefault();
+                      void handleDeleteBusiness();
+                    }}
+                  >
+                    {deletingBusiness ? 'Eliminando…' : 'Eliminar negocio'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

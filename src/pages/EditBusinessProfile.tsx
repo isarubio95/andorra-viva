@@ -53,10 +53,10 @@ import {
   rewriteSupabaseStorageUrl,
 } from '@/lib/business-image';
 import { cn } from '@/lib/utils';
+import { accountDashboardPath, navigateAccountDashboardTab } from '@/lib/account-dashboard';
 import {
   createDefaultOpeningHours,
   openingHoursEqual,
-  parseOpeningHours,
   type BusinessOpeningHours,
 } from '@/lib/business-hours';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
@@ -100,6 +100,20 @@ function sameStringList(a: string[], b: string[]): boolean {
   return sortedA.every((value, index) => value === sortedB[index]);
 }
 
+function resolveStoredOpeningHours(
+  hours: BusinessOpeningHours | null | undefined,
+): BusinessOpeningHours {
+  return hours ?? createDefaultOpeningHours();
+}
+
+function coordsMatch(formValue: string, stored: number | null | undefined): boolean {
+  const parsed = parseFloat(formValue);
+  if (stored == null || Number.isNaN(parsed)) {
+    return formValue === String(stored);
+  }
+  return parsed === stored;
+}
+
 function LockedSection({
   group,
   tier,
@@ -123,7 +137,7 @@ function LockedSection({
           Disponible con plan {planLabelForTier(required)}
         </p>
         <Button size="sm" variant="outline" asChild className="pointer-events-auto">
-          <Link to="/mi-cuenta" state={{ tab: 'plan' }}>
+          <Link to={accountDashboardPath('plan')}>
             Ver planes
           </Link>
         </Button>
@@ -207,7 +221,7 @@ export default function EditBusinessProfile() {
         setLongitude(String(row.longitude));
         const gallery = row.gallery?.length ? row.gallery : row.image_url ? [row.image_url] : [];
         setPhotos(gallery.map(url => ({ id: createPhotoId(), kind: 'existing', url })));
-        setOpeningHours(parseOpeningHours(row.opening_hours) ?? createDefaultOpeningHours());
+        setOpeningHours(resolveStoredOpeningHours(row.opening_hours));
       })
       .finally(() => setLoading(false));
   }, [businessId, user?.id, navigate, toast]);
@@ -299,21 +313,21 @@ export default function EditBusinessProfile() {
     );
     if (!sameOrderedList(currentGallery, originalGallery)) return true;
 
-    if (name.trim() !== business.name) return true;
+    if (name.trim() !== business.name.trim()) return true;
     if (category !== business.category) return true;
     if ((subcategory || null) !== (business.subcategory ?? null)) return true;
     if (location !== business.location) return true;
-    if (description.trim() !== business.description) return true;
-    if (latitude !== String(business.latitude)) return true;
-    if (longitude !== String(business.longitude)) return true;
-    if (!openingHoursEqual(openingHours, business.opening_hours ?? createDefaultOpeningHours())) return true;
+    if (description.trim() !== business.description.trim()) return true;
+    if (!coordsMatch(latitude, business.latitude)) return true;
+    if (!coordsMatch(longitude, business.longitude)) return true;
+    if (!openingHoursEqual(openingHours, resolveStoredOpeningHours(business.opening_hours))) return true;
 
     if (isProfileGroupAvailable(planTier, 'contact')) {
       if ((phone.trim() || null) !== (business.phone?.trim() || null)) return true;
       if ((website.trim() || null) !== (business.website?.trim() || null)) return true;
     }
 
-    if (!sameStringList(selectedServices.slice(0, maxServices), business.services ?? [])) return true;
+    if (!sameStringList(selectedServices, business.services ?? [])) return true;
 
     if (isProfileGroupAvailable(planTier, 'details')) {
       if (parseInt(priceRange, 10) !== business.price_range) return true;
@@ -338,7 +352,6 @@ export default function EditBusinessProfile() {
     priceRange,
     minAge,
     planTier,
-    maxServices,
     openingHours,
   ]);
 
@@ -532,7 +545,7 @@ export default function EditBusinessProfile() {
       toast({ title: 'Perfil actualizado', description: 'Los cambios ya son visibles en el directorio.' });
       if (navigateAfterSave) {
         leaveGuard.allowNextNavigation();
-        navigate('/mi-cuenta', { state: { tab: 'negocios' } });
+        navigateAccountDashboardTab(navigate, 'negocios');
       }
       return true;
     } finally {
@@ -579,13 +592,13 @@ export default function EditBusinessProfile() {
                 size="sm"
                 className="-ml-2"
                 onClick={() => {
-                  const target = { pathname: '/mi-cuenta', state: { tab: 'negocios' } };
+                  const target = { pathname: '/mi-cuenta', search: '?tab=negocios' };
                   if (hasChanges) {
                     leaveGuard.requestLeave(target);
                     return;
                   }
                   leaveGuard.allowNextNavigation();
-                  navigate('/mi-cuenta', { state: { tab: 'negocios' } });
+                  navigateAccountDashboardTab(navigate, 'negocios');
                 }}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -705,7 +718,7 @@ export default function EditBusinessProfile() {
                     {upgradePlanTier && upgradeMaxPhotos && (
                       <>
                         {' '}
-                        <Link to="/mi-cuenta" state={{ tab: 'plan' }} className="font-medium text-primary hover:underline">
+                        <Link to={accountDashboardPath('plan')} className="font-medium text-primary hover:underline">
                           Amplía a {planLabelForTier(upgradePlanTier)}
                         </Link>
                         {' '}para añadir hasta {upgradeMaxPhotos}.
@@ -821,7 +834,7 @@ export default function EditBusinessProfile() {
                     {upgradePlanTier && upgradeMaxServices && (
                       <>
                         {' '}
-                        <Link to="/mi-cuenta" state={{ tab: 'plan' }} className="font-medium text-primary hover:underline">
+                        <Link to={accountDashboardPath('plan')} className="font-medium text-primary hover:underline">
                           Amplía a {planLabelForTier(upgradePlanTier)}
                         </Link>
                         {' '}para añadir hasta {upgradeMaxServices}.
@@ -878,7 +891,7 @@ export default function EditBusinessProfile() {
                       </div>
                     </div>
                     <Button variant="outline" asChild>
-                      <Link to="/mi-cuenta" state={{ tab: 'plan' }}>Ver planes</Link>
+                      <Link to={accountDashboardPath('plan')}>Ver planes</Link>
                     </Button>
                   </CardContent>
                 </Card>

@@ -105,6 +105,20 @@ export async function updateMyBusiness(
   return { ok: true };
 }
 
+export async function deleteMyBusiness(
+  businessId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!businessId) return { ok: false, error: 'Negocio inválido' };
+
+  const { error } = await supabase.from('businesses').delete().eq('id', businessId);
+
+  if (error) {
+    console.error('Error deleting business:', error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
 export async function getBusinessById(id: string): Promise<Business | null> {
   const { data, error } = await supabase
     .from('businesses')

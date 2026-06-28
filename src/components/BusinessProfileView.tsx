@@ -19,6 +19,7 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from '@/components/ui/carousel';
+import { useCarouselAutoplay } from '@/hooks/use-carousel-autoplay';
 import type { Business, Review } from '@/types/domain';
 import { BUSINESS_IMAGE_FALLBACK, resolveBusinessImageUrl } from '@/lib/business-image';
 import { getMaxPhotosForTier, isProfileGroupAvailable, type ProfilePlanTier } from '@/lib/business-profile-plan';
@@ -91,6 +92,7 @@ export default function BusinessProfileView({
 }: BusinessProfileViewProps) {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const autoplay = useCarouselAutoplay();
 
   const showPremiumBadge = previewPremium ?? business.is_premium;
   const showContact = groupVisible(planTier, 'contact');
@@ -136,6 +138,7 @@ export default function BusinessProfileView({
           key={photos.join('\0')}
           setApi={setCarouselApi}
           opts={{ loop: hasMultiplePhotos, align: 'start', axis: 'x' }}
+          plugins={hasMultiplePhotos ? [autoplay] : undefined}
           className="h-full w-full"
         >
           <CarouselContent className="-ml-0 h-full">

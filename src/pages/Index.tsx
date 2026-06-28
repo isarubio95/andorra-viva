@@ -15,6 +15,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from '@/components/ui/carousel';
+import { useCarouselAutoplay } from '@/hooks/use-carousel-autoplay';
 import { getBusinesses, getTopVisitedBusinessesOfMonth, type TopVisitedBusiness } from '@/services/api';
 import type { Business } from '@/types/domain';
 
@@ -49,6 +50,7 @@ function FeaturedSection({
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
+  const autoplay = useCarouselAutoplay();
 
   const onApiSelect = useCallback(() => {
     if (!api) return;
@@ -72,13 +74,16 @@ function FeaturedSection({
 
   if (!loading && businesses.length === 0) return null;
 
+  const canLoop = !loading && businesses.length > 1;
+
   return (
     <section className="container mx-auto px-4 pt-10">
       <h2 className="mb-6 flex items-center gap-2 text-xl font-bold">
         <span>{icon}</span> {title}
       </h2>
       <Carousel
-        opts={{ align: 'start', loop: false }}
+        opts={{ align: 'start', loop: canLoop }}
+        plugins={canLoop ? [autoplay] : undefined}
         className="w-full"
         setApi={setApi}
       >
