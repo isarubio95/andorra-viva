@@ -1113,7 +1113,7 @@ export default function UserDashboard() {
 
                   <Separator />
 
-                  <Button variant="destructive" onClick={handleSignOut} className="w-full">
+                  <Button variant="outline" onClick={handleSignOut} className="w-full">
                     <LogOut className="mr-2 h-4 w-4" />
                     Cerrar Sesión
                   </Button>

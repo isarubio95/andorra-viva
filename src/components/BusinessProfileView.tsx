@@ -37,6 +37,8 @@ interface BusinessProfileViewProps {
   previewPremium?: boolean;
   /** Galería y contenido en columnas en escritorio (p. ej. drawer a pantalla completa). */
   desktopFullScreen?: boolean;
+  /** Reproducción automática del carrusel de fotos (desactivar en vista previa del editor). */
+  carouselAutoplay?: boolean;
 }
 
 function groupVisible(planTier: ProfilePlanTier | undefined, group: Parameters<typeof isProfileGroupAvailable>[1]): boolean {
@@ -92,6 +94,7 @@ export default function BusinessProfileView({
   planTier,
   previewPremium,
   desktopFullScreen = false,
+  carouselAutoplay = true,
 }: BusinessProfileViewProps) {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -150,7 +153,7 @@ export default function BusinessProfileView({
           key={photos.join('\0')}
           setApi={setCarouselApi}
           opts={{ loop: hasMultiplePhotos, align: 'start', axis: 'x' }}
-          plugins={hasMultiplePhotos ? [autoplay] : undefined}
+          plugins={hasMultiplePhotos && carouselAutoplay ? [autoplay] : undefined}
           className="h-full w-full"
         >
           <CarouselContent className="-ml-0 h-full">

@@ -958,6 +958,7 @@ export default function EditBusinessProfile() {
                       showReviews={false}
                       planTier={planTier}
                       previewPremium={showPremiumPreview}
+                      carouselAutoplay={false}
                       className="flex h-full flex-col bg-card"
                     />
                   </div>
@@ -1008,6 +1009,7 @@ export default function EditBusinessProfile() {
               showReviews={false}
               planTier={planTier}
               previewPremium={showPremiumPreview}
+              carouselAutoplay={false}
               className="flex h-full flex-col bg-card"
             />
           </div>

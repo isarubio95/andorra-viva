@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
+import { accountDashboardPath } from '@/lib/account-dashboard';
 import { useToast } from '@/hooks/use-toast';
 
 const navLinks = [
@@ -113,16 +114,13 @@ export default function Header() {
                   Mi Cuenta
                 </DropdownMenuItem>
                 {isPro && (
-                  <DropdownMenuItem onClick={() => navigate('/mi-cuenta')}>
+                  <DropdownMenuItem onClick={() => navigate(accountDashboardPath('negocios'))}>
                     <Store className="mr-2 h-4 w-4" />
-                    Mis Negocios
+                    Mi Negocio
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleSignOut}
-                  className="text-destructive hover:bg-muted focus:bg-muted focus:text-destructive data-highlighted:bg-muted data-highlighted:text-destructive"
-                >
+                <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Cerrar Sesión
                 </DropdownMenuItem>
@@ -200,15 +198,15 @@ export default function Header() {
                 </Button>
                 {isPro && (
                   <Button variant="ghost" className="justify-start" asChild>
-                    <Link to="/mi-cuenta" onClick={() => setMobileOpen(false)}>
+                    <Link to={accountDashboardPath('negocios')} onClick={() => setMobileOpen(false)}>
                       <Store className="mr-2 h-4 w-4" />
-                      Mis negocios
+                      Mi negocio
                     </Link>
                   </Button>
                 )}
                 <Button
                   variant="ghost"
-                  className="justify-start text-destructive hover:bg-muted hover:text-destructive focus-visible:bg-muted focus-visible:text-destructive"
+                  className="justify-start"
                   onClick={() => {
                     setMobileOpen(false);
                     void handleSignOut();
