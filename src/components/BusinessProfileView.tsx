@@ -35,6 +35,8 @@ interface BusinessProfileViewProps {
   planTier?: ProfilePlanTier;
   /** Muestra insignia premium según plan del propietario (vista previa del editor). */
   previewPremium?: boolean;
+  /** Galería y contenido en columnas en escritorio (p. ej. drawer a pantalla completa). */
+  desktopFullScreen?: boolean;
 }
 
 function groupVisible(planTier: ProfilePlanTier | undefined, group: Parameters<typeof isProfileGroupAvailable>[1]): boolean {
@@ -89,6 +91,7 @@ export default function BusinessProfileView({
   className,
   planTier,
   previewPremium,
+  desktopFullScreen = false,
 }: BusinessProfileViewProps) {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -127,9 +130,18 @@ export default function BusinessProfileView({
   const hasMultiplePhotos = photos.length > 1;
 
   return (
-    <div className={className ?? 'flex h-full flex-col bg-card'}>
+    <div
+      className={cn(
+        'flex h-full flex-col bg-card',
+        desktopFullScreen && 'lg:flex-row',
+        className,
+      )}
+    >
       <div
-        className="relative aspect-3/2 w-full shrink-0 touch-pan-x overflow-hidden bg-muted"
+        className={cn(
+          'relative aspect-3/2 w-full shrink-0 touch-pan-x overflow-hidden bg-muted',
+          desktopFullScreen && 'lg:aspect-auto lg:h-full lg:min-h-0 lg:w-1/2',
+        )}
         data-vaul-no-drag=""
         onPointerDown={stopDrawerPointerBubble}
         onTouchStart={stopDrawerPointerBubble}
@@ -182,7 +194,12 @@ export default function BusinessProfileView({
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-6">
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-6',
+          desktopFullScreen && 'lg:w-1/2 lg:p-8 xl:gap-8',
+        )}
+      >
         <div>
           <h2 className="text-2xl font-bold">{business.name || 'Nombre del negocio'}</h2>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
