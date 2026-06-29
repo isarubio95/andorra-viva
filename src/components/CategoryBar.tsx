@@ -31,7 +31,7 @@ import {
   Wine,
 } from 'lucide-react';
 import type { BusinessCategory } from '@/constants/businessCategories';
-import { CATEGORY_THEMES, type CategoryTheme } from '@/constants/categoryDisplay';
+import { CATEGORY_IMAGE_RESPONSIVE_SIZES, CATEGORY_THEMES, type CategoryTheme } from '@/constants/categoryDisplay';
 
 type SubcategoryLink = {
   /** Debe coincidir EXACTO con una subcategoría canónica (`businessSubcategories.ts`). */
@@ -136,9 +136,12 @@ function CategoryCard({
         className="relative flex h-40 w-full cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70 sm:h-44"
       >
         <img
-          src={card.image}
+          src={card.image.src}
+          srcSet={card.image.srcSet}
+          sizes={CATEGORY_IMAGE_RESPONSIVE_SIZES}
           alt=""
           loading="lazy"
+          decoding="async"
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           aria-hidden
         />
