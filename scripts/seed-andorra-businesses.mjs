@@ -299,7 +299,7 @@ async function ensureProfessional(ownerId) {
   if (roleErr) console.warn(`  user_roles ${ownerId}:`, roleErr.message);
 
   const { error: subErr } = await admin.from('subscriptions').upsert(
-    { user_id: ownerId, plan_id: 'basico', status: 'active' },
+    { user_id: ownerId, plan_id: 'free', status: 'active' },
     { onConflict: 'user_id' }
   );
   if (subErr) console.warn(`  subscriptions ${ownerId}:`, subErr.message);

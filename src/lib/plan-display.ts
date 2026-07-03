@@ -10,14 +10,8 @@ function moveFeatureLast(features: string[], label: string): string[] {
   return [...features.filter(f => f !== label), label];
 }
 
-/** Planes legacy que no deben mostrarse en la UI (sustituidos por premium). */
-export const DEPRECATED_PLAN_IDS = new Set(['enterprise']);
-
-/** Duplicados legacy del plan gratuito. */
-export const HIDDEN_PLAN_IDS = new Set(['free']);
-
-/** Planes ocultos en la pestaña de plan del dashboard profesional. */
-export const PROFESSIONAL_DASHBOARD_HIDDEN_PLAN_IDS = new Set(['basico', 'enterprise', 'free']);
+/** Plan gratuito: oculto en la pestaña de upgrade del dashboard profesional. */
+export const DASHBOARD_HIDDEN_PLAN_IDS = new Set(['free']);
 
 export function normalizePlanFeatures(features: string[]): string[] {
   return (features ?? []).map(f => f.trim()).filter(f => f.length > 0 && !META_PREFIX.test(f));
@@ -28,9 +22,7 @@ export function sortPlansByPrice(plans: Plan[]): Plan[] {
 }
 
 export function getVisiblePlans(plans: Plan[]): Plan[] {
-  return sortPlansByPrice(
-    plans.filter(p => !DEPRECATED_PLAN_IDS.has(p.id) && !HIDDEN_PLAN_IDS.has(p.id)),
-  );
+  return sortPlansByPrice(plans);
 }
 
 /** Lista única y ordenada de features para alinear filas entre columnas. */
@@ -153,7 +145,7 @@ const DEFAULT_THEME: PlanTheme = {
 };
 
 const PLAN_THEMES: Record<string, PlanTheme> = {
-  basico: {
+  free: {
     icon: Leaf,
     nameClass: 'text-emerald-600',
     priceClass: 'text-emerald-600',

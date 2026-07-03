@@ -53,8 +53,8 @@ export const useAuth = () => useContext(AuthContext);
 
 const PAID_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing']);
 
-/** Planes sin pago recurrente (incluye id legado `free` por datos antiguos). */
-const NON_PAID_PLAN_IDS = new Set(['basico', 'free']);
+/** Planes sin pago recurrente. */
+const NON_PAID_PLAN_IDS = new Set(['free']);
 
 function normalizeRole(value: unknown): UserRole | null {
   if (value === 'admin' || value === 'professional' || value === 'basic') return value;
@@ -102,8 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fromDb ?? (metadataRole === 'professional' ? 'professional' : 'basic');
     setRole(nextRole);
 
-    const rawPid = subRes.data?.plan_id ?? null;
-    const pid = rawPid === 'free' ? 'basico' : rawPid;
+    const pid = subRes.data?.plan_id ?? null;
     const st = subRes.data?.status ?? null;
     setPlanId(pid);
     setSubscriptionStatus(st);
@@ -125,8 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ) {
         const d = rpcData as MyAccessPayload;
         const nextRole = normalizeRole(d.role) ?? 'basic';
-        const raw = d.plan_id ?? 'basico';
-        const pid = raw === 'free' ? 'basico' : raw;
+        const pid = d.plan_id ?? 'free';
         const st = d.subscription_status ?? null;
         setRole(nextRole);
         setPlanId(pid);

@@ -17,6 +17,8 @@ import {
   type CarouselApi,
 } from '@/components/ui/carousel';
 import { useCarouselAutoplay } from '@/hooks/use-carousel-autoplay';
+import { useSiteContent } from '@/contexts/SiteContentContext';
+import { useMobileMapHeaderVisibility } from '@/hooks/use-mobile-map-header';
 import { getBusinesses, getTopVisitedBusinessesOfMonth, type TopVisitedBusiness } from '@/services/api';
 import type { Business } from '@/types/domain';
 
@@ -125,6 +127,8 @@ function FeaturedSection({
 }
 
 export default function Index() {
+  const { getText } = useSiteContent();
+  const { isMobile, headerVisible, onMapInteraction } = useMobileMapHeaderVisibility();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [topVisitedLoading, setTopVisitedLoading] = useState(true);
@@ -164,29 +168,35 @@ export default function Index() {
 
   return (
     <div className="flex min-h-screen flex-col bg-transparent">
+      <Header mobileOverlay mobileHidden={!headerVisible} />
       <div className="flex flex-1 flex-col">
-        <Header />
-        <HeroMap businesses={loading ? [] : businesses} onBusinessClick={setSelectedBusiness} />
+        <HeroMap
+          businesses={loading ? [] : businesses}
+          onBusinessClick={setSelectedBusiness}
+          onMapInteraction={onMapInteraction}
+          mobileFullBleed={isMobile}
+          mobileControlsOffset={isMobile && headerVisible}
+        />
         <ScrollReveal>
           <CategoryBar />
         </ScrollReveal>
 
         <FeaturedSection
-          title="Nuestras recomendaciones"
+          title={getText('section_recommendations')}
           icon="🏅"
           loading={loading}
           businesses={premium}
           onBusinessClick={setSelectedBusiness}
         />
         <FeaturedSection
-          title="Mejor valorados"
+          title={getText('section_top_rated')}
           icon="⭐"
           loading={loading}
           businesses={topRated}
           onBusinessClick={setSelectedBusiness}
         />
         <FeaturedSection
-          title="Más visitados del mes"
+          title={getText('section_most_visited')}
           icon="🔥"
           loading={topVisitedLoading}
           businesses={topVisited}
@@ -196,11 +206,11 @@ export default function Index() {
         <ScrollReveal as="section" className="container mx-auto px-4 py-12 md:py-16">
           <div className="mx-auto flex max-w-xl flex-col items-center gap-5 text-center">
             <p className="text-base text-muted-foreground md:text-lg">
-              Descubre todos los negocios de Andorra con filtros, búsqueda y reseñas de la comunidad.
+              {getText('directory_cta')}
             </p>
             <Button asChild size="lg" className="rounded-full px-8">
               <Link to="/directorio">
-                Ir al directorio completo
+                {getText('directory_cta_button')}
                 <ArrowRight />
               </Link>
             </Button>

@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import 'leaflet/dist/leaflet.css';
+import { cn } from '@/lib/utils';
 
 const MAP_FILTER_PILL_LABELS: Record<string, string> = {
   'Ocio y entretenimiento': 'Ocio',
@@ -35,6 +36,32 @@ const MAP_FILTER_PILL_LABELS: Record<string, string> = {
 interface HeroMapProps {
   businesses: Business[];
   onBusinessClick: (business: Business) => void;
+  onMapInteraction?: () => void;
+  /** Altura fija en móvil que incluye la zona del header superpuesto (evita saltos de layout). */
+  mobileFullBleed?: boolean;
+  /** Desplaza controles del mapa bajo el header visible en móvil. */
+  mobileControlsOffset?: boolean;
+}
+
+function MapInteractionBridge({ onInteract }: { onInteract?: () => void }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!onInteract) return;
+
+    const container = map.getContainer();
+    const handleInteract = () => onInteract();
+
+    container.addEventListener('touchstart', handleInteract, { passive: true });
+    container.addEventListener('mousedown', handleInteract);
+
+    return () => {
+      container.removeEventListener('touchstart', handleInteract);
+      container.removeEventListener('mousedown', handleInteract);
+    };
+  }, [map, onInteract]);
+
+  return null;
 }
 
 function AttributionPrefixCleaner() {
@@ -163,7 +190,13 @@ function BusinessMapMarker({
   );
 }
 
-export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
+export default function HeroMap({
+  businesses,
+  onBusinessClick,
+  onMapInteraction,
+  mobileFullBleed = false,
+  mobileControlsOffset = false,
+}: HeroMapProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedParish, setSelectedParish] = useState<AndorraParish | null>(null);
   const [subcategoriesOpen, setSubcategoriesOpen] = useState(false);
@@ -431,10 +464,14 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
         zoom={12}
         scrollWheelZoom
         zoomControl={false}
-        className="hero-map h-[50vh] w-full md:h-[60vh]"
+        className={cn(
+          'hero-map h-[50vh] w-full md:h-[60vh]',
+          mobileFullBleed && 'max-md:h-[calc(50vh+4rem)]',
+        )}
       >
         <AttributionPrefixCleaner />
         <MapInstanceBridge onReady={handleMapReady} />
+        <MapInteractionBridge onInteract={onMapInteraction} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
@@ -456,7 +493,12 @@ export default function HeroMap({ businesses, onBusinessClick }: HeroMapProps) {
         ))}
       </MapContainer>
 
-      <div className="pointer-events-none absolute inset-x-0 top-4 z-10">
+      <div
+        className={cn(
+          'pointer-events-none absolute inset-x-0 top-4 z-10 transition-[top] duration-300 ease-out',
+          mobileControlsOffset && 'max-md:top-20',
+        )}
+      >
         <div className="container mx-auto flex items-start justify-between gap-3 px-4">
           <div className="pointer-events-auto flex w-fit flex-col gap-2">
             <div className="overflow-hidden rounded-xl border border-border/60 shadow-sm">

@@ -1,5 +1,11 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  type CarouselApi,
+} from '@/components/ui/carousel';
 import type { LucideIcon } from 'lucide-react';
 import {
   Bed,
@@ -32,6 +38,7 @@ import {
 } from 'lucide-react';
 import type { BusinessCategory } from '@/constants/businessCategories';
 import { CATEGORY_IMAGE_RESPONSIVE_SIZES, CATEGORY_THEMES, type CategoryTheme } from '@/constants/categoryDisplay';
+import { useSiteContent } from '@/contexts/SiteContentContext';
 
 type SubcategoryLink = {
   /** Debe coincidir EXACTO con una subcategoría canónica (`businessSubcategories.ts`). */
@@ -118,10 +125,12 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
 
 function CategoryCard({
   card,
+  displayLabel,
   onCategory,
   onSubcategory,
 }: {
   card: CategoryCardConfig;
+  displayLabel: string;
   onCategory: (category: string) => void;
   onSubcategory: (category: string, subcategory: string) => void;
 }) {
@@ -132,7 +141,7 @@ function CategoryCard({
       <button
         type="button"
         onClick={() => onCategory(card.category)}
-        aria-label={`Ver ${card.displayLabel}`}
+        aria-label={`Ver ${displayLabel}`}
         className="relative flex h-40 w-full cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70 sm:h-44"
       >
         <img
@@ -161,7 +170,7 @@ function CategoryCard({
           <Icon className="h-8 w-8 text-white" strokeWidth={1.75} aria-hidden />
         </span>
         <span className="relative text-base font-extrabold uppercase tracking-wide text-white drop-shadow-sm sm:text-lg">
-          {card.displayLabel}
+          {displayLabel}
         </span>
       </button>
 
@@ -188,8 +197,80 @@ function CategoryCard({
   );
 }
 
+function CategoryCarousel({
+  cards,
+  getLabel,
+  onCategory,
+  onSubcategory,
+}: {
+  cards: CategoryCardConfig[];
+  getLabel: (category: BusinessCategory) => string;
+  onCategory: (category: string) => void;
+  onSubcategory: (category: string, subcategory: string) => void;
+}) {
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [count, setCount] = useState(0);
+
+  const onApiSelect = useCallback(() => {
+    if (!api) return;
+    setCurrent(api.selectedScrollSnap());
+  }, [api]);
+
+  useEffect(() => {
+    if (!api) return;
+    setCount(api.scrollSnapList().length);
+    setCurrent(api.selectedScrollSnap());
+    api.on('select', onApiSelect);
+    return () => {
+      api.off('select', onApiSelect);
+    };
+  }, [api, onApiSelect]);
+
+  const canLoop = cards.length > 1;
+
+  return (
+    <>
+      <Carousel
+        opts={{ align: 'start', loop: canLoop }}
+        className="w-full"
+        setApi={setApi}
+      >
+        <CarouselContent className="-ml-3">
+          {cards.map(card => (
+            <CarouselItem key={card.category} className="pl-3 basis-[85%]">
+              <CategoryCard
+                card={card}
+                displayLabel={getLabel(card.category as BusinessCategory)}
+                onCategory={onCategory}
+                onSubcategory={onSubcategory}
+              />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
+      {count > 1 && (
+        <div className="mt-4 flex justify-center gap-1.5">
+          {Array.from({ length: count }).map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              aria-label={`Ir a la categoría ${i + 1}`}
+              onClick={() => api?.scrollTo(i)}
+              className={`h-2 rounded-full transition-[width,background-color] duration-300 ease-out ${
+                i === current ? 'w-6 bg-primary' : 'w-2 bg-primary/30'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function CategoryBar() {
   const navigate = useNavigate();
+  const { getCategoryLabel } = useSiteContent();
 
   const goToCategory = useCallback(
     (grupo: string) => {
@@ -211,11 +292,21 @@ export default function CategoryBar() {
     <section className="container mx-auto px-4 pt-10 pb-4">
       <h2 className="mb-6 text-xl font-bold text-foreground">¿Qué quieres hacer hoy?</h2>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="sm:hidden">
+        <CategoryCarousel
+          cards={CATEGORY_CARDS}
+          getLabel={getCategoryLabel}
+          onCategory={goToCategory}
+          onSubcategory={goToSubcategory}
+        />
+      </div>
+
+      <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
         {CATEGORY_CARDS.map(card => (
           <CategoryCard
             key={card.category}
             card={card}
+            displayLabel={getCategoryLabel(card.category as BusinessCategory)}
             onCategory={goToCategory}
             onSubcategory={goToSubcategory}
           />

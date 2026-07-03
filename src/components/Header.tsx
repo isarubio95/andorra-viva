@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Store, Heart } from 'lucide-react';
+import { Menu, X, LogOut, User, Store, Heart, Shield } from 'lucide-react';
 import { AppLogo } from '@/components/AppLogo';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '@/components/ui/drawer';
@@ -16,13 +16,21 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { accountDashboardPath } from '@/lib/account-dashboard';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const navLinks = [
   { label: 'Mapa', href: '/#mapa' },
   { label: 'Directorio', href: '/directorio' },
 ];
 
-export default function Header() {
+type HeaderProps = {
+  /** En móvil: cabecera fija sobre el contenido (p. ej. home con mapa). */
+  mobileOverlay?: boolean;
+  /** En móvil: oculta la cabecera deslizándola hacia arriba. */
+  mobileHidden?: boolean;
+};
+
+export default function Header({ mobileOverlay = false, mobileHidden = false }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, displayName, role, signOut, loading, hasProAccess, roleLoading } = useAuth();
   const navigate = useNavigate();
@@ -48,7 +56,13 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-lg">
+    <header
+      className={cn(
+        'sticky top-0 z-50 border-b bg-card/80 backdrop-blur-lg transition-transform duration-300 ease-out',
+        mobileOverlay && 'max-md:fixed max-md:inset-x-0 max-md:top-0',
+        mobileHidden && 'max-md:-translate-y-full max-md:pointer-events-none',
+      )}
+    >
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <AppLogo size="xs" asLink priority />
 
@@ -110,6 +124,12 @@ export default function Header() {
                   <DropdownMenuItem onClick={() => navigate(accountDashboardPath('negocios'))}>
                     <Store className="mr-2 h-4 w-4" />
                     Mi Negocio
+                  </DropdownMenuItem>
+                )}
+                {role === 'admin' && (
+                  <DropdownMenuItem onClick={() => navigate('/admin')}>
+                    <Shield className="mr-2 h-4 w-4" />
+                    Administración
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
@@ -194,6 +214,14 @@ export default function Header() {
                     <Link to={accountDashboardPath('negocios')} onClick={() => setMobileOpen(false)}>
                       <Store className="mr-2 h-4 w-4" />
                       Mi negocio
+                    </Link>
+                  </Button>
+                )}
+                {role === 'admin' && (
+                  <Button variant="ghost" className="justify-start" asChild>
+                    <Link to="/admin" onClick={() => setMobileOpen(false)}>
+                      <Shield className="mr-2 h-4 w-4" />
+                      Administración
                     </Link>
                   </Button>
                 )}

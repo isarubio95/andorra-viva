@@ -11,7 +11,7 @@ interface PricingSectionProps {
 
 const FOOTER_ITEMS = [
   {
-    planId: 'basico',
+    planId: 'free',
     icon: MapPin,
     text: 'Más visibilidad para tu negocio',
   },

@@ -1,32 +1,32 @@
-export type ProfilePlanTier = 'basico' | 'basic' | 'pro' | 'premium';
+export type ProfilePlanTier = 'free' | 'basic' | 'pro' | 'premium';
 
 export type ProfileFieldGroup = 'essential' | 'contact' | 'services' | 'gallery' | 'actions' | 'details';
 
 const GROUP_MIN_TIER: Record<ProfileFieldGroup, ProfilePlanTier> = {
-  essential: 'basico',
-  contact: 'basico',
-  services: 'basico',
-  details: 'basico',
-  gallery: 'basico',
+  essential: 'free',
+  contact: 'free',
+  services: 'free',
+  details: 'free',
+  gallery: 'free',
   actions: 'pro',
 };
 
 export const PROFILE_SERVICE_LIMITS: Record<ProfilePlanTier, number> = {
-  basico: 4,
+  free: 4,
   basic: 5,
   pro: 7,
   premium: 12,
 };
 
 export const PROFILE_PHOTO_LIMITS: Record<ProfilePlanTier, number> = {
-  basico: 3,
+  free: 3,
   basic: 3,
   pro: 6,
   premium: 10,
 };
 
 const TIER_RANK: Record<ProfilePlanTier, number> = {
-  basico: 0,
+  free: 0,
   basic: 1,
   pro: 2,
   premium: 3,
@@ -40,7 +40,7 @@ export function resolveProfilePlanTier(
   if (planId === 'premium') return 'premium';
   if (planId === 'pro') return 'pro';
   if (planId === 'basic') return 'basic';
-  return 'basico';
+  return 'free';
 }
 
 export function isProfileGroupAvailable(tier: ProfilePlanTier, group: ProfileFieldGroup): boolean {
@@ -68,12 +68,12 @@ export function planLabelForTier(tier: ProfilePlanTier): string {
     case 'basic':
       return 'Basic';
     default:
-      return 'Básico';
+      return 'Free';
   }
 }
 
 export function getNextPlanTier(tier: ProfilePlanTier): ProfilePlanTier | null {
-  if (tier === 'basico') return 'basic';
+  if (tier === 'free') return 'basic';
   if (tier === 'basic') return 'pro';
   if (tier === 'pro') return 'premium';
   return null;

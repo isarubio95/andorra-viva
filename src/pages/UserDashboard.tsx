@@ -11,6 +11,7 @@ import {
   deleteMyBusiness,
   type BusinessMetricRow,
 } from '@/services/api';
+import { createStripeCheckoutSession } from '@/services/admin-api';
 import type { Business, Plan } from '@/types/domain';
 import BusinessCard from '@/components/BusinessCard';
 import PlanComparisonGrid from '@/components/PlanComparisonGrid';
@@ -31,7 +32,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { CartesianGrid, Line, LineChart, XAxis } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import { getPlanTheme, sortPlansByPrice, PROFESSIONAL_DASHBOARD_HIDDEN_PLAN_IDS } from '@/lib/plan-display';
+import { getPlanTheme, sortPlansByPrice, DASHBOARD_HIDDEN_PLAN_IDS } from '@/lib/plan-display';
 import { buildPublicUrl } from '@/lib/site-url';
 import {
   isCurrentAccountDashboardTab,
@@ -59,11 +60,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-const FREE_PLAN_IDS = new Set(['basico', 'free']);
+const FREE_PLAN_IDS = new Set(['free']);
+const STRIPE_CHECKOUT_PLAN_IDS = new Set(['basic', 'pro', 'premium']);
 
 const PLAN_RANK: Record<string, number> = {
-  basico: 0,
   free: 0,
+  basico: 0,
   basic: 1,
   pro: 2,
   premium: 3,
@@ -203,8 +205,8 @@ export default function UserDashboard() {
   const isPro = hasProAccess;
   const isProfessionalRole = role === 'professional';
   const isOnPaidPlan = !!planId && !FREE_PLAN_IDS.has(planId);
-  const dashboardPlans = plans.filter(p => !PROFESSIONAL_DASHBOARD_HIDDEN_PLAN_IDS.has(p.id));
-  const basicPlanName = plans.find(p => p.id === 'basico')?.name ?? 'Básico';
+  const dashboardPlans = plans.filter(p => !DASHBOARD_HIDDEN_PLAN_IDS.has(p.id));
+  const freePlanName = plans.find(p => p.id === 'free')?.name ?? 'Free';
   const currentPlanName = plans.find(p => p.id === planId)?.name ?? planId ?? '—';
   const downgradeTargetPlanName =
     plans.find(p => p.id === downgradeTargetPlanId)?.name ?? downgradeTargetPlanId ?? '—';
@@ -398,6 +400,20 @@ export default function UserDashboard() {
     if (!user?.id) return;
     if (nextPlanId === planId) return;
     setChangingPlan(true);
+
+    const isUpgradeToPaid =
+      STRIPE_CHECKOUT_PLAN_IDS.has(nextPlanId) &&
+      (PLAN_RANK[nextPlanId] ?? 0) > (PLAN_RANK[planId ?? 'free'] ?? 0);
+
+    if (isUpgradeToPaid) {
+      const checkout = await createStripeCheckoutSession(nextPlanId);
+      if (checkout.url) {
+        window.location.href = checkout.url;
+        setChangingPlan(false);
+        return;
+      }
+    }
+
     const result = await setMySubscriptionPlan(nextPlanId);
 
     if (!result.ok) {
@@ -949,10 +965,10 @@ export default function UserDashboard() {
                         <button
                           type="button"
                           disabled={changingPlan}
-                          onClick={() => openDowngradeConfirm('basico')}
+                          onClick={() => openDowngradeConfirm('free')}
                           className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline disabled:pointer-events-none disabled:opacity-50"
                         >
-                          Cambiar al plan {basicPlanName} (gratuito)
+                          Cambiar al plan {freePlanName} (gratuito)
                         </button>
                       </div>
                     )}
@@ -1015,7 +1031,7 @@ export default function UserDashboard() {
                   <AlertDialogDescription>
                     Dejarás de gestionar negocios y métricas desde el panel profesional.
                     Tus negocios publicados seguirán visibles en el directorio.
-                    El plan pasará al {basicPlanName} gratuito.
+                    El plan pasará al {freePlanName} gratuito.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

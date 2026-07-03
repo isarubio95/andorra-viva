@@ -3,7 +3,6 @@ import { clearStoredVisitorKey, getStoredVisitorKey } from '@/lib/visitor-key';
 import type { Business, Plan, Review } from '@/types/domain';
 import { rewriteSupabaseStorageUrl } from '@/lib/business-image';
 import { parseOpeningHours } from '@/lib/business-hours';
-import { DEPRECATED_PLAN_IDS, HIDDEN_PLAN_IDS } from '@/lib/plan-display';
 
 export interface TopVisitedBusiness extends Business {
   visits_month: number;
@@ -20,7 +19,7 @@ export interface BusinessMetricRow {
 }
 
 /** Asegura campos coherentes con la app (p. ej. `is_premium`, arrays). */
-function normalizeBusinessRow(row: unknown): Business {
+export function normalizeBusinessRow(row: unknown): Business {
   const r = row as Business & { is_premium?: boolean; services?: unknown; gallery?: unknown };
   const services = Array.isArray(r.services) ? (r.services as string[]) : [];
   const gallery = Array.isArray(r.gallery)
@@ -44,7 +43,7 @@ function normalizeBusinessRow(row: unknown): Business {
   };
 }
 
-function normalizePlanRow(row: unknown): Plan {
+export function normalizePlanRow(row: unknown): Plan {
   const r = row as Record<string, unknown>;
   const features = Array.isArray(r.features) ? (r.features as string[]) : [];
   const price = typeof r.price === 'number' ? r.price : Number(r.price ?? 0);
@@ -196,9 +195,7 @@ export async function getPlans(): Promise<Plan[]> {
     console.error('Error fetching plans:', error);
     return [];
   }
-  return (data ?? [])
-    .map(normalizePlanRow)
-    .filter(p => !DEPRECATED_PLAN_IDS.has(p.id) && !HIDDEN_PLAN_IDS.has(p.id));
+  return (data ?? []).map(normalizePlanRow);
 }
 
 /** Pasa de usuario básico a profesional y asigna el plan (RPC `upgrade_to_professional`). */

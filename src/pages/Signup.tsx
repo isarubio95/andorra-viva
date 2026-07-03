@@ -32,7 +32,7 @@ export default function Signup() {
     return 'role';
   });
   const [selectedRole, setSelectedRole] = useState<UserRole>('basic');
-  const [selectedPlan, setSelectedPlan] = useState<string>('basico');
+  const [selectedPlan, setSelectedPlan] = useState<string>('free');
   const [plans, setPlans] = useState<Plan[]>([]);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
