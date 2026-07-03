@@ -92,6 +92,11 @@ function centerPopupInViewport(map: LeafletMap, popup: LeafletPopup) {
   });
 }
 
+function getMarkerAccessibleName(biz: Business): string {
+  const type = biz.subcategory ?? biz.category;
+  return `Ver ${biz.name}, ${type}${biz.location ? `, ${biz.location}` : ''}`;
+}
+
 function BusinessMapMarker({
   biz,
   onBusinessClick,
@@ -105,6 +110,15 @@ function BusinessMapMarker({
     <Marker
       position={[biz.latitude, biz.longitude]}
       icon={getBusinessCategoryDivIcon(biz.category)}
+      eventHandlers={{
+        add: event => {
+          const el = event.target.getElement?.() as HTMLElement | undefined;
+          const label = getMarkerAccessibleName(biz);
+          if (el) {
+            el.setAttribute('aria-label', label);
+          }
+        },
+      }}
     >
       <Popup
         minWidth={200}
@@ -121,7 +135,7 @@ function BusinessMapMarker({
           <h3 className="font-bold text-sm leading-tight">{biz.name}</h3>
           <img
             src={resolveBusinessImageUrl(biz.image_url)}
-            alt=""
+            alt={biz.name}
             onError={e => {
               e.currentTarget.onerror = null;
               e.currentTarget.src = resolveBusinessImageUrl(null);

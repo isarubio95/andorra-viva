@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -31,14 +31,7 @@ import {
   Wine,
 } from 'lucide-react';
 import type { BusinessCategory } from '@/constants/businessCategories';
-import { CATEGORY_THEMES, type CategoryTheme } from '@/constants/categoryDisplay';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  type CarouselApi,
-} from '@/components/ui/carousel';
-import { useCarouselAutoplay } from '@/hooks/use-carousel-autoplay';
+import { CATEGORY_IMAGE_RESPONSIVE_SIZES, CATEGORY_THEMES, type CategoryTheme } from '@/constants/categoryDisplay';
 
 type SubcategoryLink = {
   /** Debe coincidir EXACTO con una subcategoría canónica (`businessSubcategories.ts`). */
@@ -143,9 +136,12 @@ function CategoryCard({
         className="relative flex h-40 w-full cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70 sm:h-44"
       >
         <img
-          src={card.image}
+          src={card.image.src}
+          srcSet={card.image.srcSet}
+          sizes={CATEGORY_IMAGE_RESPONSIVE_SIZES}
           alt=""
           loading="lazy"
+          decoding="async"
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           aria-hidden
         />
@@ -194,25 +190,6 @@ function CategoryCard({
 
 export default function CategoryBar() {
   const navigate = useNavigate();
-  const [api, setApi] = useState<CarouselApi>();
-  const [current, setCurrent] = useState(0);
-  const [count, setCount] = useState(0);
-  const autoplay = useCarouselAutoplay();
-
-  const onApiSelect = useCallback(() => {
-    if (!api) return;
-    setCurrent(api.selectedScrollSnap());
-  }, [api]);
-
-  useEffect(() => {
-    if (!api) return;
-    setCount(api.scrollSnapList().length);
-    setCurrent(api.selectedScrollSnap());
-    api.on('select', onApiSelect);
-    return () => {
-      api.off('select', onApiSelect);
-    };
-  }, [api, onApiSelect]);
 
   const goToCategory = useCallback(
     (grupo: string) => {
@@ -234,43 +211,7 @@ export default function CategoryBar() {
     <section className="container mx-auto px-4 pt-10 pb-4">
       <h2 className="mb-6 text-xl font-bold text-foreground">¿Qué quieres hacer hoy?</h2>
 
-      <div className="sm:hidden">
-        <Carousel
-          opts={{ align: 'start', loop: CATEGORY_CARDS.length > 1 }}
-          plugins={CATEGORY_CARDS.length > 1 ? [autoplay] : undefined}
-          className="w-full"
-          setApi={setApi}
-        >
-          <CarouselContent className="-ml-3">
-            {CATEGORY_CARDS.map(card => (
-              <CarouselItem key={card.category} className="pl-3 basis-[88%]">
-                <CategoryCard
-                  card={card}
-                  onCategory={goToCategory}
-                  onSubcategory={goToSubcategory}
-                />
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-        {count > 1 && (
-          <div className="mt-4 flex justify-center gap-1.5">
-            {Array.from({ length: count }).map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                aria-label={`Ir a la categoría ${i + 1}`}
-                onClick={() => api?.scrollTo(i)}
-                className={`h-2 rounded-full transition-[width,background-color] duration-300 ease-out ${
-                  i === current ? 'w-6 bg-primary' : 'w-2 bg-primary/30'
-                }`}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {CATEGORY_CARDS.map(card => (
           <CategoryCard
             key={card.category}
