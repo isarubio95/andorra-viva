@@ -29,6 +29,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useSiteContent } from '@/contexts/SiteContentContext';
+import { useTableView } from '@/hooks/use-table-view';
+import { SortableTableHead } from '@/components/admin/SortableTableHead';
+import { TablePagination } from '@/components/admin/TablePagination';
+
+const PAGE_SIZE = 10;
+type BusinessSortKey = 'business' | 'category' | 'premium' | 'recommended';
 
 export default function AdminBusinesses() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -59,6 +65,24 @@ export default function AdminBusinesses() {
         b.location.toLowerCase().includes(q),
     );
   }, [businesses, query]);
+
+  const comparators = useMemo(
+    (): Record<BusinessSortKey, (a: Business, b: Business) => number> => ({
+      business: (a, b) => a.name.localeCompare(b.name, 'es'),
+      category: (a, b) =>
+        getCategoryLabel(a.category).localeCompare(getCategoryLabel(b.category), 'es'),
+      premium: (a, b) => Number(a.is_premium) - Number(b.is_premium),
+      recommended: (a, b) => Number(!!a.is_recommended) - Number(!!b.is_recommended),
+    }),
+    [getCategoryLabel],
+  );
+
+  const { rows, sort, toggleSort, page, setPage, totalPages, totalItems } = useTableView(
+    filtered,
+    comparators,
+    { key: 'business', direction: 'asc' },
+    PAGE_SIZE,
+  );
 
   const toggleFlag = async (
     business: Business,
@@ -112,10 +136,10 @@ export default function AdminBusinesses() {
         <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Negocio</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Premium</TableHead>
-                <TableHead>Recomendado</TableHead>
+                <SortableTableHead label="Negocio" sortKey="business" sort={sort} onSort={toggleSort} />
+                <SortableTableHead label="Categoría" sortKey="category" sort={sort} onSort={toggleSort} />
+                <SortableTableHead label="Premium" sortKey="premium" sort={sort} onSort={toggleSort} />
+                <SortableTableHead label="Recomendado" sortKey="recommended" sort={sort} onSort={toggleSort} />
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
@@ -128,7 +152,7 @@ export default function AdminBusinesses() {
                       </TableCell>
                     </TableRow>
                   ))
-                : filtered.map(biz => (
+                : rows.map(biz => (
                     <TableRow key={biz.id}>
                       <TableCell>
                         <div className="font-medium">{biz.name}</div>
@@ -177,6 +201,24 @@ export default function AdminBusinesses() {
                   ))}
             </TableBody>
           </Table>
+
+        {!loading && filtered.length === 0 ? (
+          <p className="text-center text-sm text-muted-foreground">No hay negocios que coincidan.</p>
+        ) : null}
+
+        {!loading && filtered.length > 0 ? (
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
+        ) : null}
+
+        <Button variant="outline" onClick={() => void load()}>
+          Actualizar lista
+        </Button>
 
         <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
           <AlertDialogContent>

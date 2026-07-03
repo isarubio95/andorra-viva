@@ -1,32 +1,32 @@
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-const LOGO_ASPECT = 345 / 192;
+const LOGO_ASPECT = 361 / 198;
 
 const LOGO_SIZES = {
   xs: {
     src: '/logo-xs.png',
     srcSet: '/logo-xs.png 1x, /logo-sm.png 2x',
-    height: 40,
-    className: 'h-8',
+    height: 36,
+    className: 'h-9',
   },
   sm: {
     src: '/logo-sm.png',
     srcSet: '/logo-sm.png 1x, /logo-md.png 2x',
-    height: 64,
-    className: 'h-10',
+    height: 44,
+    className: 'h-10 sm:h-11',
   },
   md: {
     src: '/logo-md.png',
     srcSet: '/logo-md.png 1x, /logo.png 2x',
-    height: 128,
-    className: 'h-14 sm:h-16',
+    height: 56,
+    className: 'h-12 sm:h-14',
   },
   lg: {
     src: '/logo.png',
     srcSet: '/logo.png 1x, /logo.png 2x',
-    height: 192,
-    className: 'h-20',
+    height: 72,
+    className: 'h-16 sm:h-[4.5rem]',
   },
 } as const;
 

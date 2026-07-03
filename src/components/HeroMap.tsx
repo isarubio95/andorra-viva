@@ -86,7 +86,7 @@ function MapInstanceBridge({ onReady }: { onReady: (map: LeafletMap) => void }) 
 }
 
 const MAP_CONTROL_BTN =
-  'flex h-10 w-10 items-center justify-center bg-background/90 text-foreground backdrop-blur-sm transition-colors hover:bg-background active:scale-95 disabled:pointer-events-none disabled:opacity-50';
+  'flex h-10 w-10 cursor-pointer items-center justify-center bg-background/90 text-foreground backdrop-blur-sm transition-colors hover:bg-background active:scale-95 disabled:pointer-events-none disabled:opacity-50';
 
 /** Desplaza el punto de centrado hacia la derecha para no chocar con los filtros. */
 const POPUP_CENTER_OFFSET_X = 50;

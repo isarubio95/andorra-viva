@@ -39,6 +39,10 @@ import SortablePhotoGrid from '@/components/SortablePhotoGrid';
 import { BUSINESS_LOCATIONS } from '@/constants/businessForm';
 import { isAddressConfirmed, formatStoredAddress, parseStoredAddress, addressMatchesSelectedLocation } from '@/lib/geocoding';
 import {
+  BUSINESS_IMAGE_ACCEPT,
+  filterBusinessImageFiles,
+} from '@/lib/business-image-upload';
+import {
   getMaxPhotosForTier,
   getMaxServicesForTier,
   getNextPlanTier,
@@ -399,10 +403,39 @@ export default function EditBusinessProfile() {
         description: `Tu plan ${planLabelForTier(planTier)} permite subir hasta ${maxPhotos} imágenes.`,
         variant: 'destructive',
       });
+      e.target.value = '';
       return;
     }
 
-    const picked = files.slice(0, remaining);
+    const { accepted, oversized, invalidType } = filterBusinessImageFiles(files);
+    if (invalidType.length > 0) {
+      toast({
+        title: 'Formato no válido',
+        description: 'Solo se permiten JPG, PNG, WebP o GIF.',
+        variant: 'destructive',
+      });
+    }
+    if (oversized.length > 0) {
+      toast({
+        title: 'Imagen demasiado grande',
+        description: 'Cada foto puede pesar como máximo 5 MB.',
+        variant: 'destructive',
+      });
+    }
+    if (accepted.length === 0) {
+      e.target.value = '';
+      return;
+    }
+
+    const picked = accepted.slice(0, remaining);
+    if (accepted.length > remaining) {
+      toast({
+        title: `Máximo ${maxPhotos} fotos`,
+        description: `Solo se añadieron ${picked.length} imagen${picked.length === 1 ? '' : 'es'} (límite del plan).`,
+        variant: 'destructive',
+      });
+    }
+
     setPhotos(prev => [
       ...prev,
       ...picked.map(file => ({
@@ -797,7 +830,7 @@ export default function EditBusinessProfile() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept={BUSINESS_IMAGE_ACCEPT}
                     multiple
                     onChange={handleImageSelect}
                     className="hidden"
@@ -817,6 +850,7 @@ export default function EditBusinessProfile() {
                     <span className="text-sm font-medium text-foreground">
                       {totalPhotos >= maxPhotos ? 'Límite de fotos alcanzado' : 'Añadir imágenes'}
                     </span>
+                    <p className="text-xs">JPG, PNG, WebP o GIF · máx. 5 MB por imagen</p>
                   </button>
                 </CardContent>
               </Card>

@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { PRIVACY_POLICY_VERSION } from '@/constants/privacy-policy';
 import { Badge } from '@/components/ui/badge';
 import PlanComparisonGrid from '@/components/PlanComparisonGrid';
 import { sortPlansByPrice } from '@/lib/plan-display';
@@ -39,6 +41,7 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -115,6 +118,14 @@ export default function Signup() {
       toast({ title: 'Contraseña muy corta', description: 'Mínimo 6 caracteres.', variant: 'destructive' });
       return;
     }
+    if (!acceptedPrivacyPolicy) {
+      toast({
+        title: 'Debes aceptar la política de protección de datos',
+        description: 'Lee y marca la casilla de la política de protección de datos para crear tu cuenta.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setLoading(true);
 
@@ -125,6 +136,8 @@ export default function Signup() {
         data: {
           full_name: fullName,
           role: selectedRole,
+          privacy_policy_accepted_at: new Date().toISOString(),
+          privacy_policy_version: PRIVACY_POLICY_VERSION,
           ...(selectedRole === 'professional' ? { plan: selectedPlan } : {}),
         },
         emailRedirectTo: window.location.origin,
@@ -231,7 +244,7 @@ export default function Signup() {
                     key={card.role}
                     type="button"
                     onClick={() => setSelectedRole(card.role)}
-                    className={`flex flex-col items-start gap-3 rounded-xl border-2 p-5 text-left transition-all ${
+                    className={`flex cursor-pointer flex-col items-start gap-3 rounded-xl border-2 p-5 text-left transition-all ${
                       isSelected
                         ? 'border-primary bg-primary/5 shadow-md'
                         : 'border-border hover:border-muted-foreground/30 hover:bg-muted/50'
@@ -379,10 +392,31 @@ export default function Signup() {
                     <Input id="confirmPassword" type={showPassword ? 'text' : 'password'} placeholder="Repite la contraseña" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="pl-10" required />
                   </div>
                 </div>
+
+                <div className="flex items-start gap-2 mt-1">
+                  <Checkbox
+                    id="privacyPolicy"
+                    checked={acceptedPrivacyPolicy}
+                    onCheckedChange={value => setAcceptedPrivacyPolicy(value === true)}
+                    className="mt-0.5"
+                  />
+                  <label htmlFor="privacyPolicy" className="cursor-pointer text-xs leading-snug text-muted-foreground">
+                    He leído y acepto la{' '}
+                    <Link
+                      to="/politica-proteccion-datos"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-primary hover:underline"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      Política de Protección de Datos
+                    </Link>
+                  </label>
+                </div>
               </CardContent>
 
               <CardFooter className="flex flex-col gap-4">
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading || !acceptedPrivacyPolicy}>
                   {loading ? 'Creando cuenta…' : 'Crear Cuenta'}
                 </Button>
                 {!reviewMode && (

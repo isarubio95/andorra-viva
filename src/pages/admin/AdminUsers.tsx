@@ -24,14 +24,18 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { useTableView } from '@/hooks/use-table-view';
+import { SortableTableHead } from '@/components/admin/SortableTableHead';
+import { TablePagination } from '@/components/admin/TablePagination';
 
+const PAGE_SIZE = 10;
 const ROLES: UserRole[] = ['basic', 'professional', 'admin'];
+type UserSortKey = 'user' | 'role' | 'plan' | 'status' | 'stripe';
 const STATUSES = ['active', 'trialing', 'past_due', 'canceled'] as const;
 
 export default function AdminUsers() {
@@ -64,6 +68,35 @@ export default function AdminUsers() {
         u.role.includes(q),
     );
   }, [users, query]);
+
+  const planNameById = useMemo(
+    () => Object.fromEntries(plans.map(p => [p.id, p.name])),
+    [plans],
+  );
+
+  const comparators = useMemo(
+    (): Record<UserSortKey, (a: AdminUserRow, b: AdminUserRow) => number> => ({
+      user: (a, b) =>
+        (a.full_name || a.email).localeCompare(b.full_name || b.email, 'es'),
+      role: (a, b) => a.role.localeCompare(b.role),
+      plan: (a, b) =>
+        (planNameById[a.plan_id] ?? a.plan_id).localeCompare(
+          planNameById[b.plan_id] ?? b.plan_id,
+          'es',
+        ),
+      status: (a, b) => a.subscription_status.localeCompare(b.subscription_status),
+      stripe: (a, b) =>
+        (a.stripe_customer_id ?? '').localeCompare(b.stripe_customer_id ?? ''),
+    }),
+    [planNameById],
+  );
+
+  const { rows, sort, toggleSort, page, setPage, totalPages, totalItems } = useTableView(
+    filtered,
+    comparators,
+    { key: 'user', direction: 'asc' },
+    PAGE_SIZE,
+  );
 
   const handleRoleChange = async (userId: string, role: UserRole) => {
     setSavingId(userId);
@@ -112,11 +145,11 @@ export default function AdminUsers() {
         <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Usuario</TableHead>
-                <TableHead>Rol</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Stripe</TableHead>
+                <SortableTableHead label="Usuario" sortKey="user" sort={sort} onSort={toggleSort} />
+                <SortableTableHead label="Rol" sortKey="role" sort={sort} onSort={toggleSort} />
+                <SortableTableHead label="Plan" sortKey="plan" sort={sort} onSort={toggleSort} />
+                <SortableTableHead label="Estado" sortKey="status" sort={sort} onSort={toggleSort} />
+                <SortableTableHead label="Stripe" sortKey="stripe" sort={sort} onSort={toggleSort} />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -128,7 +161,7 @@ export default function AdminUsers() {
                       </TableCell>
                     </TableRow>
                   ))
-                : filtered.map(user => (
+                : rows.map(user => (
                     <TableRow key={user.user_id}>
                       <TableCell>
                         <div className="font-medium">{user.full_name || '—'}</div>
@@ -208,6 +241,16 @@ export default function AdminUsers() {
 
         {!loading && filtered.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground">No hay usuarios que coincidan.</p>
+        ) : null}
+
+        {!loading && filtered.length > 0 ? (
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         ) : null}
 
         <Button variant="outline" onClick={() => void load()}>

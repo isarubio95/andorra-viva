@@ -22,6 +22,10 @@ import { BUSINESS_LOCATIONS } from '@/constants/businessForm';
 import { isAddressConfirmed, formatStoredAddress, addressMatchesSelectedLocation } from '@/lib/geocoding';
 import { createDefaultOpeningHours, type BusinessOpeningHours } from '@/lib/business-hours';
 import {
+  BUSINESS_IMAGE_ACCEPT,
+  filterBusinessImageFiles,
+} from '@/lib/business-image-upload';
+import {
   getMaxPhotosForTier,
   getMaxServicesForTier,
   planLabelForTier,
@@ -123,6 +127,8 @@ export default function RegisterBusiness() {
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
     const remaining = maxPhotos - images.length;
     if (remaining <= 0) {
       toast({
@@ -130,11 +136,42 @@ export default function RegisterBusiness() {
         description: `Tu plan ${planLabelForTier(planTier)} permite subir hasta ${maxPhotos} imágenes.`,
         variant: 'destructive',
       });
+      e.target.value = '';
       return;
     }
-    const picked = files.slice(0, remaining);
+
+    const { accepted, oversized, invalidType } = filterBusinessImageFiles(files);
+    if (invalidType.length > 0) {
+      toast({
+        title: 'Formato no válido',
+        description: 'Solo se permiten JPG, PNG, WebP o GIF.',
+        variant: 'destructive',
+      });
+    }
+    if (oversized.length > 0) {
+      toast({
+        title: 'Imagen demasiado grande',
+        description: 'Cada foto puede pesar como máximo 5 MB.',
+        variant: 'destructive',
+      });
+    }
+    if (accepted.length === 0) {
+      e.target.value = '';
+      return;
+    }
+
+    const picked = accepted.slice(0, remaining);
+    if (accepted.length > remaining) {
+      toast({
+        title: `Máximo ${maxPhotos} fotos`,
+        description: `Solo se añadieron ${picked.length} imagen${picked.length === 1 ? '' : 'es'} (límite del plan).`,
+        variant: 'destructive',
+      });
+    }
+
     setImages(prev => [...prev, ...picked]);
     setPreviews(prev => [...prev, ...picked.map(f => URL.createObjectURL(f))]);
+    e.target.value = '';
   };
 
   const removeImage = (index: number) => {
@@ -515,7 +552,7 @@ export default function RegisterBusiness() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept={BUSINESS_IMAGE_ACCEPT}
                 multiple
                 onChange={handleImageSelect}
                 className="hidden"

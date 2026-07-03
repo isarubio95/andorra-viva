@@ -24,6 +24,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useTableView } from '@/hooks/use-table-view';
+import { SortableTableHead } from '@/components/admin/SortableTableHead';
+import { TablePagination } from '@/components/admin/TablePagination';
+
+const PAGE_SIZE = 10;
+type ReviewSortKey = 'business' | 'user' | 'rating' | 'comment' | 'date';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
@@ -67,6 +73,24 @@ export default function AdminReviews() {
     );
   }, [reviews, query]);
 
+  const comparators = useMemo(
+    (): Record<ReviewSortKey, (a: AdminReviewRow, b: AdminReviewRow) => number> => ({
+      business: (a, b) => a.business_name.localeCompare(b.business_name, 'es'),
+      user: (a, b) => a.user_name.localeCompare(b.user_name, 'es'),
+      rating: (a, b) => a.rating - b.rating,
+      comment: (a, b) => (a.comment ?? '').localeCompare(b.comment ?? '', 'es'),
+      date: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    }),
+    [],
+  );
+
+  const { rows, sort, toggleSort, page, setPage, totalPages, totalItems } = useTableView(
+    filtered,
+    comparators,
+    { key: 'date', direction: 'desc' },
+    PAGE_SIZE,
+  );
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -104,11 +128,11 @@ export default function AdminReviews() {
         <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Negocio</TableHead>
-                <TableHead>Usuario</TableHead>
-                <TableHead>Nota</TableHead>
-                <TableHead>Comentario</TableHead>
-                <TableHead>Fecha</TableHead>
+                <SortableTableHead label="Negocio" sortKey="business" sort={sort} onSort={toggleSort} />
+                <SortableTableHead label="Usuario" sortKey="user" sort={sort} onSort={toggleSort} />
+                <SortableTableHead label="Nota" sortKey="rating" sort={sort} onSort={toggleSort} />
+                <SortableTableHead label="Comentario" sortKey="comment" sort={sort} onSort={toggleSort} />
+                <SortableTableHead label="Fecha" sortKey="date" sort={sort} onSort={toggleSort} />
                 <TableHead className="w-[60px]" />
               </TableRow>
             </TableHeader>
@@ -121,7 +145,7 @@ export default function AdminReviews() {
                       </TableCell>
                     </TableRow>
                   ))
-                : filtered.map(review => (
+                : rows.map(review => (
                     <TableRow key={review.id}>
                       <TableCell className="font-medium">{review.business_name}</TableCell>
                       <TableCell>{review.user_name}</TableCell>
@@ -151,6 +175,16 @@ export default function AdminReviews() {
 
         {!loading && filtered.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground">No hay reseñas que coincidan.</p>
+        ) : null}
+
+        {!loading && filtered.length > 0 ? (
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         ) : null}
 
         <Button variant="outline" onClick={() => void load()}>
