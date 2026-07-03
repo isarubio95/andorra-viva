@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Mountain, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { AppLogo } from '@/components/AppLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,16 +44,8 @@ export default function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-transparent px-4">
       <div className="w-full max-w-md space-y-8">
-        {/* Logo */}
         <div className="flex flex-col items-center gap-3">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
-              <Mountain className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">
-              Andorra <span className="text-accent">Viva</span>
-            </span>
-          </Link>
+          <AppLogo size="md" asLink />
           <p className="text-sm text-muted-foreground">
             {reviewMode ? 'Inicia sesión para valorar este negocio' : 'Tu directorio de negocios en Andorra'}
           </p>

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mountain, Store, MapPin, Phone, Globe, DollarSign, Clock, ImagePlus, X, ArrowLeft, ArrowRight, Check, Users, FileText, Sparkles } from 'lucide-react';
+import { Store, MapPin, Phone, Globe, DollarSign, Clock, ImagePlus, X, ArrowLeft, ArrowRight, Check, Users, FileText, Sparkles } from 'lucide-react';
+import { AppLogo } from '@/components/AppLogo';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -313,14 +314,7 @@ export default function RegisterBusiness() {
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}
         <div className="flex flex-col items-center gap-3 text-center">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
-              <Mountain className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">
-              Andorra <span className="text-accent">Viva</span>
-            </span>
-          </Link>
+          <AppLogo size="md" asLink />
           <h1 className="text-2xl font-bold text-foreground">Registra tu negocio</h1>
           <p className="text-sm text-muted-foreground">
             Completa la información para aparecer en el directorio

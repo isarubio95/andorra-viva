@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { ScrollReveal } from '@/components/ScrollReveal';
 import BusinessCard from '@/components/BusinessCard';
 import ReviewsPanel from '@/components/ReviewsPanel';
 import { Button } from '@/components/ui/button';
@@ -55,21 +56,26 @@ export default function Favorites() {
       <Header />
       <main className="container mx-auto flex-1 px-4 py-8">
         <div className="mx-auto max-w-3xl space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Mis favoritos</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Negocios que has guardado</p>
-          </div>
+          <ScrollReveal>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Mis favoritos</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Negocios que has guardado</p>
+            </div>
+          </ScrollReveal>
 
           {loading ? (
             <p className="text-sm text-muted-foreground">Cargando…</p>
           ) : favoriteBusinesses.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid items-stretch gap-4 sm:grid-cols-2">
               {favoriteBusinesses.map(biz => (
-                <BusinessCard key={biz.id} business={biz} onClick={setSelectedBusiness} />
+                <ScrollReveal key={biz.id} className="h-full">
+                  <BusinessCard business={biz} onClick={setSelectedBusiness} />
+                </ScrollReveal>
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-4 rounded-xl border border-border bg-card py-12 text-center">
+            <ScrollReveal>
+              <div className="flex flex-col items-center gap-4 rounded-xl border border-border bg-card py-12 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                 <Heart className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -81,6 +87,7 @@ export default function Favorites() {
                 Explorar directorio
               </Button>
             </div>
+            </ScrollReveal>
           )}
         </div>
       </main>

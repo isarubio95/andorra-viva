@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mountain, Menu, X, LogOut, User, Store, Heart } from 'lucide-react';
+import { Menu, X, LogOut, User, Store, Heart } from 'lucide-react';
+import { AppLogo } from '@/components/AppLogo';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '@/components/ui/drawer';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -49,15 +50,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-lg">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
-            <Mountain className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="text-lg font-bold text-foreground">
-            Andorra <span className="text-accent">Viva</span>
-          </span>
-        </Link>
+        <AppLogo size="xs" asLink priority />
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-8 md:flex">

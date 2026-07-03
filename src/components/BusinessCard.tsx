@@ -46,10 +46,10 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           onClick(business);
         }
       }}
-      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-card text-left transition-[transform,box-shadow,translate] duration-300 ease-in-out hover:shadow-md hover:-translate-y-1"
+      className="group flex w-full cursor-pointer flex-col overflow-hidden rounded-xl border bg-card text-left transition-[transform,box-shadow,translate] duration-300 ease-in-out hover:shadow-md hover:-translate-y-1"
     >
       {/* Image */}
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-[4/3] shrink-0 overflow-hidden">
         <img
           src={`${imgSrc}${imgSrc.startsWith('http') ? `?v=${business.id}` : ''}`}
           alt={business.name}
@@ -84,12 +84,14 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
       </div>
 
       {/* Info */}
-      <div className="flex flex-1 flex-col gap-1 p-4">
-        <h3 className="font-semibold text-card-foreground">{business.name}</h3>
-        <p className="text-xs text-muted-foreground">
+      <div className="flex flex-col gap-1 p-4">
+        <h3 className="line-clamp-2 h-11 font-semibold leading-snug text-card-foreground">
+          {business.name}
+        </h3>
+        <p className="line-clamp-1 h-4 text-xs text-muted-foreground">
           {business.location} · {business.subcategory ?? business.category}
         </p>
-        <div className="mt-auto flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-1">
             <Star
               className={`h-4 w-4 ${

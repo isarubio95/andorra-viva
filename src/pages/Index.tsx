@@ -7,6 +7,7 @@ import CategoryBar from '@/components/CategoryBar';
 import BusinessCard from '@/components/BusinessCard';
 import ReviewsPanel from '@/components/ReviewsPanel';
 import Footer from '@/components/Footer';
+import { ScrollReveal } from '@/components/ScrollReveal';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -23,12 +24,15 @@ const FEATURED_LIMIT = 6;
 
 function BusinessCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card">
-      <Skeleton className="aspect-4/3 w-full rounded-none" />
-      <div className="space-y-2 p-4">
-        <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-3 w-1/2" />
-        <Skeleton className="h-3 w-1/3" />
+    <div className="flex w-full flex-col overflow-hidden rounded-xl border bg-card">
+      <Skeleton className="aspect-4/3 w-full shrink-0 rounded-none" />
+      <div className="flex flex-col gap-1 p-4">
+        <Skeleton className="h-11 w-2/3" />
+        <Skeleton className="h-4 w-1/2" />
+        <div className="flex items-center justify-between pt-2">
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-3 w-16" />
+        </div>
       </div>
     </div>
   );
@@ -77,7 +81,7 @@ function FeaturedSection({
   const canLoop = !loading && businesses.length > 1;
 
   return (
-    <section className="container mx-auto px-4 pt-10">
+    <ScrollReveal as="section" className="container mx-auto px-4 pt-10">
       <h2 className="mb-6 flex items-center gap-2 text-xl font-bold">
         <span>{icon}</span> {title}
       </h2>
@@ -116,7 +120,7 @@ function FeaturedSection({
           ))}
         </div>
       )}
-    </section>
+    </ScrollReveal>
   );
 }
 
@@ -163,7 +167,9 @@ export default function Index() {
       <div className="flex flex-1 flex-col">
         <Header />
         <HeroMap businesses={loading ? [] : businesses} onBusinessClick={setSelectedBusiness} />
-        <CategoryBar />
+        <ScrollReveal>
+          <CategoryBar />
+        </ScrollReveal>
 
         <FeaturedSection
           title="Nuestras recomendaciones"
@@ -187,7 +193,7 @@ export default function Index() {
           onBusinessClick={setSelectedBusiness}
         />
 
-        <section className="container mx-auto px-4 py-12 md:py-16">
+        <ScrollReveal as="section" className="container mx-auto px-4 py-12 md:py-16">
           <div className="mx-auto flex max-w-xl flex-col items-center gap-5 text-center">
             <p className="text-base text-muted-foreground md:text-lg">
               Descubre todos los negocios de Andorra con filtros, búsqueda y reseñas de la comunidad.
@@ -199,9 +205,11 @@ export default function Index() {
               </Link>
             </Button>
           </div>
-        </section>
+        </ScrollReveal>
       </div>
-      <Footer />
+      <ScrollReveal>
+        <Footer />
+      </ScrollReveal>
 
       <ReviewsPanel
         business={selectedBusiness}

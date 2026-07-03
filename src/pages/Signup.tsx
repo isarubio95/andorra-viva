@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Mountain, Mail, Lock, User, Eye, EyeOff, Store, UserCircle, Check, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Store, UserCircle, Check, ArrowLeft, ArrowRight } from 'lucide-react';
+import { AppLogo } from '@/components/AppLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -189,14 +190,7 @@ export default function Signup() {
     <div className="flex min-h-screen items-center justify-center bg-transparent px-4 py-8">
       <div className={cn('w-full space-y-8', step === 'plan' ? 'max-w-7xl' : 'max-w-lg')}>
         <div className="flex flex-col items-center gap-3">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
-              <Mountain className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">
-              Andorra <span className="text-accent">Viva</span>
-            </span>
-          </Link>
+          <AppLogo size="md" asLink />
           <p className="text-sm text-muted-foreground">
             {reviewMode && 'Cuenta personal para valorar negocios'}
             {upgradeFlow && step === 'plan' && 'Elige tu plan profesional'}
