@@ -465,8 +465,8 @@ export default function HeroMap({
         scrollWheelZoom
         zoomControl={false}
         className={cn(
-          'hero-map h-[50vh] w-full md:h-[60vh]',
-          mobileFullBleed && 'max-md:h-[calc(50vh+4rem)]',
+          'hero-map h-[55vh] w-full md:h-[60vh]',
+          mobileFullBleed && 'max-md:h-[calc(55vh+4rem)]',
         )}
       >
         <AttributionPrefixCleaner />

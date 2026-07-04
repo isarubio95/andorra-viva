@@ -26,6 +26,7 @@ import {
   filterBusinessImageFiles,
 } from '@/lib/business-image-upload';
 import { accountDashboardPath } from '@/lib/account-dashboard';
+import { canPublishNews } from '@/lib/news-access';
 import {
   deleteMyNewsPost,
   getMyNewsMonthlyQuota,
@@ -35,12 +36,39 @@ import {
 } from '@/services/api';
 import type { NewsMonthlyQuota, NewsPost } from '@/types/domain';
 
+function PremiumRequiredNotice({ hasProAccess }: { hasProAccess: boolean }) {
+  return (
+    <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 p-4">
+      <div className="flex gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+          <Crown className="h-5 w-5" />
+        </div>
+        <div className="space-y-2">
+          <p className="font-semibold text-foreground">Necesitas ser Premium para publicar noticias</p>
+          <p className="text-sm text-muted-foreground">
+            Puedes leer todas las noticias del directorio, pero solo el plan Premium permite publicar
+            (una al mes, con foto opcional).
+          </p>
+          <Button asChild size="sm">
+            <Link to={hasProAccess ? accountDashboardPath('plan') : '/signup?mode=upgrade'}>
+              {hasProAccess ? 'Ver planes' : 'Actualiza tu cuenta'}
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function NewsPublisherPanel() {
-  const { user, hasPremiumAccess, hasProAccess, roleLoading } = useAuth();
+  const { user, hasProAccess, roleLoading, planId, subscriptionStatus } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [loading, setLoading] = useState(true);
+  const isPremiumPublisher = canPublishNews(planId, subscriptionStatus);
+
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [quotaLoading, setQuotaLoading] = useState(false);
   const [posts, setPosts] = useState<NewsPost[]>([]);
   const [quota, setQuota] = useState<NewsMonthlyQuota | null>(null);
   const [title, setTitle] = useState('');
@@ -52,26 +80,34 @@ export default function NewsPublisherPanel() {
   const [deleting, setDeleting] = useState(false);
 
   const canPublishNow = useMemo(
-    () => !!quota?.can_publish && (quota.remaining_this_month ?? 0) > 0,
-    [quota],
+    () => isPremiumPublisher && !!quota?.can_publish && (quota.remaining_this_month ?? 0) > 0,
+    [isPremiumPublisher, quota],
   );
 
-  const loadData = async () => {
-    setLoading(true);
-    const [nextPosts, nextQuota] = await Promise.all([getMyNewsPosts(), getMyNewsMonthlyQuota()]);
+  const loadPosts = async () => {
+    setPostsLoading(true);
+    const nextPosts = await getMyNewsPosts();
     setPosts(nextPosts);
+    setPostsLoading(false);
+  };
+
+  const loadQuota = async () => {
+    setQuotaLoading(true);
+    const nextQuota = await getMyNewsMonthlyQuota();
     setQuota(nextQuota);
-    setLoading(false);
+    setQuotaLoading(false);
+  };
+
+  const refreshData = async () => {
+    await loadPosts();
+    if (isPremiumPublisher) await loadQuota();
   };
 
   useEffect(() => {
     if (roleLoading) return;
-    if (!hasPremiumAccess) {
-      setLoading(false);
-      return;
-    }
-    void loadData();
-  }, [roleLoading, hasPremiumAccess]);
+    void loadPosts();
+    if (isPremiumPublisher) void loadQuota();
+  }, [roleLoading, isPremiumPublisher]);
 
   useEffect(() => {
     if (!imageFile) {
@@ -153,7 +189,7 @@ export default function NewsPublisherPanel() {
 
     toast({ title: 'Noticia publicada', description: 'Ya está visible en la sección de noticias.' });
     resetForm();
-    await loadData();
+    await refreshData();
   };
 
   const handleDelete = async () => {
@@ -173,59 +209,32 @@ export default function NewsPublisherPanel() {
     }
 
     toast({ title: 'Noticia eliminada' });
-    await loadData();
+    await refreshData();
   };
 
   if (roleLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Newspaper className="h-5 w-5" />
-            Noticias
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-24 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!hasPremiumAccess) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Newspaper className="h-5 w-5" />
-            Noticias
-          </CardTitle>
-          <CardDescription>
-            Publica una noticia al mes con foto en la sección pública de noticias.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 p-4">
-            <div className="flex gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-                <Crown className="h-5 w-5" />
-              </div>
-              <div className="space-y-2">
-                <p className="font-semibold text-foreground">Función exclusiva Premium</p>
-                <p className="text-sm text-muted-foreground">
-                  Todos los usuarios pueden leer las noticias, pero solo el plan Premium permite publicarlas
-                  (una al mes, con imagen opcional).
-                </p>
-                <Button asChild size="sm">
-                  <Link to={hasProAccess ? accountDashboardPath('plan') : '/signup?mode=upgrade'}>
-                    {hasProAccess ? 'Ver planes' : 'Actualiza tu cuenta'}
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Newspaper className="h-5 w-5" />
+              Publicar noticia
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-24 w-full" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Mis publicaciones</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-28 w-full" />
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -239,97 +248,105 @@ export default function NewsPublisherPanel() {
               Publicar noticia
             </CardTitle>
             <CardDescription>
-              Comparte novedades de tu negocio. Puedes publicar 1 noticia al mes con foto opcional.
+              {isPremiumPublisher
+                ? 'Comparte novedades de tu negocio. Puedes publicar 1 noticia al mes con foto opcional.'
+                : 'Publica novedades de tu negocio en la sección pública de noticias.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {loading ? (
-              <Skeleton className="h-6 w-48" />
-            ) : quota?.posted_this_month ? (
-              <Badge variant="secondary">Ya has publicado una noticia este mes</Badge>
-            ) : quota?.can_publish ? (
-              <Badge className="recommended-badge border-0">Te queda 1 publicación este mes</Badge>
-            ) : null}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="news-title">Título</Label>
-                <Input
-                  id="news-title"
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="Título de la noticia"
-                  maxLength={120}
-                  disabled={!canPublishNow || submitting}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="news-body">Contenido</Label>
-                <Textarea
-                  id="news-body"
-                  value={body}
-                  onChange={e => setBody(e.target.value)}
-                  placeholder="Escribe la noticia..."
-                  rows={6}
-                  maxLength={4000}
-                  disabled={!canPublishNow || submitting}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="news-image">Foto (opcional)</Label>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={!canPublishNow || submitting}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <ImagePlus className="mr-2 h-4 w-4" />
-                    {imageFile ? 'Cambiar imagen' : 'Añadir imagen'}
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    id="news-image"
-                    type="file"
-                    accept={BUSINESS_IMAGE_ACCEPT}
-                    className="hidden"
-                    onChange={handleImageChange}
-                    disabled={!canPublishNow || submitting}
-                  />
-                  {imageFile ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={submitting}
-                      onClick={() => {
-                        setImageFile(null);
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                      }}
-                    >
-                      Quitar imagen
-                    </Button>
-                  ) : null}
-                </div>
-                {imagePreview ? (
-                  <div className="overflow-hidden rounded-lg border">
-                    <img src={imagePreview} alt="" className="max-h-56 w-full object-cover" />
-                  </div>
+            {!isPremiumPublisher ? (
+              <PremiumRequiredNotice hasProAccess={hasProAccess} />
+            ) : (
+              <>
+                {quotaLoading ? (
+                  <Skeleton className="h-6 w-48" />
+                ) : quota?.posted_this_month ? (
+                  <Badge variant="secondary">Ya has publicado una noticia este mes</Badge>
+                ) : quota?.can_publish ? (
+                  <Badge className="recommended-badge border-0">Te queda 1 publicación este mes</Badge>
                 ) : null}
-              </div>
-              <Button type="submit" disabled={!canPublishNow || submitting}>
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Publicando…
-                  </>
-                ) : (
-                  'Publicar noticia'
-                )}
-              </Button>
-            </form>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="news-title">Título</Label>
+                    <Input
+                      id="news-title"
+                      value={title}
+                      onChange={e => setTitle(e.target.value)}
+                      placeholder="Título de la noticia"
+                      maxLength={120}
+                      disabled={!canPublishNow || submitting}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="news-body">Contenido</Label>
+                    <Textarea
+                      id="news-body"
+                      value={body}
+                      onChange={e => setBody(e.target.value)}
+                      placeholder="Escribe la noticia..."
+                      rows={6}
+                      maxLength={4000}
+                      disabled={!canPublishNow || submitting}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="news-image">Foto (opcional)</Label>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!canPublishNow || submitting}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <ImagePlus className="mr-2 h-4 w-4" />
+                        {imageFile ? 'Cambiar imagen' : 'Añadir imagen'}
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        id="news-image"
+                        type="file"
+                        accept={BUSINESS_IMAGE_ACCEPT}
+                        className="hidden"
+                        onChange={handleImageChange}
+                        disabled={!canPublishNow || submitting}
+                      />
+                      {imageFile ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={submitting}
+                          onClick={() => {
+                            setImageFile(null);
+                            if (fileInputRef.current) fileInputRef.current.value = '';
+                          }}
+                        >
+                          Quitar imagen
+                        </Button>
+                      ) : null}
+                    </div>
+                    {imagePreview ? (
+                      <div className="overflow-hidden rounded-lg border">
+                        <img src={imagePreview} alt="" className="max-h-56 w-full object-cover" />
+                      </div>
+                    ) : null}
+                  </div>
+                  <Button type="submit" disabled={!canPublishNow || submitting}>
+                    {submitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Publicando…
+                      </>
+                    ) : (
+                      'Publicar noticia'
+                    )}
+                  </Button>
+                </form>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -339,7 +356,7 @@ export default function NewsPublisherPanel() {
             <CardDescription>Historial de noticias que has compartido.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {loading ? (
+            {postsLoading ? (
               <div className="space-y-3">
                 <Skeleton className="h-28 w-full" />
                 <Skeleton className="h-28 w-full" />

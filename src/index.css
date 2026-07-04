@@ -52,6 +52,15 @@
   }
 }
 
+@keyframes nav-link-underline-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 @theme inline {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
@@ -64,6 +73,7 @@
   --animate-subfilter-rise-in: subfilter-rise-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-scroll-reveal-up: scroll-reveal-up 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-scroll-reveal-down: scroll-reveal-down 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-nav-link-underline-in: nav-link-underline-in 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 
   --color-border: var(--border);
   --color-input: var(--input);

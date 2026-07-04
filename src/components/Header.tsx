@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, type ReactNode } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut, User, Store, Heart, Shield } from 'lucide-react';
 import { AppLogo } from '@/components/AppLogo';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,60 @@ const navLinks = [
   { label: 'Noticias', href: '/noticias' },
 ];
 
+function isNavLinkActive(href: string, pathname: string): boolean {
+  if (href === '/#mapa') return pathname === '/';
+  const path = href.split('#')[0];
+  if (path === '/directorio') {
+    return pathname === '/directorio' || pathname.startsWith('/directorio/');
+  }
+  if (path === '/noticias') {
+    return pathname === '/noticias' || pathname.startsWith('/noticias/');
+  }
+  return pathname === path;
+}
+
+type HeaderNavLinkProps = {
+  href: string;
+  children: ReactNode;
+  variant?: 'desktop' | 'mobile';
+  onClick?: () => void;
+};
+
+function HeaderNavLink({ href, children, variant = 'desktop', onClick }: HeaderNavLinkProps) {
+  const { pathname } = useLocation();
+  const isActive = isNavLinkActive(href, pathname);
+
+  return (
+    <Link
+      to={href}
+      onClick={onClick}
+      className={cn(
+        'relative transition-colors',
+        variant === 'desktop'
+          ? cn(
+              'inline-flex flex-col items-stretch py-1 text-sm font-medium',
+              isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+            )
+          : cn(
+              'inline-flex w-full rounded-lg px-3 py-3 text-base font-medium text-foreground',
+              isActive ? 'bg-muted' : 'hover:bg-muted/60',
+            ),
+      )}
+    >
+      <span>{children}</span>
+      {variant === 'desktop' ? (
+        <span
+          aria-hidden
+          className={cn(
+            'mt-1.5 h-[1.25px] origin-left rounded-full bg-primary',
+            isActive ? 'animate-nav-link-underline-in' : 'scale-x-0',
+          )}
+        />
+      ) : null}
+    </Link>
+  );
+}
+
 type HeaderProps = {
   /** En móvil: cabecera fija sobre el contenido (p. ej. home con mapa). */
   mobileOverlay?: boolean;
@@ -39,9 +93,6 @@ export default function Header({ mobileOverlay = false, mobileHidden = false }: 
 
   const isPro = hasProAccess;
   const roleBadge = role === 'admin' ? 'ADMIN' : isPro ? 'PRO' : 'USER';
-
-  const linkClass =
-    'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground';
 
   const initials = displayName
     .split(' ')
@@ -72,9 +123,9 @@ export default function Header({ mobileOverlay = false, mobileHidden = false }: 
         {/* Desktop nav: columna central del grid, centrada respecto al header completo */}
         <nav className="col-start-2 row-start-1 hidden items-center justify-center gap-8 md:flex">
           {navLinks.map(link => (
-            <Link key={link.href} to={link.href} className={linkClass}>
+            <HeaderNavLink key={link.href} href={link.href}>
               {link.label}
-            </Link>
+            </HeaderNavLink>
           ))}
         </nav>
 
@@ -184,25 +235,15 @@ export default function Header({ mobileOverlay = false, mobileHidden = false }: 
           </DrawerDescription>
           <nav className="flex flex-1 flex-col gap-1 px-4 pb-6">
             {navLinks.map(link => (
-              <Link
+              <HeaderNavLink
                 key={link.href}
-                to={link.href}
-                className="rounded-lg px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-muted"
+                href={link.href}
+                variant="mobile"
                 onClick={() => setMobileOpen(false)}
               >
                 {link.label}
-              </Link>
+              </HeaderNavLink>
             ))}
-            {user ? (
-              <Link
-                to="/favoritos"
-                className="flex items-center rounded-lg px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-muted"
-                onClick={() => setMobileOpen(false)}
-              >
-                <Heart className="mr-2 h-4 w-4" />
-                Favoritos
-              </Link>
-            ) : null}
           </nav>
 
           <div className="mt-auto border-t border-border px-4 py-4">
@@ -222,6 +263,12 @@ export default function Header({ mobileOverlay = false, mobileHidden = false }: 
                     </Link>
                   </Button>
                 )}
+                <Button variant="ghost" className="justify-start" asChild>
+                  <Link to="/favoritos" onClick={() => setMobileOpen(false)}>
+                    <Heart className="mr-2 h-4 w-4" />
+                    Favoritos
+                  </Link>
+                </Button>
                 {role === 'admin' && (
                   <Button variant="ghost" className="justify-start" asChild>
                     <Link to="/admin" onClick={() => setMobileOpen(false)}>

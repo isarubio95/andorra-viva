@@ -4,6 +4,7 @@ import { Newspaper } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import NewsCard from '@/components/NewsCard';
+import NewsPostPanel from '@/components/NewsPostPanel';
 import { getNewsPosts } from '@/services/api';
 import type { NewsPost } from '@/types/domain';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ export default function News() {
 
   const [posts, setPosts] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPost, setSelectedPost] = useState<NewsPost | null>(null);
 
   const yearOptions = useMemo(() => {
     const current = new Date().getFullYear();
@@ -80,7 +82,7 @@ export default function News() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-transparent">
       <Header />
       <main className="container mx-auto flex-1 px-4 py-10">
         <div className="mx-auto max-w-3xl space-y-8">
@@ -94,17 +96,17 @@ export default function News() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="grid w-full gap-3 sm:max-w-md sm:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="news-year" className="text-sm font-medium text-foreground">
+          <div className="flex items-end gap-2 sm:justify-between sm:gap-3">
+            <div className="flex min-w-0 flex-1 items-end gap-2 sm:grid sm:max-w-md sm:grid-cols-2 sm:gap-3">
+              <div className="min-w-0 flex-1 sm:space-y-2">
+                <label htmlFor="news-year" className="hidden text-sm font-medium text-foreground sm:block">
                   Año
                 </label>
                 <Select
                   value={String(selectedYear)}
                   onValueChange={value => updateFilters(Number(value), selectedMonth)}
                 >
-                  <SelectTrigger id="news-year">
+                  <SelectTrigger id="news-year" aria-label="Año">
                     <SelectValue placeholder="Año" />
                   </SelectTrigger>
                   <SelectContent>
@@ -116,15 +118,15 @@ export default function News() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <label htmlFor="news-month" className="text-sm font-medium text-foreground">
+              <div className="min-w-0 flex-1 sm:space-y-2">
+                <label htmlFor="news-month" className="hidden text-sm font-medium text-foreground sm:block">
                   Mes
                 </label>
                 <Select
                   value={String(selectedMonth)}
                   onValueChange={value => updateFilters(selectedYear, Number(value))}
                 >
-                  <SelectTrigger id="news-month">
+                  <SelectTrigger id="news-month" aria-label="Mes">
                     <SelectValue placeholder="Mes" />
                   </SelectTrigger>
                   <SelectContent>
@@ -140,6 +142,8 @@ export default function News() {
             <Button
               type="button"
               variant="outline"
+              size="sm"
+              className="shrink-0 sm:h-10 sm:px-4"
               onClick={() => updateFilters(defaultYear, defaultMonth)}
             >
               Mes actual
@@ -161,13 +165,19 @@ export default function News() {
           ) : (
             <div className="space-y-6">
               {posts.map(post => (
-                <NewsCard key={post.id} post={post} />
+                <NewsCard
+                  key={post.id}
+                  post={post}
+                  onReadMore={() => setSelectedPost(post)}
+                />
               ))}
             </div>
           )}
         </div>
       </main>
       <Footer />
+
+      <NewsPostPanel post={selectedPost} onClose={() => setSelectedPost(null)} />
     </div>
   );
 }
