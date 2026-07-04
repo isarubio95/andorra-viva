@@ -15,6 +15,7 @@ import { createStripeCheckoutSession } from '@/services/admin-api';
 import type { Business, Plan } from '@/types/domain';
 import BusinessCard from '@/components/BusinessCard';
 import PlanComparisonGrid from '@/components/PlanComparisonGrid';
+import NewsPublisherPanel from '@/components/NewsPublisherPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -552,6 +553,7 @@ export default function UserDashboard() {
                 </>
               )}
               <TabsTrigger value="seguridad" className={tabTriggerClass}>Seguridad</TabsTrigger>
+              <TabsTrigger value="noticias" className={tabTriggerClass}>Noticias</TabsTrigger>
             </TabsList>
 
             {/* Perfil Tab */}
@@ -1080,6 +1082,10 @@ export default function UserDashboard() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
+            <TabsContent value="noticias">
+              <NewsPublisherPanel />
+            </TabsContent>
 
             {/* Seguridad Tab */}
             <TabsContent value="seguridad">

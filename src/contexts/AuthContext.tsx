@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { supabase } from '@/lib/supabase';
 import { mergeAnonymousVisitsForUser } from '@/services/api';
+import { computeHasPremiumAccess } from '@/lib/news-access';
 import type { User, Session } from '@supabase/supabase-js';
 
 export type UserRole = 'basic' | 'professional' | 'admin';
@@ -30,6 +31,8 @@ interface AuthContextType {
   subscriptionStatus: string | null;
   /** Calculado en BD (`get_my_access`) o fallback en cliente si el RPC no existe. */
   hasProAccess: boolean;
+  /** Plan premium activo o rol admin. */
+  hasPremiumAccess: boolean;
   /** Tras cambios de plan en BD o checkout, fuerza recarga del perfil. */
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -45,6 +48,7 @@ const AuthContext = createContext<AuthContextType>({
   planId: null,
   subscriptionStatus: null,
   hasProAccess: false,
+  hasPremiumAccess: false,
   refreshProfile: async () => {},
   signOut: async () => {},
 });
@@ -83,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [planId, setPlanId] = useState<string | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [hasProAccess, setHasProAccess] = useState(false);
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
 
   const applyFallbackProfile = useCallback(async (userId: string, metadataRole?: unknown) => {
     const [roleRes, subRes] = await Promise.all([
@@ -107,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPlanId(pid);
     setSubscriptionStatus(st);
     setHasProAccess(computeHasProAccess(nextRole, pid, st));
+    setHasPremiumAccess(computeHasPremiumAccess(nextRole, pid, st));
   }, []);
 
   const fetchProfile = useCallback(
@@ -130,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPlanId(pid);
         setSubscriptionStatus(st);
         setHasProAccess(!!d.has_pro_access);
+        setHasPremiumAccess(computeHasPremiumAccess(nextRole, pid, st));
         setRoleLoading(false);
         return;
       }
@@ -163,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setPlanId(null);
           setSubscriptionStatus(null);
           setHasProAccess(false);
+          setHasPremiumAccess(false);
           setRoleLoading(false);
         }
       }
@@ -203,6 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPlanId(null);
     setSubscriptionStatus(null);
     setHasProAccess(false);
+    setHasPremiumAccess(false);
   };
 
   return (
@@ -217,6 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         planId,
         subscriptionStatus,
         hasProAccess,
+        hasPremiumAccess,
         refreshProfile,
         signOut,
       }}

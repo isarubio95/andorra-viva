@@ -17,6 +17,7 @@ import RateBusiness from "./pages/RateBusiness.tsx";
 import RegisterBusiness from "./pages/RegisterBusiness.tsx";
 import EditBusinessProfile from "./pages/EditBusinessProfile.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import News from "./pages/News.tsx";
 import AdminRoute from "./components/admin/AdminRoute.tsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminUsers from "./pages/admin/AdminUsers.tsx";
@@ -53,6 +54,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/directorio" element={<Directory />} />
+              <Route path="/noticias" element={<News />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/mi-cuenta" element={<UserDashboard />} />

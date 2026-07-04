@@ -47,3 +47,24 @@ export interface Plan {
   features: string[];
   is_popular: boolean;
 }
+
+export interface NewsPost {
+  id: string;
+  author_id: string;
+  business_id: string | null;
+  author_name: string;
+  business_name: string | null;
+  title: string;
+  body: string;
+  image_url: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface NewsMonthlyQuota {
+  can_publish: boolean;
+  posted_this_month: boolean;
+  remaining_this_month: number;
+  month_start: string;
+  month_end: string;
+}

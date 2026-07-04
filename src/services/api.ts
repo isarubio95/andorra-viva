@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { clearStoredVisitorKey, getStoredVisitorKey } from '@/lib/visitor-key';
-import type { Business, Plan, Review } from '@/types/domain';
+import type { Business, NewsMonthlyQuota, NewsPost, Plan, Review } from '@/types/domain';
 import { rewriteSupabaseStorageUrl } from '@/lib/business-image';
 import { parseOpeningHours } from '@/lib/business-hours';
 
@@ -347,4 +347,127 @@ export async function getMyBusinessMetrics(days = 30): Promise<BusinessMetricRow
         }))
       : [],
   }));
+}
+
+function normalizeNewsPostRow(row: unknown): NewsPost {
+  const r = row as NewsPost & { image_url?: string | null };
+  return {
+    ...r,
+    business_id: r.business_id ?? null,
+    business_name: r.business_name ?? null,
+    image_url: rewriteSupabaseStorageUrl(r.image_url) ?? r.image_url ?? null,
+  };
+}
+
+function monthDateRangeUtc(year: number, month: number): { from: string; to: string } {
+  const from = new Date(Date.UTC(year, month - 1, 1));
+  const to = new Date(Date.UTC(year, month, 1));
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+export async function getNewsPosts(filters?: {
+  year?: number;
+  month?: number;
+}): Promise<NewsPost[]> {
+  let query = supabase.from('news_posts').select('*').order('created_at', { ascending: false });
+
+  if (filters?.year && filters?.month) {
+    const { from, to } = monthDateRangeUtc(filters.year, filters.month);
+    query = query.gte('created_at', from).lt('created_at', to);
+  } else if (filters?.year) {
+    const from = new Date(Date.UTC(filters.year, 0, 1)).toISOString();
+    const to = new Date(Date.UTC(filters.year + 1, 0, 1)).toISOString();
+    query = query.gte('created_at', from).lt('created_at', to);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Error fetching news posts:', error);
+    return [];
+  }
+  return (data ?? []).map(normalizeNewsPostRow);
+}
+
+export async function getMyNewsPosts(): Promise<NewsPost[]> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
+  if (!userId) return [];
+
+  const { data, error } = await supabase
+    .from('news_posts')
+    .select('*')
+    .eq('author_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching my news posts:', error);
+    return [];
+  }
+  return (data ?? []).map(normalizeNewsPostRow);
+}
+
+export async function getMyNewsMonthlyQuota(): Promise<NewsMonthlyQuota | null> {
+  const { data, error } = await supabase.rpc('get_my_news_monthly_quota');
+  if (error) {
+    console.error('Error fetching news quota:', error);
+    return null;
+  }
+  if (!data || typeof data !== 'object') return null;
+  const d = data as Record<string, unknown>;
+  return {
+    can_publish: Boolean(d.can_publish),
+    posted_this_month: Boolean(d.posted_this_month),
+    remaining_this_month: Number(d.remaining_this_month ?? 0),
+    month_start: String(d.month_start ?? ''),
+    month_end: String(d.month_end ?? ''),
+  };
+}
+
+export async function submitNewsPost(params: {
+  title: string;
+  body: string;
+  imageUrl?: string | null;
+}): Promise<{ ok: boolean; postId?: string; error?: string }> {
+  const title = params.title.trim();
+  const body = params.body.trim();
+  if (!title) return { ok: false, error: 'El título es obligatorio' };
+  if (!body) return { ok: false, error: 'El contenido es obligatorio' };
+
+  const { data, error } = await supabase.rpc('submit_news_post', {
+    p_title: title,
+    p_body: body,
+    p_image_url: params.imageUrl?.trim() || null,
+  });
+
+  if (error) {
+    console.error('Error submitting news post:', error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, postId: typeof data === 'string' ? data : undefined };
+}
+
+export async function deleteMyNewsPost(postId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!postId) return { ok: false, error: 'Noticia inválida' };
+
+  const { error } = await supabase.rpc('delete_my_news_post', { p_post_id: postId });
+  if (error) {
+    console.error('Error deleting news post:', error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export async function uploadNewsImage(userId: string, file: File): Promise<{ url?: string; error?: string }> {
+  if (!userId) return { error: 'Usuario no autenticado' };
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = `${userId}/news-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from('business-images').upload(path, file);
+  if (error) {
+    console.error('Error uploading news image:', error);
+    return { error: error.message };
+  }
+  const { data } = supabase.storage.from('business-images').getPublicUrl(path);
+  return { url: data.publicUrl };
 }

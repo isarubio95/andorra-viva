@@ -1,8 +1,9 @@
-export const ACCOUNT_DASHBOARD_TABS = ['perfil', 'negocios', 'plan', 'metricas', 'seguridad'] as const;
+export const ACCOUNT_DASHBOARD_TABS = ['perfil', 'negocios', 'plan', 'metricas', 'noticias', 'seguridad'] as const;
 
 export type AccountDashboardTab = (typeof ACCOUNT_DASHBOARD_TABS)[number];
 
 const PRO_ONLY_TABS = new Set<AccountDashboardTab>(['negocios', 'plan', 'metricas']);
+const PREMIUM_ONLY_TABS = new Set<AccountDashboardTab>(['noticias']);
 
 export function isAccountDashboardTab(value: string | null | undefined): value is AccountDashboardTab {
   return !!value && (ACCOUNT_DASHBOARD_TABS as readonly string[]).includes(value);
@@ -14,6 +15,10 @@ export function parseAccountDashboardTab(value: string | null | undefined): Acco
 
 export function isProOnlyAccountDashboardTab(tab: AccountDashboardTab): boolean {
   return PRO_ONLY_TABS.has(tab);
+}
+
+export function isPremiumOnlyAccountDashboardTab(tab: AccountDashboardTab): boolean {
+  return PREMIUM_ONLY_TABS.has(tab);
 }
 
 /** Ruta del panel de cuenta con la pestaña en la URL (historial del navegador). */

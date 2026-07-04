@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 const navLinks = [
   { label: 'Mapa', href: '/#mapa' },
   { label: 'Directorio', href: '/directorio' },
+  { label: 'Noticias', href: '/noticias' },
 ];
 
 type HeaderProps = {
@@ -63,11 +64,13 @@ export default function Header({ mobileOverlay = false, mobileHidden = false }: 
         mobileHidden && 'max-md:-translate-y-full max-md:pointer-events-none',
       )}
     >
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <AppLogo size="xs" asLink priority />
+      <div className="container mx-auto grid h-16 grid-cols-[1fr_auto] items-center px-4 md:grid-cols-[1fr_auto_1fr]">
+        <div className="flex items-center justify-start">
+          <AppLogo size="xs" asLink priority />
+        </div>
 
-        {/* Desktop nav */}
-        <nav className="hidden items-center gap-8 md:flex">
+        {/* Desktop nav: columna central del grid, centrada respecto al header completo */}
+        <nav className="col-start-2 row-start-1 hidden items-center justify-center gap-8 md:flex">
           {navLinks.map(link => (
             <Link key={link.href} to={link.href} className={linkClass}>
               {link.label}
@@ -75,8 +78,9 @@ export default function Header({ mobileOverlay = false, mobileHidden = false }: 
           ))}
         </nav>
 
-        {/* Auth: placeholder mientras Supabase restaura sesión (evita salto logo/nav → contenido) */}
-        <div className="hidden min-h-10 min-w-[200px] items-center justify-end gap-3 md:flex">
+        {/* Auth + menú móvil (columna derecha del grid) */}
+        <div className="col-start-2 flex min-h-10 items-center justify-end gap-3 md:col-start-3">
+          <div className="hidden items-center gap-3 md:flex">
           {loading ? (
             <div
               className="h-9 w-full max-w-[240px] rounded-full bg-muted/45"
@@ -149,18 +153,19 @@ export default function Header({ mobileOverlay = false, mobileHidden = false }: 
               </Button>
             </>
           )}
-        </div>
+          </div>
 
-        {/* Mobile toggle */}
-        <button
-          type="button"
-          className="md:hidden"
-          onClick={() => setMobileOpen(o => !o)}
-          aria-expanded={mobileOpen}
-          aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
-        >
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+          {/* Mobile toggle */}
+          <button
+            type="button"
+            className="md:hidden"
+            onClick={() => setMobileOpen(o => !o)}
+            aria-expanded={mobileOpen}
+            aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+          >
+            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </div>
 
       <Drawer
