@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import BusinessProfileView from '@/components/BusinessProfileView';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsPhone } from '@/hooks/use-mobile';
 import { getReviewsByBusiness, trackBusinessVisit } from '@/services/api';
 import type { Business, Review } from '@/types/domain';
 import { getOrCreateVisitorKey } from '@/lib/visitor-key';
@@ -27,7 +27,7 @@ const DESKTOP_PROFILE_WIDTH =
   'h-[min(96vh,900px)] max-h-[96vh] w-[min(36rem,calc(100%-2.75rem))] max-w-xl';
 
 export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
-  const isMobile = useIsMobile();
+  const isPhone = useIsPhone();
   const [open, setOpen] = useState(false);
   const [displayedBusiness, setDisplayedBusiness] = useState<Business | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -76,7 +76,7 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
     </div>
   );
 
-  if (isMobile) {
+  if (isPhone) {
     return (
       <Drawer
         open={open}

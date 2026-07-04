@@ -1,19 +1,30 @@
 import * as React from "react";
 
 const MOBILE_BREAKPOINT = 768;
+/** Alineado con Tailwind `sm`: móvil estricto vs tablet/escritorio. */
+const PHONE_BREAKPOINT = 640;
 
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);
+function useMediaBelow(breakpoint: number) {
+  const [matches, setMatches] = React.useState<boolean | undefined>(undefined);
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
     const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      setMatches(window.innerWidth < breakpoint);
     };
     mql.addEventListener("change", onChange);
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    setMatches(window.innerWidth < breakpoint);
     return () => mql.removeEventListener("change", onChange);
-  }, []);
+  }, [breakpoint]);
 
-  return !!isMobile;
+  return !!matches;
+}
+
+export function useIsMobile() {
+  return useMediaBelow(MOBILE_BREAKPOINT);
+}
+
+/** Teléfonos (< sm). Tablet y escritorio quedan fuera. */
+export function useIsPhone() {
+  return useMediaBelow(PHONE_BREAKPOINT);
 }
