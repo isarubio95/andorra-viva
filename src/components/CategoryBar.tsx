@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/carousel';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Bed,
   Bike,
   Building2,
   CalendarDays,
@@ -21,18 +20,15 @@ import {
   Flower2,
   Gem,
   HandHeart,
-  Heart,
   Hotel,
   Martini,
   Mountain,
-  ShoppingBag,
   Shirt,
   Snowflake,
   Sparkles,
   SprayCan,
   Store,
   Tent,
-  Ticket,
   UtensilsCrossed,
   Wine,
 } from 'lucide-react';
@@ -50,7 +46,6 @@ type SubcategoryLink = {
 
 type CategoryCardConfig = CategoryTheme & {
   category: BusinessCategory;
-  Icon: LucideIcon;
   subcategories: SubcategoryLink[];
 };
 
@@ -58,7 +53,6 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
   {
     category: 'Gastronomía',
     ...CATEGORY_THEMES['Gastronomía'],
-    Icon: UtensilsCrossed,
     subcategories: [
       { subcategory: 'Restaurante', displayLabel: 'Restaurantes', Icon: UtensilsCrossed },
       { subcategory: 'Cafetería y brunch', displayLabel: 'Cafeterías', Icon: Coffee },
@@ -69,7 +63,6 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
   {
     category: 'Alojamiento',
     ...CATEGORY_THEMES.Alojamiento,
-    Icon: Bed,
     subcategories: [
       { subcategory: 'Hotel', displayLabel: 'Hoteles', Icon: Hotel },
       { subcategory: 'Apartamento turístico', displayLabel: 'Apartamentos', Icon: Building2 },
@@ -80,7 +73,6 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
   {
     category: 'Ocio y entretenimiento',
     ...CATEGORY_THEMES['Ocio y entretenimiento'],
-    Icon: Ticket,
     subcategories: [
       { subcategory: 'Eventos y salas', displayLabel: 'Eventos', Icon: CalendarDays },
       { subcategory: 'Cine y espectáculos', displayLabel: 'Espectáculos', Icon: Clapperboard },
@@ -91,7 +83,6 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
   {
     category: 'Turismo y experiencias',
     ...CATEGORY_THEMES['Turismo y experiencias'],
-    Icon: Mountain,
     subcategories: [
       { subcategory: 'Actividades al aire libre', displayLabel: 'Actividades', Icon: Bike },
       { subcategory: 'Estación de esquí y nieve', displayLabel: 'Esquí & nieve', Icon: Snowflake },
@@ -102,7 +93,6 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
   {
     category: 'Compras',
     ...CATEGORY_THEMES.Compras,
-    Icon: ShoppingBag,
     subcategories: [
       { subcategory: 'Centro comercial', displayLabel: 'Tiendas', Icon: Store },
       { subcategory: 'Moda y complementos', displayLabel: 'Moda', Icon: Shirt },
@@ -113,7 +103,6 @@ const CATEGORY_CARDS: CategoryCardConfig[] = [
   {
     category: 'Bienestar',
     ...CATEGORY_THEMES.Bienestar,
-    Icon: Heart,
     subcategories: [
       { subcategory: 'Spa termal', displayLabel: 'Spas', Icon: Flower2 },
       { subcategory: 'Masajes y terapias', displayLabel: 'Masajes', Icon: HandHeart },
@@ -134,15 +123,13 @@ function CategoryCard({
   onCategory: (category: string) => void;
   onSubcategory: (category: string, subcategory: string) => void;
 }) {
-  const { Icon } = card;
-
   return (
     <div className="group flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow duration-300 hover:shadow-lg">
       <button
         type="button"
         onClick={() => onCategory(card.category)}
         aria-label={`Ver ${displayLabel}`}
-        className="relative flex h-40 w-full cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70 sm:h-44"
+        className="relative flex h-44 w-full cursor-pointer flex-col items-center justify-center overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70 sm:h-48"
       >
         <img
           src={card.image.src}
@@ -166,12 +153,19 @@ function CategoryCard({
           style={{ background: 'radial-gradient(circle at 50% 30%, rgba(255,255,255,0.18), transparent 60%)' }}
           aria-hidden
         />
-        <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-white/10 ring-2 ring-amber-300/70 backdrop-blur-sm transition-transform duration-500 ease-out group-hover:scale-105 sm:h-18 sm:w-18">
-          <Icon className="h-8 w-8 text-white" strokeWidth={1.75} aria-hidden />
-        </span>
-        <span className="relative text-base font-extrabold uppercase tracking-wide text-white drop-shadow-sm sm:text-lg">
-          {displayLabel}
-        </span>
+        <div className="-mt-4 relative flex flex-col items-center gap-2.5 sm:gap-0.5">
+          <img
+            src={card.emblem}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="h-28 w-28 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-transform duration-500 ease-out group-hover:scale-105 sm:h-36 sm:w-36"
+            aria-hidden
+          />
+          <span className="-mt-7 text-base font-extrabold uppercase tracking-wide text-white drop-shadow-sm sm:text-lg">
+            {displayLabel}
+          </span>
+        </div>
       </button>
 
       <div className="grid grid-cols-4 gap-1 px-2 py-4">
