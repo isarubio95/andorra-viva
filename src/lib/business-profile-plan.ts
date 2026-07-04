@@ -8,7 +8,7 @@ const GROUP_MIN_TIER: Record<ProfileFieldGroup, ProfilePlanTier> = {
   services: 'free',
   details: 'free',
   gallery: 'free',
-  actions: 'pro',
+  actions: 'basic',
 };
 
 export const PROFILE_SERVICE_LIMITS: Record<ProfilePlanTier, number> = {

@@ -22,6 +22,7 @@ import {
 import { useCarouselAutoplay } from '@/hooks/use-carousel-autoplay';
 import type { Business, Review } from '@/types/domain';
 import { BUSINESS_IMAGE_FALLBACK, resolveBusinessImageUrl } from '@/lib/business-image';
+import { buildWhatsAppUrl } from '@/lib/whatsapp';
 import { getMaxPhotosForTier, isProfileGroupAvailable, type ProfilePlanTier } from '@/lib/business-profile-plan';
 import { cn } from '@/lib/utils';
 import BusinessHoursDisplay from '@/components/BusinessHoursDisplay';
@@ -131,6 +132,14 @@ export default function BusinessProfileView({
   }, [business.id, photos, carouselApi]);
 
   const hasMultiplePhotos = photos.length > 1;
+  const whatsAppUrl =
+    showContact && business.phone
+      ? buildWhatsAppUrl(
+          business.phone,
+          `Hola, me gustaría hacer una reserva en ${business.name || 'vuestro negocio'}.`,
+        )
+      : null;
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`;
 
   return (
     <div
@@ -224,26 +233,51 @@ export default function BusinessProfileView({
 
         {showActions && (
           <div className="flex gap-3">
-            <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90">
-              <MessageCircle className="mr-2 h-4 w-4" /> Reservar WhatsApp
-            </Button>
-            {showContact && business.phone && (
-              <Button variant="outline" size="icon" asChild>
-                <a href={`tel:${business.phone}`} aria-label="Llamar">
-                  <Phone className="h-4 w-4" />
-                </a>
-              </Button>
+            {whatsAppUrl ? (
+              <>
+                <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                  <a href={whatsAppUrl} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="mr-2 h-4 w-4" /> Reservar por WhatsApp
+                  </a>
+                </Button>
+                {showContact && business.phone && (
+                  <Button variant="outline" size="icon" asChild>
+                    <a href={`tel:${business.phone}`} aria-label="Llamar">
+                      <Phone className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+                <Button variant="outline" size="icon" asChild>
+                  <a
+                    href={directionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Cómo llegar"
+                  >
+                    <Navigation className="h-4 w-4" />
+                  </a>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                  <a
+                    href={directionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Navigation className="mr-2 h-4 w-4" /> Cómo llegar
+                  </a>
+                </Button>
+                {showContact && business.phone && (
+                  <Button variant="outline" size="icon" asChild>
+                    <a href={`tel:${business.phone}`} aria-label="Llamar">
+                      <Phone className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+              </>
             )}
-            <Button variant="outline" size="icon" asChild>
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Cómo llegar"
-              >
-                <Navigation className="h-4 w-4" />
-              </a>
-            </Button>
           </div>
         )}
 
