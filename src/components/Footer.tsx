@@ -11,8 +11,14 @@ export default function Footer() {
         <AppLogo size="sm" />
         <p className="text-sm text-muted-foreground">{getText('footer_tagline')}</p>
         <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+          <Link to="/aviso-legal" className="hover:text-foreground hover:underline">
+            Aviso legal
+          </Link>
           <Link to="/politica-proteccion-datos" className="hover:text-foreground hover:underline">
             Política de protección de datos
+          </Link>
+          <Link to="/condiciones-de-uso" className="hover:text-foreground hover:underline">
+            Condiciones de uso
           </Link>
         </nav>
         <p className="text-xs text-muted-foreground/60">

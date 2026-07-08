@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { PRIVACY_POLICY_VERSION } from '@/constants/privacy-policy';
+import { useSiteContent } from '@/contexts/SiteContentContext';
 import { Badge } from '@/components/ui/badge';
 import PlanComparisonGrid from '@/components/PlanComparisonGrid';
 import { sortPlansByPrice } from '@/lib/plan-display';
@@ -45,6 +45,8 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { getLegalPage } = useSiteContent();
+  const privacyPolicyVersion = getLegalPage('privacy_policy').version;
 
   useEffect(() => {
     getPlans().then(setPlans);
@@ -137,7 +139,7 @@ export default function Signup() {
           full_name: fullName,
           role: selectedRole,
           privacy_policy_accepted_at: new Date().toISOString(),
-          privacy_policy_version: PRIVACY_POLICY_VERSION,
+          privacy_policy_version: privacyPolicyVersion,
           ...(selectedRole === 'professional' ? { plan: selectedPlan } : {}),
         },
         emailRedirectTo: window.location.origin,

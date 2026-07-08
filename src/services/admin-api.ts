@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import type { UserRole } from '@/contexts/AuthContext';
 import type { BusinessCategory } from '@/constants/businessCategories';
 import type { SiteTextKey } from '@/constants/site-content-defaults';
+import type { LegalPageDocument, LegalPageKey } from '@/constants/legal-pages-defaults';
 import type { Business } from '@/types/domain';
 import type { Plan, Review } from '@/types/domain';
 import { normalizeBusinessRow, normalizePlanRow } from '@/services/api';
@@ -86,15 +87,17 @@ export async function adminUpdateSubscription(
 export async function fetchSiteSettings(): Promise<{
   texts: Partial<Record<SiteTextKey, string>>;
   categoryLabels: Partial<Record<BusinessCategory, string>>;
+  legalPages: Partial<Record<LegalPageKey, Partial<LegalPageDocument>>>;
 }> {
   const { data, error } = await supabase.from('site_settings').select('key, value');
   if (error) {
     console.error('[admin] site settings:', error.message);
-    return { texts: {}, categoryLabels: {} };
+    return { texts: {}, categoryLabels: {}, legalPages: {} };
   }
 
   const texts: Partial<Record<SiteTextKey, string>> = {};
   const categoryLabels: Partial<Record<BusinessCategory, string>> = {};
+  const legalPages: Partial<Record<LegalPageKey, Partial<LegalPageDocument>>> = {};
 
   for (const row of data ?? []) {
     if (row.key === 'texts' && row.value && typeof row.value === 'object') {
@@ -103,9 +106,12 @@ export async function fetchSiteSettings(): Promise<{
     if (row.key === 'category_labels' && row.value && typeof row.value === 'object') {
       Object.assign(categoryLabels, row.value);
     }
+    if (row.key === 'legal_pages' && row.value && typeof row.value === 'object') {
+      Object.assign(legalPages, row.value);
+    }
   }
 
-  return { texts, categoryLabels };
+  return { texts, categoryLabels, legalPages };
 }
 
 export async function saveSiteTexts(
@@ -126,6 +132,18 @@ export async function saveCategoryLabels(
   const { error } = await supabase.from('site_settings').upsert({
     key: 'category_labels',
     value: labels,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function saveLegalPages(
+  pages: Record<LegalPageKey, LegalPageDocument>,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from('site_settings').upsert({
+    key: 'legal_pages',
+    value: pages,
     updated_at: new Date().toISOString(),
   });
   if (error) return { ok: false, error: error.message };

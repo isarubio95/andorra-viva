@@ -7,6 +7,7 @@ import {
   Store,
   MessageSquare,
   Package,
+  Scale,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -53,6 +54,12 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     href: '/admin/textos',
     icon: FileText,
     description: 'Contenido de la página',
+  },
+  {
+    title: 'Páginas legales',
+    href: '/admin/legal',
+    icon: Scale,
+    description: 'Aviso legal, privacidad y condiciones',
   },
   {
     title: 'Categorías',

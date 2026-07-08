@@ -23,11 +23,14 @@ import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import AdminPayments from "./pages/admin/AdminPayments.tsx";
 import AdminContent from "./pages/admin/AdminContent.tsx";
+import AdminLegal from "./pages/admin/AdminLegal.tsx";
 import AdminCategories from "./pages/admin/AdminCategories.tsx";
 import AdminBusinesses from "./pages/admin/AdminBusinesses.tsx";
 import AdminReviews from "./pages/admin/AdminReviews.tsx";
 import AdminPlans from "./pages/admin/AdminPlans.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
+import LegalNotice from "./pages/LegalNotice.tsx";
+import TermsOfUse from "./pages/TermsOfUse.tsx";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +66,8 @@ const App = () => (
               <Route path="/registrar-negocio" element={<RegisterBusiness />} />
               <Route path="/mi-cuenta/negocios/:businessId" element={<EditBusinessProfile />} />
               <Route path="/politica-proteccion-datos" element={<PrivacyPolicy />} />
+              <Route path="/aviso-legal" element={<LegalNotice />} />
+              <Route path="/condiciones-de-uso" element={<TermsOfUse />} />
               <Route path="/admin" element={<AdminRoute />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="usuarios" element={<AdminUsers />} />
@@ -70,6 +75,7 @@ const App = () => (
                 <Route path="planes" element={<AdminPlans />} />
                 <Route path="resenas" element={<AdminReviews />} />
                 <Route path="textos" element={<AdminContent />} />
+                <Route path="legal" element={<AdminLegal />} />
                 <Route path="categorias" element={<AdminCategories />} />
                 <Route path="negocios" element={<AdminBusinesses />} />
               </Route>
