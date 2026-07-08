@@ -30,6 +30,7 @@ import { CATEGORY_GROUP_MAP } from '@/constants/categoryGroups';
 import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 import { categoryHeroBackground, getCategoryTheme } from '@/constants/categoryDisplay';
 import { getAvailableSubcategories } from '@/constants/businessSubcategories';
+import { useSiteContent } from '@/contexts/SiteContentContext';
 
 const PRICE_LABELS: Record<number, string> = {
   1: '€',
@@ -118,6 +119,7 @@ function PremiumBusinessesCarousel({
 }
 
 export default function Directory() {
+  const { getCategoryLabel } = useSiteContent();
   const [searchParams, setSearchParams] = useSearchParams();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
@@ -276,6 +278,7 @@ export default function Directory() {
   const activeCategory =
     selectedCategories.length === 1 ? selectedCategories[0] : null;
   const activeCategoryTheme = activeCategory ? getCategoryTheme(activeCategory) : null;
+  const activeCategoryLabel = activeCategory ? getCategoryLabel(activeCategory) : null;
 
   return (
     <div className="flex min-h-screen flex-col bg-transparent">
@@ -302,7 +305,7 @@ export default function Directory() {
                 : 'text-3xl font-extrabold text-primary-foreground'
             }
           >
-            {activeCategoryTheme?.displayLabel ?? 'Directorio de Negocios'}
+            {activeCategoryLabel ?? 'Directorio de Negocios'}
           </h1>
           <p
             className={
@@ -311,8 +314,8 @@ export default function Directory() {
                 : 'mt-2 text-sm text-primary-foreground/70'
             }
           >
-            {activeCategoryTheme
-              ? `Explora ${activeCategory!.toLowerCase()} en Andorra`
+            {activeCategoryLabel
+              ? `Explora ${activeCategoryLabel.toLowerCase()} en Andorra`
               : 'Explora todos los negocios de Andorra en un solo lugar'}
           </p>
         </ScrollReveal>
@@ -335,7 +338,7 @@ export default function Directory() {
             <>
               {selectedCategories.map(cat => (
                 <Badge key={cat} variant="secondary" className="gap-1 cursor-pointer" onClick={() => toggleCategory(cat)}>
-                  {cat} <X className="h-3 w-3" />
+                  {getCategoryLabel(cat)} <X className="h-3 w-3" />
                 </Badge>
               ))}
               {selectedSubcategories.map(sub => (
@@ -374,7 +377,7 @@ export default function Directory() {
                         checked={selectedCategories.includes(cat)}
                         onCheckedChange={() => toggleCategory(cat)}
                       />
-                      {cat}
+                      {getCategoryLabel(cat)}
                     </label>
                   ))}
                 </div>
@@ -496,7 +499,7 @@ export default function Directory() {
             return (
               <ScrollReveal key={category} className="mb-10">
                 <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-foreground">
-                  {category}
+                  {getCategoryLabel(category)}
                   <span className="text-sm font-normal text-muted-foreground">({categoryCount})</span>
                 </h2>
                 {subgroups.map(([subcategory, items]) => (
