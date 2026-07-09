@@ -10,6 +10,7 @@ import { createClient } from '@supabase/supabase-js';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hasR2Config, uploadFileToR2 } from './lib/r2-upload.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SEED_ASSETS_DIR = resolve(__dirname, 'seed-assets');
@@ -267,7 +268,7 @@ function slugify(name) {
     .slice(0, 48);
 }
 
-async function uploadBusinessImage(admin, ownerId, businessName, imageFile) {
+async function uploadBusinessImage(_admin, ownerId, businessName, imageFile) {
   const filePath = resolve(SEED_ASSETS_DIR, imageFile);
   if (!existsSync(filePath)) {
     throw new Error(
@@ -275,20 +276,18 @@ async function uploadBusinessImage(admin, ownerId, businessName, imageFile) {
     );
   }
 
-  const body = readFileSync(filePath);
-  const contentType = 'image/jpeg';
-  const storagePath = `seed/${ownerId}/${slugify(businessName)}.jpg`;
-
-  const { error } = await admin.storage.from('business-images').upload(storagePath, body, {
-    contentType,
-    upsert: true,
-  });
-  if (error) {
-    throw new Error(`Storage ${storagePath}: ${error.message}`);
+  if (!hasR2Config()) {
+    throw new Error(
+      'Faltan variables R2 en .env (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL)'
+    );
   }
 
-  const { data } = admin.storage.from('business-images').getPublicUrl(storagePath);
-  return data.publicUrl;
+  const storagePath = `seed/${ownerId}/${slugify(businessName)}.jpg`;
+  return uploadFileToR2({
+    key: storagePath,
+    filePath,
+    contentType: 'image/jpeg',
+  });
 }
 
 async function ensureProfessional(ownerId) {

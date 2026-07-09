@@ -1,4 +1,4 @@
-/** Límite del bucket `business-images` en Supabase (5 MiB). */
+/** Límite de imágenes de negocio en R2 (5 MiB). */
 export const BUSINESS_IMAGE_MAX_BYTES = 5_242_880;
 
 export const BUSINESS_IMAGE_MIME_TYPES = [

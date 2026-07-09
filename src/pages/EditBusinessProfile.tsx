@@ -42,6 +42,7 @@ import {
   BUSINESS_IMAGE_ACCEPT,
   filterBusinessImageFiles,
 } from '@/lib/business-image-upload';
+import { uploadBusinessImage } from '@/lib/object-storage';
 import {
   getMaxPhotosForTier,
   getMaxServicesForTier,
@@ -52,7 +53,6 @@ import {
   resolveProfilePlanTier,
   type ProfileFieldGroup,
 } from '@/lib/business-profile-plan';
-import { supabase } from '@/lib/supabase';
 import {
   BUSINESS_IMAGE_FALLBACK,
   resolveBusinessImageUrl,
@@ -469,15 +469,12 @@ export default function EditBusinessProfile() {
 
   const uploadPhotoFile = async (file: File): Promise<string | null> => {
     if (!user?.id) return null;
-    const ext = file.name.split('.').pop();
-    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from('business-images').upload(path, file);
-    if (error) {
+    const { url, error } = await uploadBusinessImage(user.id, file);
+    if (error || !url) {
       console.error('Upload error:', error);
       return null;
     }
-    const { data } = supabase.storage.from('business-images').getPublicUrl(path);
-    return data.publicUrl;
+    return url;
   };
 
   const syncBusinessBaseline = (allImages: string[], lat: number, lon: number, address: string | null) => {

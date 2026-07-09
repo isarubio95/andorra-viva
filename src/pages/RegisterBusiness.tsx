@@ -25,6 +25,7 @@ import {
   BUSINESS_IMAGE_ACCEPT,
   filterBusinessImageFiles,
 } from '@/lib/business-image-upload';
+import { uploadBusinessImage } from '@/lib/object-storage';
 import {
   getMaxPhotosForTier,
   getMaxServicesForTier,
@@ -243,22 +244,14 @@ export default function RegisterBusiness() {
       // Upload images
       const imageUrls: string[] = [];
       for (const file of images.slice(0, maxPhotos)) {
-        const ext = file.name.split('.').pop();
-        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from('business-images')
-          .upload(path, file);
+        const { url, error: uploadError } = await uploadBusinessImage(user.id, file);
 
-        if (uploadError) {
+        if (uploadError || !url) {
           console.error('Upload error:', uploadError);
           continue;
         }
 
-        const { data: urlData } = supabase.storage
-          .from('business-images')
-          .getPublicUrl(path);
-
-        imageUrls.push(urlData.publicUrl);
+        imageUrls.push(url);
       }
 
       if (!isAddressConfirmed(addressValue)) {

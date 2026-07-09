@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { clearStoredVisitorKey, getStoredVisitorKey } from '@/lib/visitor-key';
 import type { Business, NewsMonthlyQuota, NewsPost, Plan, Review } from '@/types/domain';
 import { rewriteSupabaseStorageUrl } from '@/lib/business-image';
+import { uploadBusinessImage } from '@/lib/object-storage';
 import { parseOpeningHours } from '@/lib/business-hours';
 
 export interface TopVisitedBusiness extends Business {
@@ -460,14 +461,5 @@ export async function deleteMyNewsPost(postId: string): Promise<{ ok: boolean; e
 }
 
 export async function uploadNewsImage(userId: string, file: File): Promise<{ url?: string; error?: string }> {
-  if (!userId) return { error: 'Usuario no autenticado' };
-  const ext = file.name.split('.').pop() || 'jpg';
-  const path = `${userId}/news-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const { error } = await supabase.storage.from('business-images').upload(path, file);
-  if (error) {
-    console.error('Error uploading news image:', error);
-    return { error: error.message };
-  }
-  const { data } = supabase.storage.from('business-images').getPublicUrl(path);
-  return { url: data.publicUrl };
+  return uploadBusinessImage(userId, file, { namePrefix: 'news-' });
 }
