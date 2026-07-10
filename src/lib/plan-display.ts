@@ -119,27 +119,33 @@ export interface PlanTheme {
   nameClass: string;
   priceClass: string;
   checkClass: string;
+  checkWrapClass: string;
   badgeClass: string;
   buttonClass: string;
   borderClass: string;
   cardClass: string;
+  headerClass: string;
+  glowClass: string;
   iconWrapClass: string;
   defaultTopBadge?: string;
   subBadge?: string;
   priceSubtitle?: string;
   footerNote?: string;
-  preview: 'mountains' | 'photo' | 'stats' | 'premium-photo';
+  preview?: 'mountains' | 'photo' | 'stats' | 'premium-photo';
 }
 
 const DEFAULT_THEME: PlanTheme = {
   icon: Crown,
   nameClass: 'text-primary',
   priceClass: 'text-primary',
-  checkClass: 'text-primary',
+  checkClass: 'text-white',
+  checkWrapClass: 'bg-primary',
   badgeClass: 'bg-primary text-primary-foreground',
-  buttonClass: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  buttonClass: 'bg-primary text-primary-foreground hover:brightness-110',
   borderClass: 'border-border',
   cardClass: 'bg-card',
+  headerClass: 'bg-linear-to-b from-primary to-primary',
+  glowClass: 'shadow-black/10',
   iconWrapClass: 'bg-muted text-primary',
   preview: 'photo',
 };
@@ -147,53 +153,72 @@ const DEFAULT_THEME: PlanTheme = {
 const PLAN_THEMES: Record<string, PlanTheme> = {
   free: {
     icon: Leaf,
-    nameClass: 'text-emerald-600',
+    nameClass: 'text-emerald-700',
     priceClass: 'text-emerald-600',
-    checkClass: 'text-emerald-500',
+    checkClass: 'text-white',
+    checkWrapClass: 'bg-emerald-500 shadow-emerald-500/40',
     badgeClass: 'bg-emerald-500 text-white',
-    buttonClass: 'bg-emerald-600 text-white hover:bg-emerald-600/90',
-    borderClass: 'border-emerald-200/80',
+    buttonClass:
+      'bg-linear-to-b from-emerald-500 to-emerald-700 text-white shadow-emerald-600/30 hover:brightness-110',
+    borderClass: 'border-emerald-300/70',
     cardClass: 'bg-white',
-    iconWrapClass: 'bg-emerald-500 text-white',
+    headerClass: 'bg-linear-to-b from-emerald-500 via-emerald-600 to-emerald-800',
+    glowClass: 'shadow-emerald-500/25',
+    iconWrapClass:
+      'bg-linear-to-b from-emerald-300 via-emerald-500 to-emerald-700 text-white ring-4 ring-white/30',
     defaultTopBadge: 'Para siempre gratis',
-    priceSubtitle: 'Para siempre',
     preview: 'mountains',
   },
   basic: {
     icon: Star,
-    nameClass: 'text-sky-600',
-    priceClass: 'text-sky-600',
-    checkClass: 'text-sky-500',
-    badgeClass: 'bg-sky-500 text-white',
-    buttonClass: 'bg-sky-500 text-white hover:bg-sky-500/90',
-    borderClass: 'border-sky-200/80',
+    nameClass: 'text-blue-700',
+    priceClass: 'text-blue-600',
+    checkClass: 'text-white',
+    checkWrapClass: 'bg-blue-600 shadow-blue-600/40',
+    badgeClass: 'bg-blue-600 text-white',
+    buttonClass:
+      'bg-linear-to-b from-blue-600 to-blue-800 text-white shadow-blue-700/30 hover:brightness-110',
+    borderClass: 'border-blue-300/70',
     cardClass: 'bg-white',
-    iconWrapClass: 'bg-sky-500 text-white',
+    headerClass: 'bg-linear-to-b from-blue-500 via-blue-700 to-blue-900',
+    glowClass: 'shadow-blue-600/25',
+    iconWrapClass:
+      'bg-linear-to-b from-sky-300 via-blue-500 to-blue-800 text-white ring-4 ring-white/30',
     preview: 'photo',
   },
   pro: {
     icon: BarChart3,
-    nameClass: 'text-orange-500',
-    priceClass: 'text-orange-500',
-    checkClass: 'text-orange-500',
-    badgeClass: 'bg-orange-500 text-white',
-    buttonClass: 'bg-orange-500 text-white hover:bg-orange-500/90',
-    borderClass: 'border-orange-200/80',
+    nameClass: 'text-orange-600',
+    priceClass: 'text-orange-600',
+    checkClass: 'text-white',
+    checkWrapClass: 'bg-orange-500 shadow-orange-500/40',
+    badgeClass: 'bg-red-600 text-white',
+    buttonClass:
+      'bg-linear-to-b from-orange-500 to-red-600 text-white shadow-red-600/30 hover:brightness-110',
+    borderClass: 'border-orange-300/70',
     cardClass: 'bg-white',
-    iconWrapClass: 'bg-orange-500 text-white',
+    headerClass: 'bg-linear-to-b from-orange-500 via-orange-600 to-red-700',
+    glowClass: 'shadow-orange-500/30',
+    iconWrapClass:
+      'bg-linear-to-b from-amber-300 via-orange-500 to-red-600 text-white ring-4 ring-white/30',
     subBadge: '3 meses gratis',
     preview: 'stats',
   },
   premium: {
     icon: Crown,
-    nameClass: 'text-amber-600',
+    nameClass: 'text-amber-700',
     priceClass: 'text-amber-600',
-    checkClass: 'text-amber-500',
+    checkClass: 'text-white',
+    checkWrapClass: 'bg-amber-500 shadow-amber-500/40',
     badgeClass: 'recommended-badge border-0',
-    buttonClass: 'bg-linear-to-r from-amber-500 to-yellow-500 text-white hover:from-amber-500/90 hover:to-yellow-500/90',
-    borderClass: 'border-amber-200/80',
+    buttonClass:
+      'bg-linear-to-b from-amber-400 via-amber-500 to-yellow-600 text-white shadow-amber-600/30 hover:brightness-110',
+    borderClass: 'border-amber-300/70',
     cardClass: 'bg-white',
-    iconWrapClass: 'bg-linear-to-br from-amber-400 to-yellow-500 text-white',
+    headerClass: 'bg-linear-to-b from-amber-400 via-yellow-600 to-amber-700',
+    glowClass: 'shadow-amber-500/30',
+    iconWrapClass:
+      'bg-linear-to-b from-amber-200 via-amber-400 to-yellow-600 text-white ring-4 ring-white/40',
     preview: 'premium-photo',
   },
 };

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Crown, MapPin, Sparkles, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   formatPlanPrice,
@@ -60,18 +60,54 @@ function PlanPreview({ variant }: { variant: PlanTheme['preview'] }) {
 
   if (variant === 'premium-photo') {
     return (
-      <div className="mt-5 h-28 overflow-hidden rounded-xl bg-linear-to-br from-slate-900 via-indigo-950 to-amber-900">
-        <div className="flex h-full flex-col justify-end bg-linear-to-t from-black/50 to-transparent p-3">
-          <p className="text-xs font-medium text-amber-100">Destacado en portada</p>
+      <div className="relative mt-5 h-28 overflow-hidden rounded-xl bg-linear-to-br from-slate-900 via-indigo-950 to-amber-950 p-2.5">
+        <Sparkles className="absolute right-2 top-2 h-3.5 w-3.5 text-amber-300/80" strokeWidth={2} />
+        <p className="text-[9px] font-semibold uppercase tracking-wide text-amber-200/70">
+          Portada · Destacados
+        </p>
+        <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-amber-400/40 bg-white/10 p-1.5 shadow-sm backdrop-blur-sm ring-1 ring-amber-300/20">
+          <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md bg-linear-to-br from-amber-300 via-yellow-500 to-amber-700">
+            <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent" />
+            <MapPin className="absolute bottom-0.5 left-0.5 h-3 w-3 text-white/90" strokeWidth={2.5} />
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <span className="inline-flex items-center gap-1 rounded-full bg-linear-to-r from-amber-400 to-yellow-500 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-amber-950 shadow-sm">
+              <Crown className="h-2.5 w-2.5" strokeWidth={2.5} />
+              Destacado
+            </span>
+            <div className="mt-1 h-2 w-4/5 rounded-full bg-white/80" />
+            <div className="mt-1 flex items-center gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star key={i} className="h-2.5 w-2.5 fill-amber-400 text-amber-400" strokeWidth={0} />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mt-5 h-28 overflow-hidden rounded-xl bg-linear-to-br from-stone-200 via-stone-100 to-sky-100">
-      <div className="flex h-full items-end bg-linear-to-t from-black/25 to-transparent p-3">
-        <p className="text-xs font-medium text-white drop-shadow-sm">Tu negocio en el directorio</p>
+    <div className="mt-5 h-28 overflow-hidden rounded-xl border border-blue-100 bg-linear-to-br from-sky-50 to-blue-100/70 p-2.5">
+      <p className="text-[9px] font-semibold uppercase tracking-wide text-blue-500/80">
+        Directorio · Resultado
+      </p>
+      <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-blue-100 bg-white p-1.5 shadow-sm">
+        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md bg-linear-to-br from-sky-300 via-blue-400 to-blue-600">
+          <div className="absolute inset-0 bg-linear-to-t from-black/25 to-transparent" />
+          <MapPin className="absolute bottom-0.5 left-0.5 h-3 w-3 text-white/90" strokeWidth={2.5} />
+        </div>
+        <div className="min-w-0 flex-1 text-left">
+          <div className="h-2 w-4/5 rounded-full bg-blue-900/70" />
+          <div className="mt-1 flex items-center gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star key={i} className="h-2.5 w-2.5 fill-amber-400 text-amber-400" strokeWidth={0} />
+            ))}
+          </div>
+          <span className="mt-1 inline-flex w-fit items-center rounded-full bg-blue-600 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-white">
+            Tu negocio
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -124,91 +160,130 @@ export default function PlanPricingCard({
           : undefined
       }
       className={cn(
-        'relative flex h-full min-h-0 flex-col rounded-2xl border bg-card p-4 shadow-sm sm:p-5',
-        theme.borderClass,
-        theme.cardClass,
-        selected && 'border-primary shadow-md ring-2 ring-primary/20',
-        interactive && !selected && 'cursor-pointer hover:shadow-md',
-        interactive && 'outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'group relative flex h-full min-h-0 flex-col',
+        interactive && !selected && 'cursor-pointer',
+        interactive &&
+          'rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         disabled && 'pointer-events-none opacity-70',
         className,
       )}
     >
-      <div className="relative shrink-0 flex flex-col items-center text-center">
-        {floatingBadge && (
-          <div className="pointer-events-none absolute -top-9 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap">
-            {floatingBadge}
-          </div>
-        )}
+      {floatingBadge && (
+        <div className="pointer-events-none absolute -top-3.5 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap drop-shadow-md">
+          {floatingBadge}
+        </div>
+      )}
 
+      <div
+        className={cn(
+          'flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border bg-card shadow-lg transition-all duration-300',
+          theme.borderClass,
+          theme.cardClass,
+          theme.glowClass,
+          interactive && !selected && 'group-hover:-translate-y-1 group-hover:shadow-xl',
+          selected && 'ring-2 ring-primary/40 shadow-xl',
+        )}
+      >
         <div
           className={cn(
-            'mb-3 flex h-12 w-12 items-center justify-center rounded-full shadow-sm',
-            theme.iconWrapClass,
+            'relative shrink-0 overflow-hidden px-4 pb-6 pt-9 text-center text-white sm:px-5',
+            theme.headerClass,
           )}
         >
-          <Icon className="h-5 w-5" strokeWidth={2} />
-        </div>
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-white/25 to-transparent"
+            aria-hidden
+          />
 
-        <h3 className={cn('text-xl font-extrabold uppercase tracking-wide sm:text-2xl', theme.nameClass)}>
-          {plan.name}
-        </h3>
+          <div className="relative flex flex-col items-center">
+            <div
+              className={cn(
+                'mb-3 flex h-16 w-16 items-center justify-center rounded-full shadow-lg',
+                theme.iconWrapClass,
+              )}
+            >
+              <Icon className="h-7 w-7 drop-shadow-sm" strokeWidth={2.25} />
+            </div>
 
-        <div className="mt-2 flex flex-col items-center gap-1">
-          <span className={cn('text-2xl font-extrabold sm:text-3xl', theme.priceClass)}>
-            {formatPlanPrice(plan)}
-            {plan.price > 0 && (
-              <span className="text-base font-bold sm:text-lg">/{plan.interval}</span>
-            )}
-          </span>
-          {(isFreeTier || theme.priceSubtitle) && (
-            <span className={cn('text-xs font-semibold uppercase tracking-wide', theme.priceClass)}>
-              {theme.priceSubtitle ?? 'Para siempre'}
-            </span>
-          )}
-          <div className="flex min-h-[26px] items-center justify-center">
-            {theme.subBadge && showPopularBadge ? (
-              <Badge variant="outline" className={cn('border-0', theme.badgeClass)}>
-                {theme.subBadge}
-              </Badge>
-            ) : null}
+            <h3 className="text-2xl font-black uppercase tracking-wide drop-shadow-sm sm:text-3xl">
+              {plan.name}
+            </h3>
+
+            <div className="mt-1 flex flex-col items-center gap-1">
+              <span className="text-3xl font-black drop-shadow-sm sm:text-4xl">
+                {formatPlanPrice(plan)}
+                {plan.price > 0 && (
+                  <span className="text-lg font-bold sm:text-xl">/{plan.interval}</span>
+                )}
+              </span>
+              {theme.priceSubtitle && (
+                <span className="text-xs font-semibold uppercase tracking-wide text-white/85">
+                  {theme.priceSubtitle}
+                </span>
+              )}
+              <div className="flex min-h-[26px] items-center justify-center">
+                {theme.subBadge && showPopularBadge ? (
+                  <Badge
+                    className={cn(
+                      'border-0 bg-white/95 font-bold uppercase tracking-wide text-foreground shadow-sm',
+                    )}
+                  >
+                    {theme.subBadge}
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-4 min-h-0 flex-1">
-        {isFreeTier ? (
-          <ul className="space-y-2">
-            {included.map(feature => (
-              <li key={feature} className="flex items-start gap-2 text-left text-sm">
-                <Check className={cn('mt-0.5 h-4 w-4 shrink-0', theme.checkClass)} strokeWidth={2.5} />
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="space-y-2 text-left">
-            {previousPlanName && (
-              <p className="text-sm font-semibold text-foreground">
-                Todo lo de {previousPlanName.toUpperCase()}, más:
-              </p>
-            )}
-            <ul className="space-y-2">
-              {incremental.map(feature => (
-                <li key={feature} className="flex items-start gap-2 text-sm">
-                  <Check className={cn('mt-0.5 h-4 w-4 shrink-0', theme.checkClass)} strokeWidth={2.5} />
+        <div className="min-h-0 flex-1 px-4 py-4 sm:px-5">
+          {isFreeTier ? (
+            <ul className="space-y-2.5">
+              {included.map(feature => (
+                <li key={feature} className="flex items-start gap-2.5 text-left text-sm">
+                  <span
+                    className={cn(
+                      'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full shadow-sm',
+                      theme.checkWrapClass,
+                    )}
+                  >
+                    <Check className={cn('h-3 w-3', theme.checkClass)} strokeWidth={3} />
+                  </span>
                   <span>{feature}</span>
                 </li>
               ))}
             </ul>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="space-y-2.5 text-left">
+              {previousPlanName && (
+                <p className="text-sm font-semibold text-foreground">
+                  Todo lo de {previousPlanName.toUpperCase()}, más:
+                </p>
+              )}
+              <ul className="space-y-2.5">
+                {incremental.map(feature => (
+                  <li key={feature} className="flex items-start gap-2.5 text-sm">
+                    <span
+                      className={cn(
+                        'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full shadow-sm',
+                        theme.checkWrapClass,
+                      )}
+                    >
+                      <Check className={cn('h-3 w-3', theme.checkClass)} strokeWidth={3} />
+                    </span>
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
 
-      <div className="mt-auto shrink-0">
-        {showPreview && <PlanPreview variant={theme.preview} />}
+        <div className="mt-auto shrink-0 px-4 pb-4 sm:px-5">
+          {showPreview && theme.preview && <PlanPreview variant={theme.preview} />}
 
-        <div className="mt-4 flex min-h-10 items-center">{action ?? null}</div>
+          <div className="mt-4 flex min-h-10 items-center">{action ?? null}</div>
+        </div>
       </div>
     </div>
   );

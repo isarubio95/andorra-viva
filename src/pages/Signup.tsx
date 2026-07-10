@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useSiteContent } from '@/contexts/SiteContentContext';
 import { Badge } from '@/components/ui/badge';
 import PlanComparisonGrid from '@/components/PlanComparisonGrid';
-import { sortPlansByPrice } from '@/lib/plan-display';
+import { getPlanTheme, sortPlansByPrice } from '@/lib/plan-display';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -84,10 +84,11 @@ export default function Signup() {
     }
   };
 
-  const handleContinueFromPlan = async () => {
+  const handleContinueFromPlan = async (planId: string = selectedPlan) => {
+    setSelectedPlan(planId);
     if (upgradeFlow) {
       setLoading(true);
-      const result = await upgradeToProfessional(selectedPlan);
+      const result = await upgradeToProfessional(planId);
       if (!result.ok) {
         toast({
           title: 'No se pudo actualizar la cuenta',
@@ -100,7 +101,7 @@ export default function Signup() {
       await refreshProfile();
       toast({
         title: '¡Cuenta profesional activada!',
-        description: `Plan ${plans.find(p => p.id === selectedPlan)?.name || selectedPlan}`,
+        description: `Plan ${plans.find(p => p.id === planId)?.name || planId}`,
       });
       setLoading(false);
       setStep('business');
@@ -292,22 +293,36 @@ export default function Signup() {
           <div className="space-y-4">
             <PlanComparisonGrid
               comparePlans={plans}
-              columns={sortPlansByPrice(plans).map(plan => ({
-                plan,
-                selected: selectedPlan === plan.id,
-                onSelect: () => setSelectedPlan(plan.id),
-              }))}
+              columns={sortPlansByPrice(plans).map(plan => {
+                const theme = getPlanTheme(plan.id);
+                return {
+                  plan,
+                  selected: selectedPlan === plan.id,
+                  onSelect: () => setSelectedPlan(plan.id),
+                  action: (
+                    <Button
+                      className={cn('w-full rounded-full', theme.buttonClass)}
+                      disabled={loading}
+                      onClick={e => {
+                        e.stopPropagation();
+                        void handleContinueFromPlan(plan.id);
+                      }}
+                    >
+                      {loading && selectedPlan === plan.id
+                        ? 'Actualizando…'
+                        : `Continuar con ${plan.name}`}
+                    </Button>
+                  ),
+                };
+              })}
             />
-            <div className="flex gap-3">
-              {!upgradeFlow && (
+            {!upgradeFlow && (
+              <div className="flex">
                 <Button variant="outline" onClick={goBack} className="gap-1">
                   <ArrowLeft className="h-4 w-4" /> Atrás
                 </Button>
-              )}
-              <Button className="flex-1" onClick={handleContinueFromPlan} disabled={loading}>
-                {loading ? 'Actualizando…' : `Continuar con ${plans.find(p => p.id === selectedPlan)?.name || 'Básico'}`}
-              </Button>
-            </div>
+              </div>
+            )}
           </div>
         )}
 
