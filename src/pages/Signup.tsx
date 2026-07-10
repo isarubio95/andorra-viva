@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, User, Eye, EyeOff, Store, UserCircle, Check, ArrowLeft, ArrowRight } from 'lucide-react';
 import { AppLogo } from '@/components/AppLogo';
@@ -11,6 +11,13 @@ import { useSiteContent } from '@/contexts/SiteContentContext';
 import { Badge } from '@/components/ui/badge';
 import PlanComparisonGrid from '@/components/PlanComparisonGrid';
 import { getPlanTheme, sortPlansByPrice } from '@/lib/plan-display';
+import {
+  buildSignupSearchParams,
+  getSignupStepSequence,
+  parseSignupRole,
+  resolveSignupStep,
+  type SignupStep,
+} from '@/lib/signup-wizard';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,22 +26,29 @@ import { getPlans, upgradeToProfessional } from '@/services/api';
 import type { UserRole } from '@/contexts/AuthContext';
 import type { Plan } from '@/types/domain';
 
-type SignupStep = 'role' | 'plan' | 'form' | 'business';
-
 export default function Signup() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const reviewMode = searchParams.get('mode') === 'review';
   const upgradeParam = searchParams.get('mode') === 'upgrade';
   const next = searchParams.get('next');
+  const stepParam = searchParams.get('step');
+  const roleParam = searchParams.get('role');
+  const planParam = searchParams.get('plan');
   const { user, role, roleLoading, hasProAccess, refreshProfile } = useAuth();
   const upgradeFlow = upgradeParam || (!reviewMode && !!user && role === 'basic');
-  const [step, setStep] = useState<SignupStep>(() => {
-    if (reviewMode) return 'form';
-    if (upgradeParam) return 'plan';
-    return 'role';
-  });
-  const [selectedRole, setSelectedRole] = useState<UserRole>('basic');
-  const [selectedPlan, setSelectedPlan] = useState<string>('free');
+  const selectedRole = parseSignupRole(roleParam);
+  const selectedPlan = planParam || 'free';
+  const step = useMemo(
+    () =>
+      resolveSignupStep({
+        stepParam,
+        role: selectedRole,
+        planParam,
+        reviewMode,
+        upgradeFlow,
+      }),
+    [stepParam, selectedRole, planParam, reviewMode, upgradeFlow],
+  );
   const [plans, setPlans] = useState<Plan[]>([]);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -48,46 +62,95 @@ export default function Signup() {
   const { getLegalPage } = useSiteContent();
   const privacyPolicyVersion = getLegalPage('privacy_policy').version;
 
+  const pushWizardParams = (updates: { step?: SignupStep; role?: UserRole; plan?: string }) => {
+    setSearchParams(current => buildSignupSearchParams(current, updates));
+  };
+
+  const replaceWizardParams = (updates: { step?: SignupStep; role?: UserRole; plan?: string }) => {
+    setSearchParams(current => buildSignupSearchParams(current, updates), { replace: true });
+  };
+
   useEffect(() => {
     getPlans().then(setPlans);
   }, []);
 
   useEffect(() => {
+    if (reviewMode) {
+      if (stepParam !== 'form') {
+        replaceWizardParams({ step: 'form' });
+      }
+      return;
+    }
+
+    if (upgradeFlow) return;
+
+    if (planParam && !stepParam) {
+      replaceWizardParams({ step: 'plan', role: 'professional', plan: planParam });
+      return;
+    }
+
+    if (!stepParam) {
+      replaceWizardParams({ step: 'role', role: selectedRole });
+      return;
+    }
+
+    const validStep = resolveSignupStep({
+      stepParam,
+      role: selectedRole,
+      planParam,
+      reviewMode,
+      upgradeFlow,
+    });
+    if (validStep !== stepParam) {
+      replaceWizardParams({
+        step: validStep,
+        role: selectedRole,
+        ...(planParam ? { plan: planParam } : {}),
+      });
+    }
+  }, [reviewMode, upgradeFlow, planParam, stepParam, selectedRole]);
+
+  useEffect(() => {
     if (roleLoading) return;
     if (upgradeFlow && !user) {
-      navigate(`/login?next=${encodeURIComponent('/signup?mode=upgrade')}`, { replace: true });
+      const returnUrl = buildSignupSearchParams(new URLSearchParams('mode=upgrade'), {
+        step: (stepParam as SignupStep | null) ?? 'plan',
+        role: 'professional',
+        ...(planParam ? { plan: planParam } : {}),
+      });
+      navigate(`/login?next=${encodeURIComponent(`/signup?${returnUrl.toString()}`)}`, { replace: true });
       return;
     }
     if (upgradeFlow && hasProAccess) {
       navigate('/mi-cuenta', { replace: true });
     }
-  }, [upgradeFlow, user, roleLoading, hasProAccess, navigate]);
+  }, [upgradeFlow, user, roleLoading, hasProAccess, navigate, stepParam, planParam]);
 
   useEffect(() => {
-    if (upgradeFlow && user && !roleLoading) {
-      setSelectedRole('professional');
-      if (step === 'role' || step === 'form') {
-        setStep(s => (s === 'form' ? 'business' : 'plan'));
-      }
-    }
-  }, [upgradeFlow, user, roleLoading, step]);
+    if (!upgradeFlow || !user || roleLoading) return;
 
-  const stepSequence: SignupStep[] = upgradeFlow
-    ? ['plan', 'business']
-    : ['role', ...(selectedRole === 'professional' ? ['plan' as const] : []), 'form'];
+    if (stepParam === 'role' || stepParam === 'form' || !stepParam) {
+      replaceWizardParams({
+        step: stepParam === 'form' ? 'business' : 'plan',
+        role: 'professional',
+        ...(planParam ? { plan: planParam } : {}),
+      });
+    }
+  }, [upgradeFlow, user, roleLoading, stepParam, planParam]);
+
+  const stepSequence: SignupStep[] = getSignupStepSequence(upgradeFlow, selectedRole);
 
   const handleContinueFromRole = () => {
-    if (selectedRole === 'professional') {
-      setStep('plan');
-    } else {
-      setStep('form');
-    }
+    pushWizardParams({
+      step: selectedRole === 'professional' ? 'plan' : 'form',
+      role: selectedRole,
+    });
   };
 
   const handleContinueFromPlan = async (planId: string = selectedPlan) => {
-    setSelectedPlan(planId);
     if (upgradeFlow) {
       setLoading(true);
+      replaceWizardParams({ plan: planId });
       const result = await upgradeToProfessional(planId);
       if (!result.ok) {
         toast({
@@ -104,10 +167,10 @@ export default function Signup() {
         description: `Plan ${plans.find(p => p.id === planId)?.name || planId}`,
       });
       setLoading(false);
-      setStep('business');
+      pushWizardParams({ step: 'business', plan: planId, role: 'professional' });
       return;
     }
-    setStep('form');
+    pushWizardParams({ step: 'form', plan: planId, role: selectedRole });
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -183,15 +246,7 @@ export default function Signup() {
   ];
 
   const goBack = () => {
-    if (step === 'business') {
-      setStep('plan');
-    } else if (step === 'form' && selectedRole === 'professional') {
-      setStep('plan');
-    } else if (step === 'form') {
-      setStep('role');
-    } else if (step === 'plan' && !upgradeFlow) {
-      setStep('role');
-    }
+    navigate(-1);
   };
 
   if (upgradeFlow && (roleLoading || !user || hasProAccess)) {
@@ -246,7 +301,7 @@ export default function Signup() {
                   <button
                     key={card.role}
                     type="button"
-                    onClick={() => setSelectedRole(card.role)}
+                    onClick={() => replaceWizardParams({ role: card.role })}
                     className={`flex cursor-pointer flex-col items-start gap-3 rounded-xl border-2 p-5 text-left transition-all ${
                       isSelected
                         ? 'border-primary bg-primary/5 shadow-md'
@@ -298,7 +353,7 @@ export default function Signup() {
                 return {
                   plan,
                   selected: selectedPlan === plan.id,
-                  onSelect: () => setSelectedPlan(plan.id),
+                  onSelect: () => replaceWizardParams({ plan: plan.id }),
                   action: (
                     <Button
                       className={cn('w-full rounded-full', theme.buttonClass)}
