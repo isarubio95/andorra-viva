@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, User, Eye, EyeOff, Store, UserCircle, Check, ArrowLeft, ArrowRight } from 'lucide-react';
 import { AppLogo } from '@/components/AppLogo';
@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useSiteContent } from '@/contexts/SiteContentContext';
 import { Badge } from '@/components/ui/badge';
 import PlanComparisonGrid from '@/components/PlanComparisonGrid';
+import PlanBenefitsBar from '@/components/PlanBenefitsBar';
 import { getPlanTheme, sortPlansByPrice } from '@/lib/plan-display';
 import {
   buildSignupSearchParams,
@@ -271,22 +272,35 @@ export default function Signup() {
             {!upgradeFlow && step === 'form' && (selectedRole === 'professional' ? 'Crea tu cuenta profesional' : 'Crea tu cuenta')}
           </p>
           {!reviewMode && (
-            <div className="flex items-center gap-2">
-              {stepSequence.map((s, i, arr) => (
-                <div key={s} className="flex items-center gap-2">
-                  <div
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                      step === s ? 'bg-primary text-primary-foreground' :
-                      arr.indexOf(step) > i ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {arr.indexOf(step) > i ? <Check className="h-3.5 w-3.5" /> : i + 1}
-                  </div>
-                  {i < arr.length - 1 && (
-                    <div className={`h-0.5 w-6 rounded ${arr.indexOf(step) > i ? 'bg-accent' : 'bg-muted'}`} />
-                  )}
-                </div>
-              ))}
+            <div className="flex items-center">
+              {stepSequence.map((s, i, arr) => {
+                const currentIndex = arr.indexOf(step);
+                const isCompleted = currentIndex > i;
+                const isActive = step === s || isCompleted;
+
+                return (
+                  <Fragment key={s}>
+                    <div
+                      className={cn(
+                        'relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors',
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-white text-muted-foreground',
+                      )}
+                    >
+                      {i + 1}
+                    </div>
+                    {i < arr.length - 1 && (
+                      <div
+                        className={cn(
+                          'w-10 shrink-0',
+                          isCompleted ? 'h-0.5 bg-primary' : 'h-0.5 bg-white',
+                        )}
+                      />
+                    )}
+                  </Fragment>
+                );
+              })}
             </div>
           )}
         </div>
@@ -302,28 +316,44 @@ export default function Signup() {
                     key={card.role}
                     type="button"
                     onClick={() => replaceWizardParams({ role: card.role })}
-                    className={`flex cursor-pointer flex-col items-start gap-3 rounded-xl border-2 p-5 text-left transition-all ${
+                    className={cn(
+                      'group relative flex cursor-pointer flex-col items-start gap-3 overflow-hidden rounded-2xl border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
                       isSelected
-                        ? 'border-primary bg-primary/5 shadow-md'
-                        : 'border-border hover:border-muted-foreground/30 hover:bg-muted/50'
-                    }`}
+                        ? 'border-primary ring-2 ring-primary/30 shadow-md'
+                        : 'border-border hover:border-primary/40',
+                    )}
                   >
+                    {isSelected && (
+                      <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                    )}
                     <div className="flex w-full items-start justify-between">
-                      <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                      <div
+                        className={cn(
+                          'flex h-12 w-12 items-center justify-center rounded-xl transition-colors',
+                          isSelected
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary',
+                        )}
+                      >
                         <Icon className="h-6 w-6" />
                       </div>
-                      <Badge variant={isSelected ? 'default' : 'secondary'} className="text-xs">
+                      <Badge
+                        variant={isSelected ? 'default' : 'secondary'}
+                        className={cn('text-xs', isSelected && 'mr-9')}
+                      >
                         {card.badge}
                       </Badge>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-foreground">{card.title}</h3>
-                      <p className="mt-1 text-xs text-muted-foreground">{card.description}</p>
+                      <h3 className="text-base font-semibold text-foreground">{card.title}</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{card.description}</p>
                     </div>
-                    <ul className="mt-1 space-y-1">
+                    <ul className="mt-1 space-y-1.5">
                       {card.features.map(f => (
                         <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className={`h-1.5 w-1.5 rounded-full ${isSelected ? 'bg-primary' : 'bg-muted-foreground/40'}`} />
+                          <span className={cn('h-1.5 w-1.5 rounded-full', isSelected ? 'bg-primary' : 'bg-muted-foreground/40')} />
                           {f}
                         </li>
                       ))}
@@ -371,6 +401,7 @@ export default function Signup() {
                 };
               })}
             />
+            <PlanBenefitsBar className="mt-6 w-full" />
             {!upgradeFlow && (
               <div className="flex">
                 <Button variant="outline" onClick={goBack} className="gap-1">

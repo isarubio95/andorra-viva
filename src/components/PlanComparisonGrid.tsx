@@ -50,14 +50,14 @@ export default function PlanComparisonGrid({
   return (
     <div
       className={cn(
-        'grid auto-rows-fr items-stretch gap-4 sm:gap-5',
+        'grid auto-rows-auto items-start gap-4 sm:auto-rows-fr sm:items-stretch sm:gap-5',
         hasFloatingBadge && 'pt-5',
         getGridClasses(colCount),
         className,
       )}
     >
       {sortedColumns.map(column => (
-        <div key={column.plan.id} className="flex min-h-0 flex-col">
+        <div key={column.plan.id} className="flex min-h-0 flex-col sm:h-full">
           <PlanPricingCard
             plan={column.plan}
             plans={visibleComparePlans}
@@ -68,7 +68,7 @@ export default function PlanComparisonGrid({
             topBadge={column.topBadge}
             showPopularBadge={column.showPopularBadge}
             showPreview={column.showPreview ?? showPreview}
-            className="flex-1"
+            className="sm:flex-1"
           />
         </div>
       ))}

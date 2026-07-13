@@ -1,36 +1,13 @@
 import { Link } from 'react-router-dom';
-import { BarChart3, Crown, MapPin, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PlanComparisonGrid from '@/components/PlanComparisonGrid';
+import PlanBenefitsBar from '@/components/PlanBenefitsBar';
 import { getPlanTheme, getVisiblePlans } from '@/lib/plan-display';
 import type { Plan } from '@/types/domain';
 
 interface PricingSectionProps {
   plans: Plan[];
 }
-
-const FOOTER_ITEMS = [
-  {
-    planId: 'free',
-    icon: MapPin,
-    text: 'Más visibilidad para tu negocio',
-  },
-  {
-    planId: 'basic',
-    icon: Users,
-    text: 'Conecta con más clientes',
-  },
-  {
-    planId: 'pro',
-    icon: Crown,
-    text: 'Impulsa tu imagen y reputación',
-  },
-  {
-    planId: 'premium',
-    icon: BarChart3,
-    text: 'Haz crecer tu negocio',
-  },
-] as const;
 
 export default function PricingSection({ plans }: PricingSectionProps) {
   const visiblePlans = getVisiblePlans(plans);
@@ -64,22 +41,7 @@ export default function PricingSection({ plans }: PricingSectionProps) {
           })}
         />
 
-        <div className="mx-auto mt-10 grid max-w-5xl gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {FOOTER_ITEMS.map(item => {
-            const theme = getPlanTheme(item.planId);
-            const Icon = item.icon;
-            return (
-              <div key={item.planId} className="flex flex-col items-center gap-2 text-center">
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full ${theme.iconWrapClass}`}
-                >
-                  <Icon className="h-5 w-5" strokeWidth={2} />
-                </div>
-                <p className={`text-sm font-medium ${theme.nameClass}`}>{item.text}</p>
-              </div>
-            );
-          })}
-        </div>
+        <PlanBenefitsBar className="mx-auto mt-10 max-w-5xl" />
       </div>
     </section>
   );

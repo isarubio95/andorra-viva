@@ -160,7 +160,7 @@ export default function PlanPricingCard({
           : undefined
       }
       className={cn(
-        'group relative flex h-full min-h-0 flex-col',
+        'group relative flex min-h-0 flex-col sm:h-full',
         interactive && !selected && 'cursor-pointer',
         interactive &&
           'rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
@@ -176,7 +176,7 @@ export default function PlanPricingCard({
 
       <div
         className={cn(
-          'flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border bg-card shadow-lg transition-all duration-300',
+          'flex min-h-0 flex-col overflow-hidden rounded-3xl border bg-card shadow-lg transition-all duration-300 sm:h-full',
           theme.borderClass,
           theme.cardClass,
           theme.glowClass,
@@ -236,7 +236,7 @@ export default function PlanPricingCard({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 px-4 py-4 sm:px-5">
+        <div className="min-h-0 px-4 py-4 sm:flex-1 sm:px-5">
           {isFreeTier ? (
             <ul className="space-y-2.5">
               {included.map(feature => (
