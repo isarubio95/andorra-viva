@@ -233,31 +233,16 @@ export default function Directory() {
     });
   }, [businesses, selectedCategories, selectedSubcategories, priceRange, minAge]);
 
-  const grouped = useMemo(() => {
-    const byCategory: Record<string, Record<string, Business[]>> = {};
-    filtered.forEach(b => {
-      const sub = b.subcategory ?? 'Sin clasificar';
-      if (!byCategory[b.category]) byCategory[b.category] = {};
-      if (!byCategory[b.category][sub]) byCategory[b.category][sub] = [];
-      byCategory[b.category][sub].push(b);
-    });
-    return Object.entries(byCategory)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([category, subs]) => ({
-        category,
-        subgroups: Object.entries(subs).sort(([a], [b]) => a.localeCompare(b)),
-      }));
-  }, [filtered]);
-
   const isDefaultView = selectedCategories.length === 0;
 
+  /** Destacados del resultado actual (toda Andorra o la sección/categoría filtrada). */
   const premiumBusinesses = useMemo(
-    () => (isDefaultView ? filtered.filter(b => b.is_premium) : []),
-    [filtered, isDefaultView],
+    () => filtered.filter(b => b.is_premium),
+    [filtered],
   );
 
+  /** Resto agrupado por categoría → subcategoría (sin duplicar los destacados). */
   const displayGrouped = useMemo(() => {
-    if (!isDefaultView) return grouped;
     const nonPremium = filtered.filter(b => !b.is_premium);
     const byCategory: Record<string, Record<string, Business[]>> = {};
     nonPremium.forEach(b => {
@@ -272,7 +257,7 @@ export default function Directory() {
         category,
         subgroups: Object.entries(subs).sort(([a], [b]) => a.localeCompare(b)),
       }));
-  }, [filtered, grouped, isDefaultView]);
+  }, [filtered]);
 
   const activeCategory =
     selectedCategories.length === 1 ? selectedCategories[0] : null;
@@ -439,27 +424,25 @@ export default function Directory() {
         {/* Results */}
         {loading ? (
           <div className="space-y-8">
-            {isDefaultView && (
-              <div>
-                <div className="mb-4 flex items-center gap-2">
-                  <Skeleton className="h-6 w-44" />
-                </div>
-                <div className="grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="rounded-xl border bg-card overflow-hidden">
-                      <Skeleton className="aspect-[4/3] w-full rounded-none" />
-                      <div className="space-y-2 p-4">
-                        <Skeleton className="h-4 w-2/3" />
-                        <Skeleton className="h-3 w-1/2" />
-                        <div className="pt-2">
-                          <Skeleton className="h-4 w-20" />
-                        </div>
+            <div>
+              <div className="mb-4 flex items-center gap-2">
+                <Skeleton className="h-6 w-44" />
+              </div>
+              <div className="grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="rounded-xl border bg-card overflow-hidden">
+                    <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                    <div className="space-y-2 p-4">
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-1/2" />
+                      <div className="pt-2">
+                        <Skeleton className="h-4 w-20" />
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
             {Array.from({ length: 2 }).map((_, sectionIdx) => (
               <div key={sectionIdx}>
                 <div className="mb-4 flex items-center gap-2">
@@ -485,7 +468,7 @@ export default function Directory() {
           </div>
         ) : (
           <>
-            {isDefaultView && premiumBusinesses.length > 0 && (
+            {premiumBusinesses.length > 0 && (
               <PremiumBusinessesCarousel
                 businesses={premiumBusinesses}
                 onBusinessClick={setSelectedBusiness}
@@ -519,7 +502,7 @@ export default function Directory() {
               </ScrollReveal>
             );
           })
-            ) : !isDefaultView || premiumBusinesses.length === 0 ? (
+            ) : premiumBusinesses.length === 0 ? (
           <p className="py-16 text-center text-muted-foreground">
             No se encontraron negocios con los filtros seleccionados.
           </p>
