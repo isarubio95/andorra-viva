@@ -1,0 +1,14 @@
+# Config mínima del proyecto Supabase (Andorra Viva).
+# El webhook de Stripe no envía JWT de Supabase.
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.sync-plan-stripe]
+verify_jwt = true
+
+[functions.r2-upload-url]
+verify_jwt = true

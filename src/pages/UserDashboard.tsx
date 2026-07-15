@@ -170,6 +170,7 @@ export default function UserDashboard() {
   const [showPasswordFields, setShowPasswordFields] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordUpdatedAt, setPasswordUpdatedAt] = useState<Date | null>(null);
+  const checkoutFeedbackHandled = useRef(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -177,6 +178,37 @@ export default function UserDashboard() {
       navigate('/login', { replace: true });
     }
   }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    const checkout = searchParams.get('checkout');
+    if (!checkout || !user?.id || checkoutFeedbackHandled.current) return;
+    checkoutFeedbackHandled.current = true;
+
+    const cleanUrl = () => {
+      const next = new URLSearchParams(searchParams);
+      next.delete('checkout');
+      navigate(
+        { pathname: '/mi-cuenta', search: next.toString() ? `?${next.toString()}` : '' },
+        { replace: true },
+      );
+    };
+
+    void (async () => {
+      if (checkout === 'success') {
+        await refreshProfile();
+        toast({
+          title: 'Pago confirmado',
+          description: 'Tu plan se ha actualizado correctamente.',
+        });
+      } else if (checkout === 'cancel') {
+        toast({
+          title: 'Pago cancelado',
+          description: 'No se ha aplicado ningún cambio de plan.',
+        });
+      }
+      cleanUrl();
+    })();
+  }, [searchParams, user?.id, refreshProfile, navigate, toast]);
 
   useEffect(() => {
     setPlansLoading(true);
@@ -413,6 +445,25 @@ export default function UserDashboard() {
 
     if (isUpgradeToPaid) {
       const checkout = await createStripeCheckoutSession(nextPlanId);
+      if (checkout.error) {
+        toast({
+          title: 'No se pudo iniciar el pago',
+          description: checkout.error,
+          variant: 'destructive',
+        });
+        setChangingPlan(false);
+        return;
+      }
+      if (checkout.updated) {
+        const planLabel = plans.find(p => p.id === nextPlanId)?.name ?? nextPlanId;
+        toast({
+          title: 'Plan actualizado',
+          description: `Nuevo plan: ${planLabel}`,
+        });
+        await refreshProfile();
+        setChangingPlan(false);
+        return;
+      }
       if (checkout.url) {
         window.location.href = checkout.url;
         setChangingPlan(false);

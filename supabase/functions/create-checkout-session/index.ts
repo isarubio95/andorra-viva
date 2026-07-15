@@ -55,7 +55,8 @@ serve(async req => {
       });
     }
 
-    const { planId } = (await req.json()) as { planId?: string };
+    const body = (await req.json()) as { planId?: string; returnOrigin?: string };
+    const { planId } = body;
     if (!planId || !PLAN_PRICE_ENV[planId]) {
       return new Response(JSON.stringify({ error: 'Invalid plan' }), {
         status: 400,
@@ -63,35 +64,58 @@ serve(async req => {
       });
     }
 
+    const allowedOrigins = new Set(
+      [siteUrl, 'http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'].map(u =>
+        u.replace(/\/$/, ''),
+      ),
+    );
+    const requestedOrigin = (body.returnOrigin ?? '').replace(/\/$/, '');
+    const appOrigin = allowedOrigins.has(requestedOrigin) ? requestedOrigin : siteUrl;
+
     const { data: planRow } = await supabase
       .from('plans')
-      .select('trial_months')
+      .select('trial_months, stripe_price_id, price')
       .eq('id', planId)
       .maybeSingle();
 
+    if (!planRow || Number(planRow.price) <= 0) {
+      return new Response(JSON.stringify({ error: 'Plan not available for checkout' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const trialMonths =
-      typeof planRow?.trial_months === 'number' && planRow.trial_months > 0
+      typeof planRow.trial_months === 'number' && planRow.trial_months > 0
         ? Math.floor(planRow.trial_months)
         : 0;
 
-    const priceEnvKey = PLAN_PRICE_ENV[planId];
-    const priceId = Deno.env.get(priceEnvKey);
+    const priceId =
+      (typeof planRow.stripe_price_id === 'string' && planRow.stripe_price_id) ||
+      Deno.env.get(PLAN_PRICE_ENV[planId]);
     if (!priceId) {
-      return new Response(JSON.stringify({ error: `Missing ${priceEnvKey}` }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          error:
+            'Falta stripe_price_id del plan. Guárdalo desde Admin → Planes para sincronizar con Stripe.',
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
 
     const { data: subRow } = await supabase
       .from('subscriptions')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id, stripe_subscription_id')
       .eq('user_id', user.id)
       .maybeSingle();
 
     let customerId = subRow?.stripe_customer_id as string | undefined;
+    const existingSubscriptionId = subRow?.stripe_subscription_id as string | undefined;
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -103,6 +127,56 @@ serve(async req => {
         .from('subscriptions')
         .update({ stripe_customer_id: customerId })
         .eq('user_id', user.id);
+    }
+
+    // Ya hay suscripción Stripe: cambiar precio (upgrade/downgrade) sin nuevo Checkout.
+    if (existingSubscriptionId) {
+      const current = await stripe.subscriptions.retrieve(existingSubscriptionId);
+      if (current.status === 'active' || current.status === 'trialing') {
+        const itemId = current.items.data[0]?.id;
+        if (!itemId) {
+          return new Response(JSON.stringify({ error: 'Subscription has no items' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const updated = await stripe.subscriptions.update(existingSubscriptionId, {
+          items: [{ id: itemId, price: priceId }],
+          metadata: { supabase_user_id: user.id, plan_id: planId },
+          proration_behavior: 'create_prorations',
+        });
+
+        const status =
+          updated.status === 'trialing'
+            ? 'trialing'
+            : updated.status === 'active'
+              ? 'active'
+              : updated.status === 'past_due'
+                ? 'past_due'
+                : 'active';
+
+        await supabase
+          .from('subscriptions')
+          .update({
+            plan_id: planId,
+            status,
+            stripe_subscription_id: updated.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id);
+
+        return new Response(
+          JSON.stringify({
+            updated: true,
+            planId,
+            url: `${appOrigin}/mi-cuenta?tab=plan&checkout=success`,
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
+      }
     }
 
     const subscriptionData: Stripe.Checkout.SessionCreateParams['subscription_data'] = {
@@ -117,8 +191,8 @@ serve(async req => {
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${siteUrl}/mi-cuenta?tab=plan&checkout=success`,
-      cancel_url: `${siteUrl}/mi-cuenta?tab=plan&checkout=cancel`,
+      success_url: `${appOrigin}/mi-cuenta?tab=plan&checkout=success`,
+      cancel_url: `${appOrigin}/mi-cuenta?tab=plan&checkout=cancel`,
       metadata: { supabase_user_id: user.id, plan_id: planId },
       subscription_data: subscriptionData,
     });

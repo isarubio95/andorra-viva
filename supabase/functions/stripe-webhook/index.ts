@@ -19,7 +19,8 @@ serve(async req => {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    // Deno Edge Runtime: SubtleCrypto exige constructEventAsync
+    event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Invalid signature';
     return new Response(`Webhook Error: ${message}`, { status: 400 });
@@ -154,6 +155,7 @@ serve(async req => {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId =
           typeof subscription.customer === 'string' ? subscription.customer : null;
+        const planId = subscription.metadata?.plan_id;
 
         const { data: subRow } = customerId
           ? await supabase
@@ -179,6 +181,7 @@ serve(async req => {
             .from('subscriptions')
             .update({
               status,
+              ...(planId ? { plan_id: planId } : {}),
               stripe_subscription_id: subscription.id,
               updated_at: new Date().toISOString(),
             })
@@ -191,6 +194,7 @@ serve(async req => {
           subscriptionId: subscription.id,
           eventType: event.type,
           status: subscription.status,
+          metadata: subscription.metadata as Record<string, unknown>,
         });
         break;
       }

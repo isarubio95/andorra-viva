@@ -131,7 +131,12 @@ export default function AdminPlans() {
       return;
     }
 
-    toast({ title: 'Plan actualizado', description: form.name });
+    toast({
+      title: 'Plan actualizado',
+      description: res.stripe_synced
+        ? `${form.name} · precio sincronizado con Stripe`
+        : form.name,
+    });
     void load();
   };
 
@@ -174,10 +179,16 @@ export default function AdminPlans() {
                 id={`price-${plan.id}`}
                 type="number"
                 min={0}
-                step={1}
+                step={0.01}
                 value={form.price}
                 onChange={e => updateForm(plan.id, { price: e.target.value })}
               />
+              {isPaidPlan ? (
+                <p className="text-xs text-muted-foreground">
+                  Al guardar se crea/actualiza el precio en Stripe (los Prices son inmutables: se
+                  genera uno nuevo y se archiva el anterior).
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -197,7 +208,8 @@ export default function AdminPlans() {
                 <p className="text-sm font-medium">Oferta promocional</p>
                 <p className="text-xs text-muted-foreground">
                   Configura meses gratis para este plan. Se mostrará un badge en la página de
-                  precios y se aplicará un periodo de prueba en Stripe al suscribirse.
+                  precios y se aplicará un periodo de prueba en Stripe al suscribirse (igual
+                  que el precio del catálogo).
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -253,7 +265,8 @@ export default function AdminPlans() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Planes</h2>
           <p className="text-muted-foreground">
-            Edita precios, características y ofertas (meses gratis) de los planes de suscripción.
+            Edita precios, características y ofertas (meses gratis). Los planes de pago se
+            sincronizan automáticamente con Stripe al guardar.
           </p>
         </div>
 

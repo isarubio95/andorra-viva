@@ -346,7 +346,47 @@ export async function adminUpdatePlan(
     trial_months: number;
     promo_label: string | null;
   },
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; stripe_synced?: boolean }> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) return { ok: false, error: 'Sesión no válida' };
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (!supabaseUrl) return { ok: false, error: 'Supabase no configurado' };
+
+  const paidPlanIds = new Set(['basic', 'pro', 'premium']);
+  const shouldSyncStripe = paidPlanIds.has(planId) && payload.price > 0;
+
+  if (shouldSyncStripe) {
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/sync-plan-stripe`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planId,
+          name: payload.name,
+          price: payload.price,
+          features: payload.features,
+          is_popular: payload.is_popular,
+          trial_months: Math.max(0, Math.floor(payload.trial_months)),
+          promo_label: payload.promo_label,
+        }),
+      });
+      const body = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        stripe_synced?: boolean;
+      };
+      if (!res.ok) return { ok: false, error: body.error ?? 'Error al sincronizar con Stripe' };
+      return { ok: true, stripe_synced: !!body.stripe_synced };
+    } catch {
+      return { ok: false, error: 'No se pudo sincronizar el plan con Stripe' };
+    }
+  }
+
   const { error } = await supabase
     .from('plans')
     .update({
@@ -356,6 +396,7 @@ export async function adminUpdatePlan(
       is_popular: payload.is_popular,
       trial_months: Math.max(0, Math.floor(payload.trial_months)),
       promo_label: payload.promo_label?.trim() || null,
+      stripe_price_id: null,
     })
     .eq('id', planId);
 
@@ -365,7 +406,7 @@ export async function adminUpdatePlan(
 
 export async function createStripeCheckoutSession(
   planId: string,
-): Promise<{ url?: string; error?: string }> {
+): Promise<{ url?: string; updated?: boolean; planId?: string; error?: string }> {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) return { error: 'Sesión no válida' };
@@ -380,12 +421,17 @@ export async function createStripeCheckoutSession(
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ planId }),
+      body: JSON.stringify({ planId, returnOrigin: window.location.origin }),
     });
 
-    const body = (await res.json()) as { url?: string; error?: string };
+    const body = (await res.json()) as {
+      url?: string;
+      updated?: boolean;
+      planId?: string;
+      error?: string;
+    };
     if (!res.ok) return { error: body.error ?? 'Error al crear sesión de pago' };
-    return { url: body.url };
+    return { url: body.url, updated: body.updated, planId: body.planId };
   } catch {
     return { error: 'No se pudo conectar con Stripe. ¿Está desplegada la Edge Function?' };
   }
