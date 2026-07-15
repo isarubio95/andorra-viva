@@ -26,7 +26,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
@@ -237,13 +236,6 @@ export default function UserDashboard() {
   const businessToDelete = deleteBusinessId
     ? myBusinesses.find(b => b.id === deleteBusinessId) ?? null
     : null;
-
-  const initials = displayName
-    .split(' ')
-    .map((n: string) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || 'U';
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -538,21 +530,9 @@ export default function UserDashboard() {
       <main className="container mx-auto flex-1 px-4 py-8">
         <div className="mx-auto max-w-4xl space-y-8">
           {/* Profile Header */}
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 border-2 border-primary/20">
-              <AvatarFallback className="bg-primary text-lg text-primary-foreground">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
-                <Badge variant={isPro ? 'default' : 'secondary'}>
-                  {accountLabel}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
+            <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
 
           <Tabs value={mainTab} onValueChange={handleMainTabChange} className="space-y-6">
