@@ -24,6 +24,9 @@ export interface Business {
   gallery?: string[];
   phone?: string | null;
   website?: string | null;
+  instagram_url?: string | null;
+  facebook_url?: string | null;
+  x_url?: string | null;
   opening_hours?: BusinessOpeningHours | null;
   created_at?: string;
 }

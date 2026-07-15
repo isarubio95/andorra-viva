@@ -1,6 +1,6 @@
 export type ProfilePlanTier = 'free' | 'basic' | 'pro' | 'premium';
 
-export type ProfileFieldGroup = 'essential' | 'contact' | 'services' | 'gallery' | 'actions' | 'details';
+export type ProfileFieldGroup = 'essential' | 'contact' | 'services' | 'gallery' | 'actions' | 'details' | 'social';
 
 const GROUP_MIN_TIER: Record<ProfileFieldGroup, ProfilePlanTier> = {
   essential: 'free',
@@ -9,6 +9,7 @@ const GROUP_MIN_TIER: Record<ProfileFieldGroup, ProfilePlanTier> = {
   details: 'free',
   gallery: 'free',
   actions: 'basic',
+  social: 'pro',
 };
 
 export const PROFILE_SERVICE_LIMITS: Record<ProfilePlanTier, number> = {

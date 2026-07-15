@@ -10,6 +10,7 @@ import {
   Globe,
   MapPin,
   Save,
+  Share2,
   Sparkles,
   Store,
   X,
@@ -66,6 +67,7 @@ import {
   type BusinessOpeningHours,
 } from '@/lib/business-hours';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
+import { normalizeSocialUrls } from '@/lib/social-links';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -184,6 +186,9 @@ export default function EditBusinessProfile() {
   const [description, setDescription] = useState('');
   const [phone, setPhone] = useState('');
   const [website, setWebsite] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const [facebookUrl, setFacebookUrl] = useState('');
+  const [xUrl, setXUrl] = useState('');
   const [priceRange, setPriceRange] = useState('2');
   const [minAge, setMinAge] = useState('');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -238,6 +243,9 @@ export default function EditBusinessProfile() {
         setDescription(row.description);
         setPhone(row.phone ?? '');
         setWebsite(row.website ?? '');
+        setInstagramUrl(row.instagram_url ?? '');
+        setFacebookUrl(row.facebook_url ?? '');
+        setXUrl(row.x_url ?? '');
         setPriceRange(String(row.price_range || 2));
         setMinAge(row.min_age != null ? String(row.min_age) : '');
         setSelectedServices(row.services ?? []);
@@ -279,6 +287,15 @@ export default function EditBusinessProfile() {
       description,
       phone: isProfileGroupAvailable(planTier, 'contact') ? phone.trim() || null : null,
       website: isProfileGroupAvailable(planTier, 'contact') ? website.trim() || null : null,
+      instagram_url: isProfileGroupAvailable(planTier, 'social')
+        ? normalizeSocialUrls({ instagram_url: instagramUrl }).instagram_url
+        : null,
+      facebook_url: isProfileGroupAvailable(planTier, 'social')
+        ? normalizeSocialUrls({ facebook_url: facebookUrl }).facebook_url
+        : null,
+      x_url: isProfileGroupAvailable(planTier, 'social')
+        ? normalizeSocialUrls({ x_url: xUrl }).x_url
+        : null,
       services: selectedServices.slice(0, maxServices),
       price_range: isProfileGroupAvailable(planTier, 'details') ? parseInt(priceRange, 10) : business?.price_range ?? 2,
       min_age:
@@ -305,6 +322,9 @@ export default function EditBusinessProfile() {
     description,
     phone,
     website,
+    instagramUrl,
+    facebookUrl,
+    xUrl,
     selectedServices,
     priceRange,
     minAge,
@@ -349,6 +369,17 @@ export default function EditBusinessProfile() {
       if ((website.trim() || null) !== (business.website?.trim() || null)) return true;
     }
 
+    if (isProfileGroupAvailable(planTier, 'social')) {
+      const normalized = normalizeSocialUrls({
+        instagram_url: instagramUrl,
+        facebook_url: facebookUrl,
+        x_url: xUrl,
+      });
+      if ((normalized.instagram_url ?? null) !== (business.instagram_url?.trim() || null)) return true;
+      if ((normalized.facebook_url ?? null) !== (business.facebook_url?.trim() || null)) return true;
+      if ((normalized.x_url ?? null) !== (business.x_url?.trim() || null)) return true;
+    }
+
     if (!sameStringList(selectedServices, business.services ?? [])) return true;
 
     if (isProfileGroupAvailable(planTier, 'details')) {
@@ -369,6 +400,9 @@ export default function EditBusinessProfile() {
     addressValue,
     phone,
     website,
+    instagramUrl,
+    facebookUrl,
+    xUrl,
     selectedServices,
     priceRange,
     minAge,
@@ -490,6 +524,17 @@ export default function EditBusinessProfile() {
       description: description.trim(),
       phone: isProfileGroupAvailable(planTier, 'contact') ? phone.trim() || null : business.phone,
       website: isProfileGroupAvailable(planTier, 'contact') ? website.trim() || null : business.website,
+      ...(isProfileGroupAvailable(planTier, 'social')
+        ? normalizeSocialUrls({
+            instagram_url: instagramUrl,
+            facebook_url: facebookUrl,
+            x_url: xUrl,
+          })
+        : {
+            instagram_url: business.instagram_url,
+            facebook_url: business.facebook_url,
+            x_url: business.x_url,
+          }),
       services: selectedServices.slice(0, maxServices),
       price_range: isProfileGroupAvailable(planTier, 'details')
         ? parseInt(priceRange, 10)
@@ -601,6 +646,17 @@ export default function EditBusinessProfile() {
       if (isProfileGroupAvailable(planTier, 'contact')) {
         payload.phone = phone.trim() || null;
         payload.website = website.trim() || null;
+      }
+
+      if (isProfileGroupAvailable(planTier, 'social')) {
+        const social = normalizeSocialUrls({
+          instagram_url: instagramUrl,
+          facebook_url: facebookUrl,
+          x_url: xUrl,
+        });
+        payload.instagram_url = social.instagram_url;
+        payload.facebook_url = social.facebook_url;
+        payload.x_url = social.x_url;
       }
 
       payload.services = selectedServices.slice(0, maxServices);
@@ -895,6 +951,51 @@ export default function EditBusinessProfile() {
                             className="pl-10"
                           />
                         </div>
+                      </div>
+                    </div>
+                  </LockedSection>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Share2 className="h-5 w-5 text-primary" />
+                    Redes sociales
+                  </CardTitle>
+                  <CardDescription>
+                    Añade enlaces a Instagram, Facebook y X. Disponible con plan Pro o Premium.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <LockedSection group="social" tier={planTier}>
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-instagram">Instagram</Label>
+                        <Input
+                          id="edit-instagram"
+                          value={instagramUrl}
+                          onChange={e => setInstagramUrl(e.target.value)}
+                          placeholder="@tu_negocio o https://instagram.com/tu_negocio"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-facebook">Facebook</Label>
+                        <Input
+                          id="edit-facebook"
+                          value={facebookUrl}
+                          onChange={e => setFacebookUrl(e.target.value)}
+                          placeholder="https://facebook.com/tu_negocio"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-x">X</Label>
+                        <Input
+                          id="edit-x"
+                          value={xUrl}
+                          onChange={e => setXUrl(e.target.value)}
+                          placeholder="@tu_negocio o https://x.com/tu_negocio"
+                        />
                       </div>
                     </div>
                   </LockedSection>

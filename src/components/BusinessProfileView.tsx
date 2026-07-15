@@ -28,6 +28,7 @@ import { trackBusinessClick, type BusinessClickType } from '@/services/api';
 import { getMaxPhotosForTier, isProfileGroupAvailable, type ProfilePlanTier } from '@/lib/business-profile-plan';
 import { cn } from '@/lib/utils';
 import BusinessHoursDisplay from '@/components/BusinessHoursDisplay';
+import BusinessSocialLinks from '@/components/BusinessSocialLinks';
 
 interface BusinessProfileViewProps {
   business: Business;
@@ -117,6 +118,7 @@ export default function BusinessProfileView({
 
   const showPremiumBadge = previewPremium ?? business.is_premium;
   const showContact = groupVisible(planTier, 'contact');
+  const showSocial = groupVisible(planTier, 'social') || !planTier;
   const showServices = groupVisible(planTier, 'services');
   const showActions = groupVisible(planTier, 'actions') || !planTier;
   const photos = useMemo(() => {
@@ -335,6 +337,16 @@ export default function BusinessProfileView({
             </div>
           )}
           <BusinessHoursDisplay hours={business.opening_hours} />
+          {showSocial && (
+            <BusinessSocialLinks
+              className="mt-4 gap-3"
+              urls={{
+                instagram_url: business.instagram_url,
+                facebook_url: business.facebook_url,
+                x_url: business.x_url,
+              }}
+            />
+          )}
         </div>
 
         <div>
