@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Package,
   Scale,
+  Map,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -54,6 +55,12 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     href: '/admin/textos',
     icon: FileText,
     description: 'Contenido de la página',
+  },
+  {
+    title: 'Mapa',
+    href: '/admin/mapa',
+    icon: Map,
+    description: 'Estilo del mapa principal',
   },
   {
     title: 'Páginas legales',

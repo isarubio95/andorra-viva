@@ -10,6 +10,7 @@ import {
   CATEGORY_MARKER_DEFAULT_COLOR,
   getBusinessCategoryDivIcon,
 } from '@/lib/map-category-marker';
+import { getMapThemeConfig } from '@/constants/map-themes';
 import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 import { useSiteContent } from '@/contexts/SiteContentContext';
 import {
@@ -197,7 +198,8 @@ export default function HeroMap({
   mobileFullBleed = false,
   mobileControlsOffset = false,
 }: HeroMapProps) {
-  const { getSubcategoriesForCategory } = useSiteContent();
+  const { getSubcategoriesForCategory, mapTheme } = useSiteContent();
+  const mapThemeConfig = useMemo(() => getMapThemeConfig(mapTheme), [mapTheme]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedParish, setSelectedParish] = useState<AndorraParish | null>(null);
   const [subcategoriesOpen, setSubcategoriesOpen] = useState(false);
@@ -474,8 +476,9 @@ export default function HeroMap({
         <MapInstanceBridge onReady={handleMapReady} />
         <MapInteractionBridge onInteract={onMapInteraction} />
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          key={mapThemeConfig.id}
+          attribution={mapThemeConfig.attribution}
+          url={mapThemeConfig.url}
         />
         {userPosition && (
           <CircleMarker

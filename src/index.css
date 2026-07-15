@@ -334,21 +334,8 @@
   z-index: 0;
 }
 
-#mapa::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
-  background:
-    linear-gradient(to bottom, hsl(152 24% 90% / 0.20) 0%, transparent 14%),
-    linear-gradient(to top, hsl(155 22% 87% / 0.24) 0%, transparent 18%);
-}
-
-.dark #mapa::after {
-  background:
-    linear-gradient(to bottom, hsl(160 20% 8% / 0.28) 0%, transparent 14%),
-    linear-gradient(to top, hsl(160 20% 8% / 0.32) 0%, transparent 18%);
+#mapa .hero-map.leaflet-container {
+  box-shadow: 0 10px 32px rgb(0 0 0 / 0.14);
 }
 
 .leaflet-control-zoom {

@@ -5,6 +5,7 @@ import type { SubcategoryConfig } from '@/constants/businessSubcategories';
 import { DEFAULT_SUBCATEGORY_LABELS } from '@/constants/subcategory-display';
 import type { SiteTextKey } from '@/constants/site-content-defaults';
 import type { LegalPageDocument, LegalPageKey } from '@/constants/legal-pages-defaults';
+import { DEFAULT_MAP_THEME, resolveMapTheme, type MapThemeId } from '@/constants/map-themes';
 import type { Business } from '@/types/domain';
 import type { Plan, Review } from '@/types/domain';
 import { normalizeBusinessRow, normalizePlanRow } from '@/services/api';
@@ -93,6 +94,7 @@ export async function fetchSiteSettings(): Promise<{
   subcategoryLabels: Partial<Record<string, string>>;
   subcategoryIcons: Partial<Record<string, string>>;
   legalPages: Partial<Record<LegalPageKey, Partial<LegalPageDocument>>>;
+  mapTheme: MapThemeId;
 }> {
   const { data, error } = await supabase.from('site_settings').select('key, value');
   if (error) {
@@ -104,6 +106,7 @@ export async function fetchSiteSettings(): Promise<{
       subcategoryLabels: {},
       subcategoryIcons: {},
       legalPages: {},
+      mapTheme: DEFAULT_MAP_THEME,
     };
   }
 
@@ -113,6 +116,7 @@ export async function fetchSiteSettings(): Promise<{
   const subcategoryLabels: Partial<Record<string, string>> = {};
   const subcategoryIcons: Partial<Record<string, string>> = {};
   const legalPages: Partial<Record<LegalPageKey, Partial<LegalPageDocument>>> = {};
+  let mapTheme: MapThemeId = DEFAULT_MAP_THEME;
 
   for (const row of data ?? []) {
     if (row.key === 'texts' && row.value && typeof row.value === 'object') {
@@ -133,9 +137,12 @@ export async function fetchSiteSettings(): Promise<{
     if (row.key === 'legal_pages' && row.value && typeof row.value === 'object') {
       Object.assign(legalPages, row.value);
     }
+    if (row.key === 'map_theme') {
+      mapTheme = resolveMapTheme(row.value);
+    }
   }
 
-  return { texts, categoryLabels, subcategories, subcategoryLabels, subcategoryIcons, legalPages };
+  return { texts, categoryLabels, subcategories, subcategoryLabels, subcategoryIcons, legalPages, mapTheme };
 }
 
 export async function saveSiteTexts(
@@ -212,6 +219,18 @@ export async function saveSubcategoryConfig(
 
 /** Etiquetas por defecto exportadas para el admin. */
 export { DEFAULT_SUBCATEGORY_LABELS };
+
+export async function saveMapTheme(
+  themeId: MapThemeId,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from('site_settings').upsert({
+    key: 'map_theme',
+    value: themeId,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
 
 export async function saveLegalPages(
   pages: Record<LegalPageKey, LegalPageDocument>,

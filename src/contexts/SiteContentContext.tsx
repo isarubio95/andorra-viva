@@ -26,6 +26,7 @@ import {
   type LegalPageDocument,
   type LegalPageKey,
 } from '@/constants/legal-pages-defaults';
+import { DEFAULT_MAP_THEME, type MapThemeId } from '@/constants/map-themes';
 import {
   DEFAULT_SUBCATEGORY_LABELS,
   getSubcategoryDisplayLabel,
@@ -46,6 +47,7 @@ interface SiteContentContextValue {
   subcategoryLabels: Record<string, string>;
   subcategoryIcons: Record<string, string>;
   legalPages: Record<LegalPageKey, LegalPageDocument>;
+  mapTheme: MapThemeId;
   refresh: () => Promise<void>;
 }
 
@@ -64,6 +66,7 @@ const SiteContentContext = createContext<SiteContentContextValue>({
   subcategoryLabels: DEFAULT_SUBCATEGORY_LABELS,
   subcategoryIcons: {},
   legalPages: DEFAULT_LEGAL_PAGES,
+  mapTheme: DEFAULT_MAP_THEME,
   refresh: async () => {},
 });
 
@@ -83,6 +86,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
   const [subcategoryIcons, setSubcategoryIcons] = useState<Record<string, string>>({});
   const [legalPages, setLegalPages] =
     useState<Record<LegalPageKey, LegalPageDocument>>(DEFAULT_LEGAL_PAGES);
+  const [mapTheme, setMapTheme] = useState<MapThemeId>(DEFAULT_MAP_THEME);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,6 +97,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       subcategoryLabels: remoteSubcategoryLabels,
       subcategoryIcons: remoteSubcategoryIcons,
       legalPages: remoteLegal,
+      mapTheme: remoteMapTheme,
     } = await fetchSiteSettings();
     setTexts({ ...DEFAULT_SITE_TEXTS, ...remoteTexts });
     setCategoryLabels({ ...DEFAULT_CATEGORY_LABELS, ...remoteLabels });
@@ -107,6 +112,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       ),
     );
     setLegalPages(mergeLegalPages(remoteLegal));
+    setMapTheme(remoteMapTheme);
     setLoading(false);
   }, []);
 
@@ -163,6 +169,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       subcategoryLabels,
       subcategoryIcons,
       legalPages,
+      mapTheme,
       refresh: load,
     }),
     [
@@ -179,6 +186,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       subcategoryLabels,
       subcategoryIcons,
       legalPages,
+      mapTheme,
       load,
     ],
   );
