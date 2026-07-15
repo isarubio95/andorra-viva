@@ -155,13 +155,27 @@ serve(async req => {
       }
 
       let needsNewPrice = !stripePriceId;
+      let previousPriceId = stripePriceId;
+
       if (stripePriceId) {
-        const existing = await stripe.prices.retrieve(stripePriceId);
-        needsNewPrice =
-          !existing.active ||
-          existing.unit_amount !== amountCents ||
-          existing.currency !== 'eur' ||
-          existing.recurring?.interval !== 'month';
+        try {
+          const existing = await stripe.prices.retrieve(stripePriceId);
+          needsNewPrice =
+            !existing.active ||
+            existing.unit_amount !== amountCents ||
+            existing.currency !== 'eur' ||
+            existing.recurring?.interval !== 'month';
+        } catch (err) {
+          // Precio borrado o inaccesible en Stripe → recrear
+          const msg = err instanceof Error ? err.message : String(err);
+          if (/no such price/i.test(msg)) {
+            needsNewPrice = true;
+            previousPriceId = null;
+            stripePriceId = null;
+          } else {
+            throw err;
+          }
+        }
       }
 
       if (needsNewPrice) {
@@ -174,11 +188,11 @@ serve(async req => {
           nickname: `${planId}-${amountCents}`,
         });
 
-        if (stripePriceId && stripePriceId !== created.id) {
+        if (previousPriceId && previousPriceId !== created.id) {
           try {
-            await stripe.prices.update(stripePriceId, { active: false });
+            await stripe.prices.update(previousPriceId, { active: false });
           } catch {
-            // El precio anterior puede estar ya archivado
+            // El precio anterior puede estar ya archivado o borrado
           }
         }
 
