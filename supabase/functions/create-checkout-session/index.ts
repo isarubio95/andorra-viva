@@ -63,6 +63,17 @@ serve(async req => {
       });
     }
 
+    const { data: planRow } = await supabase
+      .from('plans')
+      .select('trial_months')
+      .eq('id', planId)
+      .maybeSingle();
+
+    const trialMonths =
+      typeof planRow?.trial_months === 'number' && planRow.trial_months > 0
+        ? Math.floor(planRow.trial_months)
+        : 0;
+
     const priceEnvKey = PLAN_PRICE_ENV[planId];
     const priceId = Deno.env.get(priceEnvKey);
     if (!priceId) {
@@ -94,6 +105,14 @@ serve(async req => {
         .eq('user_id', user.id);
     }
 
+    const subscriptionData: Stripe.Checkout.SessionCreateParams['subscription_data'] = {
+      metadata: { supabase_user_id: user.id, plan_id: planId },
+    };
+
+    if (trialMonths > 0) {
+      subscriptionData.trial_period_days = trialMonths * 30;
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
@@ -101,9 +120,7 @@ serve(async req => {
       success_url: `${siteUrl}/mi-cuenta?tab=plan&checkout=success`,
       cancel_url: `${siteUrl}/mi-cuenta?tab=plan&checkout=cancel`,
       metadata: { supabase_user_id: user.id, plan_id: planId },
-      subscription_data: {
-        metadata: { supabase_user_id: user.id, plan_id: planId },
-      },
+      subscription_data: subscriptionData,
     });
 
     return new Response(JSON.stringify({ url: session.url }), {

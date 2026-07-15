@@ -17,7 +17,14 @@ type PlanFormState = {
   price: string;
   featuresText: string;
   is_popular: boolean;
+  trial_months: string;
+  promo_label: string;
 };
+
+function defaultPromoLabel(months: number): string {
+  if (months <= 0) return '';
+  return months === 1 ? '1 mes gratis' : `${months} meses gratis`;
+}
 
 function toForm(plan: Plan): PlanFormState {
   return {
@@ -25,6 +32,8 @@ function toForm(plan: Plan): PlanFormState {
     price: String(plan.price),
     featuresText: (plan.features ?? []).join('\n'),
     is_popular: plan.is_popular,
+    trial_months: String(plan.trial_months ?? 0),
+    promo_label: plan.promo_label ?? '',
   };
 }
 
@@ -35,7 +44,9 @@ function isPlanDirty(plan: Plan, form: PlanFormState | undefined) {
     form.name !== original.name ||
     form.price !== original.price ||
     form.featuresText !== original.featuresText ||
-    form.is_popular !== original.is_popular
+    form.is_popular !== original.is_popular ||
+    form.trial_months !== original.trial_months ||
+    form.promo_label !== original.promo_label
   );
 }
 
@@ -59,7 +70,23 @@ export default function AdminPlans() {
   }, []);
 
   const updateForm = (planId: string, patch: Partial<PlanFormState>) => {
-    setForms(prev => ({ ...prev, [planId]: { ...prev[planId], ...patch } }));
+    setForms(prev => {
+      const current = prev[planId];
+      if (!current) return prev;
+      const next = { ...current, ...patch };
+
+      if ('trial_months' in patch && !('promo_label' in patch)) {
+        const months = Number(next.trial_months);
+        if (Number.isFinite(months) && months > 0 && !current.promo_label.trim()) {
+          next.promo_label = defaultPromoLabel(Math.floor(months));
+        }
+        if (Number.isFinite(months) && months <= 0) {
+          next.promo_label = '';
+        }
+      }
+
+      return { ...prev, [planId]: next };
+    });
   };
 
   const handleSave = async (planId: string) => {
@@ -72,10 +99,21 @@ export default function AdminPlans() {
       return;
     }
 
+    const trialMonths = Number(form.trial_months);
+    if (!Number.isFinite(trialMonths) || trialMonths < 0 || !Number.isInteger(trialMonths)) {
+      toast({ title: 'Meses gratis inválidos', variant: 'destructive' });
+      return;
+    }
+
     const features = form.featuresText
       .split('\n')
       .map(f => f.trim())
       .filter(Boolean);
+
+    const promoLabel =
+      trialMonths > 0
+        ? form.promo_label.trim() || defaultPromoLabel(trialMonths)
+        : null;
 
     setSavingId(planId);
     const res = await adminUpdatePlan(planId, {
@@ -83,6 +121,8 @@ export default function AdminPlans() {
       price,
       features,
       is_popular: form.is_popular,
+      trial_months: trialMonths,
+      promo_label: promoLabel,
     });
     setSavingId(null);
 
@@ -99,12 +139,20 @@ export default function AdminPlans() {
     const form = forms[plan.id];
     if (!form) return null;
 
+    const trialMonths = Number(form.trial_months) || 0;
+    const isPaidPlan = plan.price > 0 || Number(form.price) > 0;
+
     return (
       <Card key={plan.id}>
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-lg">{plan.id}</CardTitle>
-            {plan.is_popular ? <Badge>Popular</Badge> : null}
+            <div className="flex gap-2">
+              {trialMonths > 0 && isPaidPlan ? (
+                <Badge variant="secondary">{trialMonths} mes(es) gratis</Badge>
+              ) : null}
+              {plan.is_popular ? <Badge>Popular</Badge> : null}
+            </div>
           </div>
           <CardDescription>
             {plan.currency}/{plan.interval} — visible en signup y panel de cuenta
@@ -143,6 +191,42 @@ export default function AdminPlans() {
             />
           </div>
 
+          {isPaidPlan ? (
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+              <div>
+                <p className="text-sm font-medium">Oferta promocional</p>
+                <p className="text-xs text-muted-foreground">
+                  Configura meses gratis para este plan. Se mostrará un badge en la página de
+                  precios y se aplicará un periodo de prueba en Stripe al suscribirse.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor={`trial-${plan.id}`}>Meses gratis</Label>
+                  <Input
+                    id={`trial-${plan.id}`}
+                    type="number"
+                    min={0}
+                    max={24}
+                    step={1}
+                    value={form.trial_months}
+                    onChange={e => updateForm(plan.id, { trial_months: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`promo-${plan.id}`}>Texto del badge</Label>
+                  <Input
+                    id={`promo-${plan.id}`}
+                    value={form.promo_label}
+                    onChange={e => updateForm(plan.id, { promo_label: e.target.value })}
+                    placeholder={trialMonths > 0 ? defaultPromoLabel(trialMonths) : 'Sin oferta'}
+                    disabled={trialMonths <= 0}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex items-center gap-2">
             <Switch
               id={`popular-${plan.id}`}
@@ -169,7 +253,7 @@ export default function AdminPlans() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Planes</h2>
           <p className="text-muted-foreground">
-            Edita precios, nombres y características de los planes de suscripción.
+            Edita precios, características y ofertas (meses gratis) de los planes de suscripción.
           </p>
         </div>
 

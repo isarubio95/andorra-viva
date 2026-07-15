@@ -14,6 +14,7 @@ import {
 import { createStripeCheckoutSession } from '@/services/admin-api';
 import type { Business, Plan } from '@/types/domain';
 import BusinessCard from '@/components/BusinessCard';
+import BusinessMetricsPanel from '@/components/BusinessMetricsPanel';
 import PlanComparisonGrid from '@/components/PlanComparisonGrid';
 import NewsPublisherPanel from '@/components/NewsPublisherPanel';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,11 +30,14 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { CartesianGrid, Line, LineChart, XAxis } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { getPlanTheme, sortPlansByPrice, DASHBOARD_HIDDEN_PLAN_IDS } from '@/lib/plan-display';
+import {
+  DEFAULT_METRICS_PERIOD_ID,
+  getMetricsPeriodDays,
+  type MetricsPeriodId,
+} from '@/lib/metrics-period';
 import { buildPublicUrl } from '@/lib/site-url';
 import {
   isCurrentAccountDashboardTab,
@@ -110,6 +114,7 @@ export default function UserDashboard() {
   const [deletingBusiness, setDeletingBusiness] = useState(false);
   const [metrics, setMetrics] = useState<BusinessMetricRow[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsPeriodId, setMetricsPeriodId] = useState<MetricsPeriodId>(DEFAULT_METRICS_PERIOD_ID);
 
   const mainTab = useMemo(
     () => parseAccountDashboardTab(searchParams.get('tab')),
@@ -198,10 +203,18 @@ export default function UserDashboard() {
       return;
     }
     setMetricsLoading(true);
-    getMyBusinessMetrics(30)
+    getMyBusinessMetrics(getMetricsPeriodDays(metricsPeriodId))
       .then(setMetrics)
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Error desconocido';
+        toast({
+          title: 'No se pudieron cargar las métricas',
+          description: message,
+          variant: 'destructive',
+        });
+      })
       .finally(() => setMetricsLoading(false));
-  }, [user?.id, hasProAccess]);
+  }, [user?.id, hasProAccess, metricsPeriodId, toast]);
 
   const isPro = hasProAccess;
   const isProfessionalRole = role === 'professional';
@@ -350,7 +363,7 @@ export default function UserDashboard() {
       await refreshMyBusinesses();
       if (user?.id && hasProAccess) {
         setMetricsLoading(true);
-        getMyBusinessMetrics(30)
+        getMyBusinessMetrics(getMetricsPeriodDays(metricsPeriodId))
           .then(setMetrics)
           .finally(() => setMetricsLoading(false));
       }
@@ -790,90 +803,18 @@ export default function UserDashboard() {
                       <BarChart3 className="h-5 w-5" />
                       Métricas
                     </CardTitle>
-                    <CardDescription>Visitas, reseñas y evolución de los últimos 30 días por negocio</CardDescription>
+                    <CardDescription>
+                      Visitas, valoraciones y clics de contacto — elige el periodo que quieras analizar
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {metricsLoading ? (
-                      <div className="space-y-6">
-                        {Array.from({ length: 2 }).map((_, i) => (
-                          <div key={i} className="rounded-xl border p-4">
-                            <Skeleton className="h-5 w-48" />
-                            <div className="mt-3 grid gap-3 sm:grid-cols-4">
-                              {Array.from({ length: 4 }).map((__, j) => (
-                                <Skeleton key={j} className="h-16 rounded-lg" />
-                              ))}
-                            </div>
-                            <Skeleton className="mt-4 h-48 rounded-lg" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : metrics.length > 0 ? (
-                      <div className="space-y-6">
-                        {metrics.map(row => (
-                          <div key={row.business_id} className="rounded-xl border p-4">
-                            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                              <h3 className="font-semibold text-foreground">{row.business_name}</h3>
-                              <Badge variant="secondary">Ultimos 30 dias</Badge>
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-4">
-                              <div className="rounded-lg border border-border p-3 text-center">
-                                <p className="text-xl font-bold text-foreground">{row.visits_month}</p>
-                                <p className="text-xs text-muted-foreground">Visitas este mes</p>
-                              </div>
-                              <div className="rounded-lg border border-border p-3 text-center">
-                                <p className="text-xl font-bold text-foreground">{row.visits_total}</p>
-                                <p className="text-xs text-muted-foreground">Visitas totales</p>
-                              </div>
-                              <div className="rounded-lg border border-border p-3 text-center">
-                                <p className="text-xl font-bold text-foreground">{row.reviews_total}</p>
-                                <p className="text-xs text-muted-foreground">Reseñas totales</p>
-                              </div>
-                              <div className="rounded-lg border border-border p-3 text-center">
-                                <p className="text-xl font-bold text-foreground">{row.rating_avg.toFixed(1)}</p>
-                                <p className="text-xs text-muted-foreground">Valoracion media</p>
-                              </div>
-                            </div>
-                            <div className="mt-4">
-                              <ChartContainer
-                                config={{
-                                  visits: {
-                                    label: 'Visitas',
-                                    color: 'var(--primary)',
-                                  },
-                                }}
-                                className="h-56 w-full"
-                              >
-                                <LineChart data={row.daily_visits}>
-                                  <CartesianGrid vertical={false} />
-                                  <XAxis
-                                    dataKey="date"
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickMargin={8}
-                                    tickFormatter={(value) => String(value).slice(5)}
-                                  />
-                                  <ChartTooltip
-                                    cursor={false}
-                                    content={<ChartTooltipContent indicator="line" />}
-                                  />
-                                  <Line
-                                    dataKey="visits"
-                                    type="monotone"
-                                    stroke="var(--color-visits)"
-                                    strokeWidth={2}
-                                    dot={false}
-                                  />
-                                </LineChart>
-                              </ChartContainer>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-center text-sm text-muted-foreground">
-                        Las metricas apareceran cuando tengas negocios con visitas.
-                      </p>
-                    )}
+                    <BusinessMetricsPanel
+                      metrics={metrics}
+                      loading={metricsLoading}
+                      periodId={metricsPeriodId}
+                      onPeriodChange={setMetricsPeriodId}
+                      hasBusinesses={myBusinesses.length > 0}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>

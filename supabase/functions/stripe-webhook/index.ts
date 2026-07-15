@@ -71,11 +71,18 @@ serve(async req => {
         const planId = session.metadata?.plan_id ?? 'pro';
 
         if (userId && session.subscription) {
+          let subscriptionStatus = 'active';
+          if (typeof session.subscription === 'string') {
+            const stripeSubscription = await stripe.subscriptions.retrieve(session.subscription);
+            subscriptionStatus =
+              stripeSubscription.status === 'trialing' ? 'trialing' : 'active';
+          }
+
           await supabase
             .from('subscriptions')
             .update({
               plan_id: planId,
-              status: 'active',
+              status: subscriptionStatus,
               stripe_customer_id:
                 typeof session.customer === 'string' ? session.customer : null,
               stripe_subscription_id:
@@ -139,6 +146,51 @@ serve(async req => {
           amountCents: invoice.amount_paid,
           currency: invoice.currency,
           status: invoice.status,
+        });
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId =
+          typeof subscription.customer === 'string' ? subscription.customer : null;
+
+        const { data: subRow } = customerId
+          ? await supabase
+              .from('subscriptions')
+              .select('user_id')
+              .eq('stripe_customer_id', customerId)
+              .maybeSingle()
+          : { data: null };
+
+        if (subRow?.user_id) {
+          const status =
+            subscription.status === 'trialing'
+              ? 'trialing'
+              : subscription.status === 'active'
+                ? 'active'
+                : subscription.status === 'past_due'
+                  ? 'past_due'
+                  : subscription.status === 'canceled'
+                    ? 'canceled'
+                    : 'active';
+
+          await supabase
+            .from('subscriptions')
+            .update({
+              status,
+              stripe_subscription_id: subscription.id,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', subRow.user_id);
+        }
+
+        await recordEvent({
+          userId: subRow?.user_id,
+          customerId,
+          subscriptionId: subscription.id,
+          eventType: event.type,
+          status: subscription.status,
         });
         break;
       }

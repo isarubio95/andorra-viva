@@ -9,14 +9,35 @@ export interface TopVisitedBusiness extends Business {
   visits_month: number;
 }
 
+export type BusinessClickType = 'whatsapp' | 'phone' | 'directions' | 'website';
+
+export interface ClickTypeMetric {
+  click_type: BusinessClickType;
+  count: number;
+  count_total: number;
+}
+
+export interface StarDistribution {
+  stars: number;
+  count: number;
+}
+
 export interface BusinessMetricRow {
   business_id: string;
   business_name: string;
-  visits_month: number;
+  visits_period: number;
   visits_total: number;
   reviews_total: number;
+  reviews_period: number;
   rating_avg: number;
+  rating_avg_period: number;
+  rating_distribution: StarDistribution[];
   daily_visits: { date: string; visits: number }[];
+  daily_reviews: { date: string; reviews: number }[];
+  clicks_period: number;
+  clicks_total: number;
+  clicks_by_type: ClickTypeMetric[];
+  daily_clicks: { date: string; clicks: number }[];
 }
 
 /** Asegura campos coherentes con la app (p. ej. `is_premium`, arrays). */
@@ -48,6 +69,9 @@ export function normalizePlanRow(row: unknown): Plan {
   const r = row as Record<string, unknown>;
   const features = Array.isArray(r.features) ? (r.features as string[]) : [];
   const price = typeof r.price === 'number' ? r.price : Number(r.price ?? 0);
+  const trialMonths =
+    typeof r.trial_months === 'number' ? r.trial_months : Number(r.trial_months ?? 0);
+
   return {
     id: String(r.id ?? ''),
     name: String(r.name ?? ''),
@@ -56,6 +80,10 @@ export function normalizePlanRow(row: unknown): Plan {
     interval: String(r.interval ?? 'mes'),
     features,
     is_popular: Boolean(r.is_popular),
+    trial_months: Number.isFinite(trialMonths) && trialMonths > 0 ? Math.floor(trialMonths) : 0,
+    promo_label: r.promo_label != null && String(r.promo_label).trim() !== ''
+      ? String(r.promo_label).trim()
+      : null,
   };
 }
 
@@ -262,6 +290,24 @@ export async function trackBusinessVisit(businessId: string, visitorKey: string)
   }
 }
 
+export async function trackBusinessClick(
+  businessId: string,
+  clickType: BusinessClickType,
+  visitorKey?: string,
+): Promise<void> {
+  if (!businessId) return;
+
+  const { error } = await supabase.rpc('track_business_click', {
+    p_business_id: businessId,
+    p_click_type: clickType,
+    p_visitor_key: visitorKey && visitorKey.length >= 8 ? visitorKey : null,
+  });
+
+  if (error) {
+    console.error('Error tracking business click:', error);
+  }
+}
+
 /** Tras login: une visitas anónimas (localStorage) a la cuenta y limpia la clave. */
 export async function mergeAnonymousVisitsForUser(userId: string): Promise<void> {
   const anonKey = getStoredVisitorKey();
@@ -320,31 +366,84 @@ export async function getMyBusinessMetrics(days = 30): Promise<BusinessMetricRow
   const { data, error } = await supabase.rpc('get_my_business_metrics', { _days: days });
   if (error) {
     console.error('Error fetching my business metrics:', error);
-    return [];
+    throw new Error(error.message);
   }
 
   type RpcRow = {
     business_id: string;
     business_name: string;
-    visits_month: unknown;
+    visits_period?: unknown;
+    visits_month?: unknown;
     visits_total: unknown;
     reviews_total: unknown;
+    reviews_period?: unknown;
+    reviews_month?: unknown;
     rating_avg: unknown;
+    rating_avg_period?: unknown;
+    rating_distribution: unknown;
     daily_visits: unknown;
+    daily_reviews: unknown;
+    clicks_period?: unknown;
+    clicks_month?: unknown;
+    clicks_total: unknown;
+    clicks_by_type: unknown;
+    daily_clicks: unknown;
   };
-  type DailyPoint = { date?: unknown; visits?: unknown };
+  type DailyVisitsPoint = { date?: unknown; visits?: unknown };
+  type DailyReviewsPoint = { date?: unknown; reviews?: unknown };
+  type DailyClicksPoint = { date?: unknown; clicks?: unknown };
+  type StarPoint = { stars?: unknown; count?: unknown };
+  type ClickTypePoint = {
+    click_type?: unknown;
+    count?: unknown;
+    count_total?: unknown;
+    count_month?: unknown;
+  };
+
+  const CLICK_TYPES: BusinessClickType[] = ['whatsapp', 'phone', 'directions', 'website'];
 
   return ((data ?? []) as RpcRow[]).map(row => ({
     business_id: row.business_id,
     business_name: row.business_name,
-    visits_month: Number(row.visits_month ?? 0),
+    visits_period: Number(row.visits_period ?? row.visits_month ?? 0),
     visits_total: Number(row.visits_total ?? 0),
     reviews_total: Number(row.reviews_total ?? 0),
+    reviews_period: Number(row.reviews_period ?? row.reviews_month ?? 0),
     rating_avg: Number(row.rating_avg ?? 0),
+    rating_avg_period: Number(row.rating_avg_period ?? 0),
+    rating_distribution: Array.isArray(row.rating_distribution)
+      ? (row.rating_distribution as StarPoint[]).map(p => ({
+          stars: Number(p.stars ?? 0),
+          count: Number(p.count ?? 0),
+        }))
+      : [],
     daily_visits: Array.isArray(row.daily_visits)
-      ? (row.daily_visits as DailyPoint[]).map(p => ({
+      ? (row.daily_visits as DailyVisitsPoint[]).map(p => ({
           date: String(p.date ?? ''),
           visits: Number(p.visits ?? 0),
+        }))
+      : [],
+    daily_reviews: Array.isArray(row.daily_reviews)
+      ? (row.daily_reviews as DailyReviewsPoint[]).map(p => ({
+          date: String(p.date ?? ''),
+          reviews: Number(p.reviews ?? 0),
+        }))
+      : [],
+    clicks_period: Number(row.clicks_period ?? row.clicks_month ?? 0),
+    clicks_total: Number(row.clicks_total ?? 0),
+    clicks_by_type: Array.isArray(row.clicks_by_type)
+      ? (row.clicks_by_type as ClickTypePoint[])
+          .filter(p => CLICK_TYPES.includes(String(p.click_type) as BusinessClickType))
+          .map(p => ({
+            click_type: String(p.click_type) as BusinessClickType,
+            count: Number(p.count ?? 0),
+            count_total: Number(p.count_total ?? p.count ?? 0),
+          }))
+      : [],
+    daily_clicks: Array.isArray(row.daily_clicks)
+      ? (row.daily_clicks as DailyClicksPoint[]).map(p => ({
+          date: String(p.date ?? ''),
+          clicks: Number(p.clicks ?? 0),
         }))
       : [],
   }));

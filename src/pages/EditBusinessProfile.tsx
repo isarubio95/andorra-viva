@@ -31,7 +31,7 @@ import { getBusinessById, updateMyBusiness } from '@/services/api';
 import type { Business } from '@/types/domain';
 import { isOwnBusiness } from '@/lib/business-access';
 import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
-import { getSubcategoriesForCategory } from '@/constants/businessSubcategories';
+import { useSiteContent } from '@/contexts/SiteContentContext';
 import BusinessServicesPicker from '@/components/BusinessServicesPicker';
 import BusinessHoursEditor from '@/components/BusinessHoursEditor';
 import BusinessAddressPicker, { type BusinessAddressValue } from '@/components/BusinessAddressPicker';
@@ -161,6 +161,7 @@ export default function EditBusinessProfile() {
   const { businessId } = useParams<{ businessId: string }>();
   const navigate = useNavigate();
   const { user, hasProAccess, planId, role, subscriptionStatus, loading: authLoading } = useAuth();
+  const { getSubcategoriesForCategory } = useSiteContent();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 

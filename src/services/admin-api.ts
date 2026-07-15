@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import type { UserRole } from '@/contexts/AuthContext';
 import type { BusinessCategory } from '@/constants/businessCategories';
+import type { SubcategoryConfig } from '@/constants/businessSubcategories';
+import { DEFAULT_SUBCATEGORY_LABELS } from '@/constants/subcategory-display';
 import type { SiteTextKey } from '@/constants/site-content-defaults';
 import type { LegalPageDocument, LegalPageKey } from '@/constants/legal-pages-defaults';
 import type { Business } from '@/types/domain';
@@ -87,16 +89,29 @@ export async function adminUpdateSubscription(
 export async function fetchSiteSettings(): Promise<{
   texts: Partial<Record<SiteTextKey, string>>;
   categoryLabels: Partial<Record<BusinessCategory, string>>;
+  subcategories: Partial<SubcategoryConfig>;
+  subcategoryLabels: Partial<Record<string, string>>;
+  subcategoryIcons: Partial<Record<string, string>>;
   legalPages: Partial<Record<LegalPageKey, Partial<LegalPageDocument>>>;
 }> {
   const { data, error } = await supabase.from('site_settings').select('key, value');
   if (error) {
     console.error('[admin] site settings:', error.message);
-    return { texts: {}, categoryLabels: {}, legalPages: {} };
+    return {
+      texts: {},
+      categoryLabels: {},
+      subcategories: {},
+      subcategoryLabels: {},
+      subcategoryIcons: {},
+      legalPages: {},
+    };
   }
 
   const texts: Partial<Record<SiteTextKey, string>> = {};
   const categoryLabels: Partial<Record<BusinessCategory, string>> = {};
+  const subcategories: Partial<SubcategoryConfig> = {};
+  const subcategoryLabels: Partial<Record<string, string>> = {};
+  const subcategoryIcons: Partial<Record<string, string>> = {};
   const legalPages: Partial<Record<LegalPageKey, Partial<LegalPageDocument>>> = {};
 
   for (const row of data ?? []) {
@@ -106,12 +121,21 @@ export async function fetchSiteSettings(): Promise<{
     if (row.key === 'category_labels' && row.value && typeof row.value === 'object') {
       Object.assign(categoryLabels, row.value);
     }
+    if (row.key === 'subcategories' && row.value && typeof row.value === 'object') {
+      Object.assign(subcategories, row.value);
+    }
+    if (row.key === 'subcategory_labels' && row.value && typeof row.value === 'object') {
+      Object.assign(subcategoryLabels, row.value);
+    }
+    if (row.key === 'subcategory_icons' && row.value && typeof row.value === 'object') {
+      Object.assign(subcategoryIcons, row.value);
+    }
     if (row.key === 'legal_pages' && row.value && typeof row.value === 'object') {
       Object.assign(legalPages, row.value);
     }
   }
 
-  return { texts, categoryLabels, legalPages };
+  return { texts, categoryLabels, subcategories, subcategoryLabels, subcategoryIcons, legalPages };
 }
 
 export async function saveSiteTexts(
@@ -137,6 +161,57 @@ export async function saveCategoryLabels(
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
+
+export async function saveSubcategories(
+  subcategories: SubcategoryConfig,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from('site_settings').upsert({
+    key: 'subcategories',
+    value: subcategories,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function saveSubcategoryLabels(
+  labels: Record<string, string>,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from('site_settings').upsert({
+    key: 'subcategory_labels',
+    value: labels,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function saveSubcategoryIcons(
+  icons: Record<string, string>,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from('site_settings').upsert({
+    key: 'subcategory_icons',
+    value: icons,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function saveSubcategoryConfig(
+  subcategories: SubcategoryConfig,
+  labels: Record<string, string>,
+  icons: Record<string, string>,
+): Promise<{ ok: boolean; error?: string }> {
+  const subRes = await saveSubcategories(subcategories);
+  if (!subRes.ok) return subRes;
+  const labelRes = await saveSubcategoryLabels(labels);
+  if (!labelRes.ok) return labelRes;
+  return saveSubcategoryIcons(icons);
+}
+
+/** Etiquetas por defecto exportadas para el admin. */
+export { DEFAULT_SUBCATEGORY_LABELS };
 
 export async function saveLegalPages(
   pages: Record<LegalPageKey, LegalPageDocument>,
@@ -249,6 +324,8 @@ export async function adminUpdatePlan(
     price: number;
     features: string[];
     is_popular: boolean;
+    trial_months: number;
+    promo_label: string | null;
   },
 ): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase
@@ -258,6 +335,8 @@ export async function adminUpdatePlan(
       price: payload.price,
       features: payload.features,
       is_popular: payload.is_popular,
+      trial_months: Math.max(0, Math.floor(payload.trial_months)),
+      promo_label: payload.promo_label?.trim() || null,
     })
     .eq('id', planId);
 

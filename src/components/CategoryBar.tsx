@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Carousel,
@@ -6,111 +6,20 @@ import {
   CarouselItem,
   type CarouselApi,
 } from '@/components/ui/carousel';
-import type { LucideIcon } from 'lucide-react';
-import {
-  Bike,
-  Building2,
-  CalendarDays,
-  Clapperboard,
-  Coffee,
-  CookingPot,
-  Compass,
-  Dices,
-  Dumbbell,
-  Flower2,
-  Gem,
-  HandHeart,
-  Hotel,
-  Martini,
-  Mountain,
-  Shirt,
-  Snowflake,
-  Sparkles,
-  SprayCan,
-  Store,
-  Tent,
-  UtensilsCrossed,
-  Wine,
-} from 'lucide-react';
-import type { BusinessCategory } from '@/constants/businessCategories';
+import { BUSINESS_CATEGORIES, type BusinessCategory } from '@/constants/businessCategories';
 import { CATEGORY_IMAGE_RESPONSIVE_SIZES, CATEGORY_THEMES, type CategoryTheme } from '@/constants/categoryDisplay';
+import SubcategoryIcon from '@/components/SubcategoryIcon';
 import { useSiteContent } from '@/contexts/SiteContentContext';
 
 type SubcategoryLink = {
-  /** Debe coincidir EXACTO con una subcategoría canónica (`businessSubcategories.ts`). */
   subcategory: string;
-  /** Etiqueta corta para la tarjeta de la home. */
   displayLabel: string;
-  Icon: LucideIcon;
 };
 
 type CategoryCardConfig = CategoryTheme & {
   category: BusinessCategory;
   subcategories: SubcategoryLink[];
 };
-
-const CATEGORY_CARDS: CategoryCardConfig[] = [
-  {
-    category: 'Gastronomía',
-    ...CATEGORY_THEMES['Gastronomía'],
-    subcategories: [
-      { subcategory: 'Restaurante', displayLabel: 'Restaurantes', Icon: UtensilsCrossed },
-      { subcategory: 'Cafetería y brunch', displayLabel: 'Cafeterías', Icon: Coffee },
-      { subcategory: 'Bar y copas', displayLabel: 'Bar & copas', Icon: Wine },
-      { subcategory: 'Borda y cocina de montaña', displayLabel: 'Cocina local', Icon: CookingPot },
-    ],
-  },
-  {
-    category: 'Alojamiento',
-    ...CATEGORY_THEMES.Alojamiento,
-    subcategories: [
-      { subcategory: 'Hotel', displayLabel: 'Hoteles', Icon: Hotel },
-      { subcategory: 'Apartamento turístico', displayLabel: 'Apartamentos', Icon: Building2 },
-      { subcategory: 'Alojamiento de montaña', displayLabel: 'De montaña', Icon: Mountain },
-      { subcategory: 'Camping y glamping', displayLabel: 'Camping', Icon: Tent },
-    ],
-  },
-  {
-    category: 'Ocio y entretenimiento',
-    ...CATEGORY_THEMES['Ocio y entretenimiento'],
-    subcategories: [
-      { subcategory: 'Eventos y salas', displayLabel: 'Eventos', Icon: CalendarDays },
-      { subcategory: 'Cine y espectáculos', displayLabel: 'Espectáculos', Icon: Clapperboard },
-      { subcategory: 'Vida nocturna', displayLabel: 'Vida nocturna', Icon: Martini },
-      { subcategory: 'Casino y apuestas', displayLabel: 'Casino', Icon: Dices },
-    ],
-  },
-  {
-    category: 'Turismo y experiencias',
-    ...CATEGORY_THEMES['Turismo y experiencias'],
-    subcategories: [
-      { subcategory: 'Actividades al aire libre', displayLabel: 'Actividades', Icon: Bike },
-      { subcategory: 'Estación de esquí y nieve', displayLabel: 'Esquí & nieve', Icon: Snowflake },
-      { subcategory: 'Parque de aventura y naturaleza', displayLabel: 'Aventura', Icon: Mountain },
-      { subcategory: 'Tours y guías', displayLabel: 'Tours', Icon: Compass },
-    ],
-  },
-  {
-    category: 'Compras',
-    ...CATEGORY_THEMES.Compras,
-    subcategories: [
-      { subcategory: 'Centro comercial', displayLabel: 'Tiendas', Icon: Store },
-      { subcategory: 'Moda y complementos', displayLabel: 'Moda', Icon: Shirt },
-      { subcategory: 'Joyería, relojería y lujo', displayLabel: 'Joyerías', Icon: Gem },
-      { subcategory: 'Perfumería y cosmética', displayLabel: 'Perfumería', Icon: SprayCan },
-    ],
-  },
-  {
-    category: 'Bienestar',
-    ...CATEGORY_THEMES.Bienestar,
-    subcategories: [
-      { subcategory: 'Spa termal', displayLabel: 'Spas', Icon: Flower2 },
-      { subcategory: 'Masajes y terapias', displayLabel: 'Masajes', Icon: HandHeart },
-      { subcategory: 'Belleza y estética', displayLabel: 'Belleza', Icon: Sparkles },
-      { subcategory: 'Gimnasio y fitness', displayLabel: 'Fitness', Icon: Dumbbell },
-    ],
-  },
-];
 
 function CategoryCard({
   card,
@@ -123,6 +32,13 @@ function CategoryCard({
   onCategory: (category: string) => void;
   onSubcategory: (category: string, subcategory: string) => void;
 }) {
+  const gridCols =
+    card.subcategories.length <= 3
+      ? 'grid-cols-3'
+      : card.subcategories.length === 4
+        ? 'grid-cols-4'
+        : 'grid-cols-2 sm:grid-cols-3';
+
   return (
     <div className="group flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow duration-300 hover:shadow-lg">
       <button
@@ -168,24 +84,25 @@ function CategoryCard({
         </div>
       </button>
 
-      <div className="grid grid-cols-4 gap-1 px-2 py-4">
-        {card.subcategories.map(sub => {
-          const SubIcon = sub.Icon;
-          return (
-            <button
-              key={sub.subcategory}
-              type="button"
-              onClick={() => onSubcategory(card.category, sub.subcategory)}
-              aria-label={sub.displayLabel}
-              className="flex cursor-pointer flex-col items-center gap-1.5 rounded-lg px-1 py-2 text-center transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <SubIcon className="h-5 w-5 shrink-0" style={{ color: card.accent }} strokeWidth={2} aria-hidden />
-              <span className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground">
-                {sub.displayLabel}
-              </span>
-            </button>
-          );
-        })}
+      <div className={`grid ${gridCols} gap-1 px-2 py-4`}>
+        {card.subcategories.map(sub => (
+          <button
+            key={sub.subcategory}
+            type="button"
+            onClick={() => onSubcategory(card.category, sub.subcategory)}
+            aria-label={sub.displayLabel}
+            className="flex cursor-pointer flex-col items-center gap-1.5 rounded-lg px-1 py-2 text-center transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <SubcategoryIcon
+              subcategory={sub.subcategory}
+              className="h-5 w-5 shrink-0"
+              color={card.accent}
+            />
+            <span className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground">
+              {sub.displayLabel}
+            </span>
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -235,7 +152,7 @@ function CategoryCarousel({
             <CarouselItem key={card.category} className="pl-3 basis-[85%]">
               <CategoryCard
                 card={card}
-                displayLabel={getLabel(card.category as BusinessCategory)}
+                displayLabel={getLabel(card.category)}
                 onCategory={onCategory}
                 onSubcategory={onSubcategory}
               />
@@ -264,7 +181,20 @@ function CategoryCarousel({
 
 export default function CategoryBar() {
   const navigate = useNavigate();
-  const { getCategoryLabel } = useSiteContent();
+  const { getCategoryLabel, getSubcategoryLabel, getSubcategoriesForCategory } = useSiteContent();
+
+  const categoryCards = useMemo<CategoryCardConfig[]>(
+    () =>
+      BUSINESS_CATEGORIES.map(category => ({
+        category,
+        ...CATEGORY_THEMES[category],
+        subcategories: getSubcategoriesForCategory(category).map(subcategory => ({
+          subcategory,
+          displayLabel: getSubcategoryLabel(subcategory),
+        })),
+      })),
+    [getSubcategoriesForCategory, getSubcategoryLabel],
+  );
 
   const goToCategory = useCallback(
     (grupo: string) => {
@@ -288,7 +218,7 @@ export default function CategoryBar() {
 
       <div className="sm:hidden">
         <CategoryCarousel
-          cards={CATEGORY_CARDS}
+          cards={categoryCards}
           getLabel={getCategoryLabel}
           onCategory={goToCategory}
           onSubcategory={goToSubcategory}
@@ -296,11 +226,11 @@ export default function CategoryBar() {
       </div>
 
       <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
-        {CATEGORY_CARDS.map(card => (
+        {categoryCards.map(card => (
           <CategoryCard
             key={card.category}
             card={card}
-            displayLabel={getCategoryLabel(card.category as BusinessCategory)}
+            displayLabel={getCategoryLabel(card.category)}
             onCategory={goToCategory}
             onSubcategory={goToSubcategory}
           />

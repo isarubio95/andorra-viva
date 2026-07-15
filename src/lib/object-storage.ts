@@ -11,8 +11,14 @@ export function getR2PublicUrl(key: string): string {
   return `${r2PublicUrl}/${normalizedKey}`;
 }
 
+const EXTRA_MIME_TYPES = ['image/svg+xml'];
+
 function resolveContentType(file: File): string {
-  if (file.type && BUSINESS_IMAGE_MIME_TYPES.includes(file.type as (typeof BUSINESS_IMAGE_MIME_TYPES)[number])) {
+  if (
+    file.type &&
+    (BUSINESS_IMAGE_MIME_TYPES.includes(file.type as (typeof BUSINESS_IMAGE_MIME_TYPES)[number]) ||
+      EXTRA_MIME_TYPES.includes(file.type))
+  ) {
     return file.type;
   }
   const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '';
@@ -23,6 +29,8 @@ function resolveContentType(file: File): string {
       return 'image/webp';
     case '.gif':
       return 'image/gif';
+    case '.svg':
+      return 'image/svg+xml';
     default:
       return 'image/jpeg';
   }
@@ -32,6 +40,14 @@ function buildObjectKey(userId: string, file: File, namePrefix = ''): string {
   const ext = file.name.split('.').pop() || 'jpg';
   const randomPart = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return `${userId}/${namePrefix}${randomPart}.${ext}`;
+}
+
+export async function uploadStorageFile(
+  userId: string,
+  file: File,
+  options?: { namePrefix?: string },
+): Promise<{ url?: string; error?: string }> {
+  return uploadBusinessImage(userId, file, options);
 }
 
 export async function uploadBusinessImage(

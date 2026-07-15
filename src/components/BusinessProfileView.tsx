@@ -23,6 +23,8 @@ import { useCarouselAutoplay } from '@/hooks/use-carousel-autoplay';
 import type { Business, Review } from '@/types/domain';
 import { BUSINESS_IMAGE_FALLBACK, resolveBusinessImageUrl } from '@/lib/business-image';
 import { buildWhatsAppUrl } from '@/lib/whatsapp';
+import { getOrCreateVisitorKey } from '@/lib/visitor-key';
+import { trackBusinessClick, type BusinessClickType } from '@/services/api';
 import { getMaxPhotosForTier, isProfileGroupAvailable, type ProfilePlanTier } from '@/lib/business-profile-plan';
 import { cn } from '@/lib/utils';
 import BusinessHoursDisplay from '@/components/BusinessHoursDisplay';
@@ -67,6 +69,18 @@ function buildPhotoList(business: Business): string[] {
 /** Evita que el drawer (Vaul) interprete el deslizamiento horizontal como cierre. */
 function stopDrawerPointerBubble(event: React.PointerEvent | React.TouchEvent) {
   event.stopPropagation();
+}
+
+function normalizeWebsiteUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function trackProfileClick(businessId: string, clickType: BusinessClickType, enabled: boolean) {
+  if (!enabled) return;
+  void trackBusinessClick(businessId, clickType, getOrCreateVisitorKey());
 }
 
 function CarouselSlideImage({ url, alt }: { url: string; alt: string }) {
@@ -140,6 +154,9 @@ export default function BusinessProfileView({
         )
       : null;
   const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`;
+  const websiteUrl =
+    showContact && business.website ? normalizeWebsiteUrl(business.website) : null;
+  const trackClicks = !planTier;
 
   return (
     <div
@@ -236,13 +253,22 @@ export default function BusinessProfileView({
             {whatsAppUrl ? (
               <>
                 <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                  <a href={whatsAppUrl} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={whatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackProfileClick(business.id, 'whatsapp', trackClicks)}
+                  >
                     <MessageCircle className="mr-2 h-4 w-4" /> Reservar por WhatsApp
                   </a>
                 </Button>
                 {showContact && business.phone && (
                   <Button variant="outline" size="icon" asChild>
-                    <a href={`tel:${business.phone}`} aria-label="Llamar">
+                    <a
+                      href={`tel:${business.phone}`}
+                      aria-label="Llamar"
+                      onClick={() => trackProfileClick(business.id, 'phone', trackClicks)}
+                    >
                       <Phone className="h-4 w-4" />
                     </a>
                   </Button>
@@ -253,6 +279,7 @@ export default function BusinessProfileView({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Cómo llegar"
+                    onClick={() => trackProfileClick(business.id, 'directions', trackClicks)}
                   >
                     <Navigation className="h-4 w-4" />
                   </a>
@@ -265,13 +292,18 @@ export default function BusinessProfileView({
                     href={directionsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackProfileClick(business.id, 'directions', trackClicks)}
                   >
                     <Navigation className="mr-2 h-4 w-4" /> Cómo llegar
                   </a>
                 </Button>
                 {showContact && business.phone && (
                   <Button variant="outline" size="icon" asChild>
-                    <a href={`tel:${business.phone}`} aria-label="Llamar">
+                    <a
+                      href={`tel:${business.phone}`}
+                      aria-label="Llamar"
+                      onClick={() => trackProfileClick(business.id, 'phone', trackClicks)}
+                    >
                       <Phone className="h-4 w-4" />
                     </a>
                   </Button>
@@ -288,10 +320,18 @@ export default function BusinessProfileView({
               ? business.address
               : `Ubicación en ${business.location || '—'}, Andorra`}
           </div>
-          {showContact && business.website && (
+          {websiteUrl && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Globe className="h-4 w-4 shrink-0" />
-              <span className="truncate">{business.website}</span>
+              <a
+                href={websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate text-primary hover:underline"
+                onClick={() => trackProfileClick(business.id, 'website', trackClicks)}
+              >
+                {business.website}
+              </a>
             </div>
           )}
           <BusinessHoursDisplay hours={business.opening_hours} />

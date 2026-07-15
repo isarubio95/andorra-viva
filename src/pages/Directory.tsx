@@ -29,7 +29,6 @@ import { SlidersHorizontal, X } from 'lucide-react';
 import { CATEGORY_GROUP_MAP } from '@/constants/categoryGroups';
 import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 import { categoryHeroBackground, getCategoryTheme } from '@/constants/categoryDisplay';
-import { getAvailableSubcategories } from '@/constants/businessSubcategories';
 import { useSiteContent } from '@/contexts/SiteContentContext';
 
 const PRICE_LABELS: Record<number, string> = {
@@ -119,7 +118,7 @@ function PremiumBusinessesCarousel({
 }
 
 export default function Directory() {
-  const { getCategoryLabel } = useSiteContent();
+  const { getCategoryLabel, getAvailableSubcategories } = useSiteContent();
   const [searchParams, setSearchParams] = useSearchParams();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,7 +133,7 @@ export default function Directory() {
 
   const availableSubcategories = useMemo(
     () => getAvailableSubcategories(selectedCategories),
-    [selectedCategories],
+    [getAvailableSubcategories, selectedCategories],
   );
 
   useEffect(() => {
@@ -163,7 +162,7 @@ export default function Directory() {
       const next = prev.filter(sub => allowed.has(sub));
       return next.length === prev.length ? prev : next;
     });
-  }, [selectedCategories]);
+  }, [getAvailableSubcategories, selectedCategories]);
 
   useEffect(() => {
     setLoading(true);

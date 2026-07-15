@@ -201,7 +201,7 @@ const PLAN_THEMES: Record<string, PlanTheme> = {
     glowClass: 'shadow-orange-500/30',
     iconWrapClass:
       'bg-linear-to-b from-amber-300 via-orange-500 to-red-600 text-white ring-4 ring-white/30',
-    subBadge: '3 meses gratis',
+    subBadge: undefined,
     preview: 'stats',
   },
   premium: {
@@ -225,6 +225,11 @@ const PLAN_THEMES: Record<string, PlanTheme> = {
 
 export function getPlanTheme(planId: string): PlanTheme {
   return PLAN_THEMES[planId] ?? DEFAULT_THEME;
+}
+
+export function getPlanPromoBadge(plan: Plan): string | null {
+  if (plan.price <= 0 || plan.trial_months <= 0) return null;
+  return plan.promo_label ?? (plan.trial_months === 1 ? '1 mes gratis' : `${plan.trial_months} meses gratis`);
 }
 
 export function formatPlanPrice(plan: Plan): string {

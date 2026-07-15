@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   formatPlanPrice,
   getPlanFeatureDisplay,
+  getPlanPromoBadge,
   getPlanTheme,
 } from '@/lib/plan-display';
 import { cn } from '@/lib/utils';
@@ -129,6 +130,7 @@ export default function PlanPricingCard({
 }: PlanPricingCardProps) {
   const theme = getPlanTheme(plan.id);
   const Icon = theme.icon;
+  const promoBadge = getPlanPromoBadge(plan);
   const { previousPlanName, incremental, included, isFreeTier } = getPlanFeatureDisplay(
     plans,
     plan.id,
@@ -222,13 +224,13 @@ export default function PlanPricingCard({
                 </span>
               )}
               <div className="flex min-h-[26px] items-center justify-center">
-                {theme.subBadge && showPopularBadge ? (
+                {promoBadge && showPopularBadge ? (
                   <Badge
                     className={cn(
                       'border-0 bg-white/95 font-bold uppercase tracking-wide text-foreground shadow-sm',
                     )}
                   >
-                    {theme.subBadge}
+                    {promoBadge}
                   </Badge>
                 ) : null}
               </div>

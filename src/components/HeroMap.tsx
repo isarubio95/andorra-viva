@@ -11,7 +11,7 @@ import {
   getBusinessCategoryDivIcon,
 } from '@/lib/map-category-marker';
 import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
-import { getSubcategoriesForCategory } from '@/constants/businessSubcategories';
+import { useSiteContent } from '@/contexts/SiteContentContext';
 import {
   ANDORRA_PARISHES,
   PARISH_MAP_CENTERS,
@@ -197,6 +197,7 @@ export default function HeroMap({
   mobileFullBleed = false,
   mobileControlsOffset = false,
 }: HeroMapProps) {
+  const { getSubcategoriesForCategory } = useSiteContent();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedParish, setSelectedParish] = useState<AndorraParish | null>(null);
   const [subcategoriesOpen, setSubcategoriesOpen] = useState(false);

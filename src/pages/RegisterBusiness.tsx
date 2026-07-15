@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
-import { getSubcategoriesForCategory } from '@/constants/businessSubcategories';
+import { useSiteContent } from '@/contexts/SiteContentContext';
 import BusinessServicesPicker from '@/components/BusinessServicesPicker';
 import BusinessHoursEditor from '@/components/BusinessHoursEditor';
 import BusinessAddressPicker, { type BusinessAddressValue } from '@/components/BusinessAddressPicker';
@@ -37,6 +37,7 @@ type Step = 'info' | 'details' | 'images' | 'review';
 
 export default function RegisterBusiness() {
   const { user, planId, role } = useAuth();
+  const { getSubcategoriesForCategory } = useSiteContent();
   const planTier = resolveProfilePlanTier(planId, role);
   const maxServices = getMaxServicesForTier(planTier);
   const maxPhotos = getMaxPhotosForTier(planTier);

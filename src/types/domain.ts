@@ -46,6 +46,8 @@ export interface Plan {
   interval: string;
   features: string[];
   is_popular: boolean;
+  trial_months: number;
+  promo_label: string | null;
 }
 
 export interface NewsPost {

@@ -13,6 +13,7 @@ const ALLOWED_CONTENT_TYPES = new Set([
   'image/png',
   'image/webp',
   'image/gif',
+  'image/svg+xml',
 ]);
 
 const MAX_KEY_LENGTH = 512;
