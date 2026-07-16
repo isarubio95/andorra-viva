@@ -28,6 +28,7 @@ import AdminLegal from "./pages/admin/AdminLegal.tsx";
 import AdminCategories from "./pages/admin/AdminCategories.tsx";
 import AdminBusinesses from "./pages/admin/AdminBusinesses.tsx";
 import AdminReviews from "./pages/admin/AdminReviews.tsx";
+import AdminNews from "./pages/admin/AdminNews.tsx";
 import AdminPlans from "./pages/admin/AdminPlans.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import LegalNotice from "./pages/LegalNotice.tsx";
@@ -75,6 +76,7 @@ const App = () => (
                 <Route path="pagos" element={<AdminPayments />} />
                 <Route path="planes" element={<AdminPlans />} />
                 <Route path="resenas" element={<AdminReviews />} />
+                <Route path="noticias" element={<AdminNews />} />
                 <Route path="textos" element={<AdminContent />} />
                 <Route path="mapa" element={<AdminMap />} />
                 <Route path="legal" element={<AdminLegal />} />

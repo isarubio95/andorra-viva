@@ -7,7 +7,7 @@ import type { SiteTextKey } from '@/constants/site-content-defaults';
 import type { LegalPageDocument, LegalPageKey } from '@/constants/legal-pages-defaults';
 import { DEFAULT_MAP_THEME, resolveMapTheme, type MapThemeId } from '@/constants/map-themes';
 import type { Business } from '@/types/domain';
-import type { Plan, Review } from '@/types/domain';
+import type { NewsPost, Plan, Review } from '@/types/domain';
 import { normalizeBusinessRow, normalizePlanRow } from '@/services/api';
 
 export interface AdminUserRow {
@@ -323,6 +323,45 @@ export async function adminDeleteReview(
   reviewId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase.rpc('admin_delete_review', { p_review_id: reviewId });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export type AdminNewsPostRow = NewsPost;
+
+export async function adminListNewsPosts(limit = 100): Promise<AdminNewsPostRow[]> {
+  const { data, error } = await supabase
+    .from('news_posts')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('[admin] news posts:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map(row => {
+    const r = row as NewsPost & { image_url?: string | null };
+    return {
+      id: r.id,
+      author_id: r.author_id,
+      business_id: r.business_id,
+      author_name: r.author_name,
+      business_name: r.business_name,
+      title: r.title,
+      body: r.body,
+      image_url: r.image_url ?? null,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    };
+  });
+}
+
+export async function adminDeleteNewsPost(
+  postId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.rpc('admin_delete_news_post', { p_post_id: postId });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }

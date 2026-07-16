@@ -6,6 +6,7 @@ import {
   Tags,
   Store,
   MessageSquare,
+  Newspaper,
   Package,
   Scale,
   Map,
@@ -49,6 +50,12 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     href: '/admin/resenas',
     icon: MessageSquare,
     description: 'Moderación de reseñas',
+  },
+  {
+    title: 'Noticias',
+    href: '/admin/noticias',
+    icon: Newspaper,
+    description: 'Moderación de noticias',
   },
   {
     title: 'Textos web',
