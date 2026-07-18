@@ -1,4 +1,4 @@
-import type { BusinessCategory } from '@/constants/businessCategories';
+import { DEFAULT_BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 import { CATEGORY_THEMES } from '@/constants/categoryDisplay';
 
 export type SiteTextKey =
@@ -19,12 +19,9 @@ export const DEFAULT_SITE_TEXTS: Record<SiteTextKey, string> = {
   section_most_visited: 'Más visitados del mes',
 };
 
-export const DEFAULT_CATEGORY_LABELS: Record<BusinessCategory, string> = Object.fromEntries(
-  (Object.keys(CATEGORY_THEMES) as BusinessCategory[]).map(cat => [
-    cat,
-    CATEGORY_THEMES[cat].displayLabel,
-  ]),
-) as Record<BusinessCategory, string>;
+export const DEFAULT_CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
+  DEFAULT_BUSINESS_CATEGORIES.map(cat => [cat, CATEGORY_THEMES[cat].displayLabel]),
+);
 
 export const SITE_TEXT_LABELS: Record<SiteTextKey, string> = {
   footer_tagline: 'Eslogan del pie de página',

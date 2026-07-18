@@ -6,8 +6,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from '@/components/ui/carousel';
-import { BUSINESS_CATEGORIES, type BusinessCategory } from '@/constants/businessCategories';
-import { CATEGORY_IMAGE_RESPONSIVE_SIZES, CATEGORY_THEMES, type CategoryTheme } from '@/constants/categoryDisplay';
+import { CATEGORY_IMAGE_RESPONSIVE_SIZES, type CategoryTheme } from '@/constants/categoryDisplay';
 import SubcategoryIcon from '@/components/SubcategoryIcon';
 import { useSiteContent } from '@/contexts/SiteContentContext';
 
@@ -17,7 +16,7 @@ type SubcategoryLink = {
 };
 
 type CategoryCardConfig = CategoryTheme & {
-  category: BusinessCategory;
+  category: string;
   subcategories: SubcategoryLink[];
 };
 
@@ -49,7 +48,7 @@ function CategoryCard({
       >
         <img
           src={card.image.src}
-          srcSet={card.image.srcSet}
+          {...(card.image.srcSet ? { srcSet: card.image.srcSet } : {})}
           sizes={CATEGORY_IMAGE_RESPONSIVE_SIZES}
           alt=""
           loading="lazy"
@@ -115,7 +114,7 @@ function CategoryCarousel({
   onSubcategory,
 }: {
   cards: CategoryCardConfig[];
-  getLabel: (category: BusinessCategory) => string;
+  getLabel: (category: string) => string;
   onCategory: (category: string) => void;
   onSubcategory: (category: string, subcategory: string) => void;
 }) {
@@ -181,19 +180,31 @@ function CategoryCarousel({
 
 export default function CategoryBar() {
   const navigate = useNavigate();
-  const { getCategoryLabel, getSubcategoryLabel, getSubcategoriesForCategory } = useSiteContent();
+  const {
+    categories,
+    getCategoryLabel,
+    getCategoryTheme,
+    getSubcategoryLabel,
+    getSubcategoriesForCategory,
+  } = useSiteContent();
 
   const categoryCards = useMemo<CategoryCardConfig[]>(
     () =>
-      BUSINESS_CATEGORIES.map(category => ({
-        category,
-        ...CATEGORY_THEMES[category],
-        subcategories: getSubcategoriesForCategory(category).map(subcategory => ({
-          subcategory,
-          displayLabel: getSubcategoryLabel(subcategory),
-        })),
-      })),
-    [getSubcategoriesForCategory, getSubcategoryLabel],
+      categories.flatMap(category => {
+        const theme = getCategoryTheme(category);
+        if (!theme) return [];
+        return [
+          {
+            category,
+            ...theme,
+            subcategories: getSubcategoriesForCategory(category).map(subcategory => ({
+              subcategory,
+              displayLabel: getSubcategoryLabel(subcategory),
+            })),
+          },
+        ];
+      }),
+    [categories, getCategoryTheme, getSubcategoriesForCategory, getSubcategoryLabel],
   );
 
   const goToCategory = useCallback(

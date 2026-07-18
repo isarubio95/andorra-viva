@@ -1,5 +1,4 @@
-import type { BusinessCategory } from '@/constants/businessCategories';
-import { CATEGORY_THEMES } from '@/constants/categoryDisplay';
+import { getCategoryTheme } from '@/constants/categoryDisplay';
 
 export const SUBCATEGORY_ICON_DISPLAY_PX = 20;
 export const SUBCATEGORY_ICON_UPLOAD_PX = 48;
@@ -25,11 +24,11 @@ export const SUBCATEGORY_ICON_RECOMMENDED_LIBRARIES = [
   },
 ] as const;
 
-export function getSubcategoryIconAccentColor(category: BusinessCategory): string {
-  return CATEGORY_THEMES[category].accent;
+export function getSubcategoryIconAccentColor(category: string): string {
+  return getCategoryTheme(category)?.accent ?? '#475569';
 }
 
-export function getSubcategoryIconGuidelines(category: BusinessCategory) {
+export function getSubcategoryIconGuidelines(category: string) {
   const accent = getSubcategoryIconAccentColor(category);
   return {
     accent,

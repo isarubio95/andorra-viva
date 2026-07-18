@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { BusinessCategory } from '@/constants/businessCategories';
+import { mergeCategories } from '@/constants/businessCategories';
 import {
   DEFAULT_SUBCATEGORY_CONFIG,
   mergeSubcategoryConfig,
@@ -15,6 +15,11 @@ import {
   getSubcategoriesForCategory as getSubsForCategory,
   getAvailableSubcategories as getAvailableSubs,
 } from '@/constants/businessSubcategories';
+import {
+  getCategoryTheme as resolveTheme,
+  type CategoryTheme,
+  type CategoryThemesConfig,
+} from '@/constants/categoryDisplay';
 import {
   DEFAULT_CATEGORY_LABELS,
   DEFAULT_SITE_TEXTS,
@@ -36,13 +41,16 @@ import { fetchSiteSettings } from '@/services/admin-api';
 interface SiteContentContextValue {
   loading: boolean;
   getText: (key: SiteTextKey) => string;
-  getCategoryLabel: (category: BusinessCategory | string) => string;
+  getCategoryLabel: (category: string) => string;
+  getCategoryTheme: (category: string) => CategoryTheme | null;
   getSubcategoryLabel: (subcategory: string) => string;
   getSubcategoriesForCategory: (category: string) => readonly string[];
   getAvailableSubcategories: (selectedCategories: string[]) => string[];
   getLegalPage: (key: LegalPageKey) => LegalPageDocument;
   texts: Record<SiteTextKey, string>;
-  categoryLabels: Record<BusinessCategory, string>;
+  categories: string[];
+  categoryLabels: Record<string, string>;
+  categoryThemes: CategoryThemesConfig;
   subcategories: SubcategoryConfig;
   subcategoryLabels: Record<string, string>;
   subcategoryIcons: Record<string, string>;
@@ -54,14 +62,16 @@ interface SiteContentContextValue {
 const SiteContentContext = createContext<SiteContentContextValue>({
   loading: true,
   getText: key => DEFAULT_SITE_TEXTS[key],
-  getCategoryLabel: category =>
-    DEFAULT_CATEGORY_LABELS[category as BusinessCategory] ?? String(category),
+  getCategoryLabel: category => DEFAULT_CATEGORY_LABELS[category] ?? String(category),
+  getCategoryTheme: category => resolveTheme(category),
   getSubcategoryLabel: subcategory => getSubcategoryDisplayLabel(subcategory),
   getSubcategoriesForCategory: category => getSubsForCategory(category),
   getAvailableSubcategories: selected => getAvailableSubs(selected),
   getLegalPage: key => DEFAULT_LEGAL_PAGES[key],
   texts: DEFAULT_SITE_TEXTS,
+  categories: mergeCategories(),
   categoryLabels: DEFAULT_CATEGORY_LABELS,
+  categoryThemes: {},
   subcategories: DEFAULT_SUBCATEGORY_CONFIG,
   subcategoryLabels: DEFAULT_SUBCATEGORY_LABELS,
   subcategoryIcons: {},
@@ -77,8 +87,10 @@ export function useSiteContent() {
 export function SiteContentProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [texts, setTexts] = useState<Record<SiteTextKey, string>>(DEFAULT_SITE_TEXTS);
+  const [categories, setCategories] = useState<string[]>(() => mergeCategories());
   const [categoryLabels, setCategoryLabels] =
-    useState<Record<BusinessCategory, string>>(DEFAULT_CATEGORY_LABELS);
+    useState<Record<string, string>>(DEFAULT_CATEGORY_LABELS);
+  const [categoryThemes, setCategoryThemes] = useState<CategoryThemesConfig>({});
   const [subcategories, setSubcategories] =
     useState<SubcategoryConfig>(DEFAULT_SUBCATEGORY_CONFIG);
   const [subcategoryLabels, setSubcategoryLabels] =
@@ -92,16 +104,21 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     const {
       texts: remoteTexts,
+      categories: remoteCategories,
       categoryLabels: remoteLabels,
+      categoryThemes: remoteThemes,
       subcategories: remoteSubcategories,
       subcategoryLabels: remoteSubcategoryLabels,
       subcategoryIcons: remoteSubcategoryIcons,
       legalPages: remoteLegal,
       mapTheme: remoteMapTheme,
     } = await fetchSiteSettings();
+    const nextCategories = mergeCategories(remoteCategories);
     setTexts({ ...DEFAULT_SITE_TEXTS, ...remoteTexts });
+    setCategories(nextCategories);
     setCategoryLabels({ ...DEFAULT_CATEGORY_LABELS, ...remoteLabels });
-    setSubcategories(mergeSubcategoryConfig(remoteSubcategories));
+    setCategoryThemes(remoteThemes ?? {});
+    setSubcategories(mergeSubcategoryConfig(remoteSubcategories, nextCategories));
     setSubcategoryLabels({ ...DEFAULT_SUBCATEGORY_LABELS, ...remoteSubcategoryLabels });
     setSubcategoryIcons(
       Object.fromEntries(
@@ -126,11 +143,14 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
   );
 
   const getCategoryLabel = useCallback(
-    (category: BusinessCategory | string) =>
-      categoryLabels[category as BusinessCategory] ??
-      DEFAULT_CATEGORY_LABELS[category as BusinessCategory] ??
-      String(category),
+    (category: string) =>
+      categoryLabels[category] ?? DEFAULT_CATEGORY_LABELS[category] ?? String(category),
     [categoryLabels],
+  );
+
+  const getCategoryTheme = useCallback(
+    (category: string) => resolveTheme(category, categoryThemes, categoryLabels),
+    [categoryThemes, categoryLabels],
   );
 
   const getSubcategoryLabel = useCallback(
@@ -159,12 +179,15 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       loading,
       getText,
       getCategoryLabel,
+      getCategoryTheme,
       getSubcategoryLabel,
       getSubcategoriesForCategory,
       getAvailableSubcategories,
       getLegalPage,
       texts,
+      categories,
       categoryLabels,
+      categoryThemes,
       subcategories,
       subcategoryLabels,
       subcategoryIcons,
@@ -176,12 +199,15 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       loading,
       getText,
       getCategoryLabel,
+      getCategoryTheme,
       getSubcategoryLabel,
       getSubcategoriesForCategory,
       getAvailableSubcategories,
       getLegalPage,
       texts,
+      categories,
       categoryLabels,
+      categoryThemes,
       subcategories,
       subcategoryLabels,
       subcategoryIcons,

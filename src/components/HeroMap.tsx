@@ -11,7 +11,6 @@ import {
   getBusinessCategoryDivIcon,
 } from '@/lib/map-category-marker';
 import { getMapThemeConfig } from '@/constants/map-themes';
-import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 import { useSiteContent } from '@/contexts/SiteContentContext';
 import {
   ANDORRA_PARISHES,
@@ -198,7 +197,7 @@ export default function HeroMap({
   mobileFullBleed = false,
   mobileControlsOffset = false,
 }: HeroMapProps) {
-  const { getSubcategoriesForCategory, mapTheme } = useSiteContent();
+  const { categories, getSubcategoriesForCategory, mapTheme } = useSiteContent();
   const mapThemeConfig = useMemo(() => getMapThemeConfig(mapTheme), [mapTheme]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedParish, setSelectedParish] = useState<AndorraParish | null>(null);
@@ -325,12 +324,12 @@ export default function HeroMap({
   const orderedCategories = useMemo(() => {
     if (isCollapsedWithSubs && selectedCategory) {
       return [
-        ...BUSINESS_CATEGORIES.filter(cat => cat !== selectedCategory),
+        ...categories.filter(cat => cat !== selectedCategory),
         selectedCategory,
       ];
     }
-    return [...BUSINESS_CATEGORIES];
-  }, [isCollapsedWithSubs, selectedCategory]);
+    return [...categories];
+  }, [categories, isCollapsedWithSubs, selectedCategory]);
 
   const pillRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const prevRects = useRef<Map<string, DOMRect>>(new Map());

@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { UserRole } from '@/contexts/AuthContext';
-import type { BusinessCategory } from '@/constants/businessCategories';
+import { mergeCategories } from '@/constants/businessCategories';
+import type { CategoryThemesConfig } from '@/constants/categoryDisplay';
 import type { SubcategoryConfig } from '@/constants/businessSubcategories';
 import { DEFAULT_SUBCATEGORY_LABELS } from '@/constants/subcategory-display';
 import type { SiteTextKey } from '@/constants/site-content-defaults';
@@ -89,7 +90,9 @@ export async function adminUpdateSubscription(
 
 export async function fetchSiteSettings(): Promise<{
   texts: Partial<Record<SiteTextKey, string>>;
-  categoryLabels: Partial<Record<BusinessCategory, string>>;
+  categories: string[];
+  categoryLabels: Partial<Record<string, string>>;
+  categoryThemes: CategoryThemesConfig;
   subcategories: Partial<SubcategoryConfig>;
   subcategoryLabels: Partial<Record<string, string>>;
   subcategoryIcons: Partial<Record<string, string>>;
@@ -101,7 +104,9 @@ export async function fetchSiteSettings(): Promise<{
     console.error('[admin] site settings:', error.message);
     return {
       texts: {},
+      categories: mergeCategories(),
       categoryLabels: {},
+      categoryThemes: {},
       subcategories: {},
       subcategoryLabels: {},
       subcategoryIcons: {},
@@ -111,7 +116,9 @@ export async function fetchSiteSettings(): Promise<{
   }
 
   const texts: Partial<Record<SiteTextKey, string>> = {};
-  const categoryLabels: Partial<Record<BusinessCategory, string>> = {};
+  let categoriesRaw: unknown;
+  const categoryLabels: Partial<Record<string, string>> = {};
+  const categoryThemes: CategoryThemesConfig = {};
   const subcategories: Partial<SubcategoryConfig> = {};
   const subcategoryLabels: Partial<Record<string, string>> = {};
   const subcategoryIcons: Partial<Record<string, string>> = {};
@@ -122,8 +129,14 @@ export async function fetchSiteSettings(): Promise<{
     if (row.key === 'texts' && row.value && typeof row.value === 'object') {
       Object.assign(texts, row.value);
     }
+    if (row.key === 'categories') {
+      categoriesRaw = row.value;
+    }
     if (row.key === 'category_labels' && row.value && typeof row.value === 'object') {
       Object.assign(categoryLabels, row.value);
+    }
+    if (row.key === 'category_themes' && row.value && typeof row.value === 'object' && !Array.isArray(row.value)) {
+      Object.assign(categoryThemes, row.value as CategoryThemesConfig);
     }
     if (row.key === 'subcategories' && row.value && typeof row.value === 'object') {
       Object.assign(subcategories, row.value);
@@ -142,7 +155,17 @@ export async function fetchSiteSettings(): Promise<{
     }
   }
 
-  return { texts, categoryLabels, subcategories, subcategoryLabels, subcategoryIcons, legalPages, mapTheme };
+  return {
+    texts,
+    categories: mergeCategories(categoriesRaw),
+    categoryLabels,
+    categoryThemes,
+    subcategories,
+    subcategoryLabels,
+    subcategoryIcons,
+    legalPages,
+    mapTheme,
+  };
 }
 
 export async function saveSiteTexts(
@@ -151,6 +174,18 @@ export async function saveSiteTexts(
   const { error } = await supabase.from('site_settings').upsert({
     key: 'texts',
     value: texts,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function saveCategories(
+  categories: string[],
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from('site_settings').upsert({
+    key: 'categories',
+    value: categories,
     updated_at: new Date().toISOString(),
   });
   if (error) return { ok: false, error: error.message };
@@ -167,6 +202,30 @@ export async function saveCategoryLabels(
   });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
+}
+
+export async function saveCategoryThemes(
+  themes: CategoryThemesConfig,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from('site_settings').upsert({
+    key: 'category_themes',
+    value: themes,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function saveCategoryConfig(
+  categories: string[],
+  labels: Record<string, string>,
+  themes: CategoryThemesConfig,
+): Promise<{ ok: boolean; error?: string }> {
+  const catRes = await saveCategories(categories);
+  if (!catRes.ok) return catRes;
+  const labelRes = await saveCategoryLabels(labels);
+  if (!labelRes.ok) return labelRes;
+  return saveCategoryThemes(themes);
 }
 
 export async function saveSubcategories(

@@ -1,16 +1,16 @@
-import type { BusinessCategory } from '@/constants/businessCategories';
+import { DEFAULT_BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 
-export type SubcategoryConfig = Record<BusinessCategory, string[]>;
+export type SubcategoryConfig = Record<string, string[]>;
 
 /** Subcategorías por categoría canónica (Andorra Viva). */
-export const BUSINESS_SUBCATEGORIES: Record<BusinessCategory, readonly string[]> = {
-  'Gastronomía': [
+export const BUSINESS_SUBCATEGORIES: Record<string, readonly string[]> = {
+  Gastronomía: [
     'Restaurante',
     'Borda y cocina de montaña',
     'Bar y copas',
     'Cafetería y brunch',
   ],
-  'Alojamiento': [
+  Alojamiento: [
     'Hotel',
     'Apartamento turístico',
     'Alojamiento de montaña',
@@ -28,39 +28,43 @@ export const BUSINESS_SUBCATEGORIES: Record<BusinessCategory, readonly string[]>
     'Actividades al aire libre',
     'Tours y guías',
   ],
-  'Compras': [
+  Compras: [
     'Centro comercial',
     'Moda y complementos',
     'Perfumería y cosmética',
     'Joyería, relojería y lujo',
   ],
-  'Bienestar': [
+  Bienestar: [
     'Spa termal',
     'Masajes y terapias',
     'Belleza y estética',
     'Gimnasio y fitness',
   ],
-} as const;
+};
 
-export type BusinessSubcategory =
-  (typeof BUSINESS_SUBCATEGORIES)[BusinessCategory][number];
+export type BusinessSubcategory = string;
 
-const SUBCATEGORY_TO_CATEGORY = new Map<string, BusinessCategory>(
+const SUBCATEGORY_TO_CATEGORY = new Map<string, string>(
   Object.entries(BUSINESS_SUBCATEGORIES).flatMap(([category, subs]) =>
-    subs.map(sub => [sub, category as BusinessCategory]),
+    subs.map(sub => [sub, category]),
   ),
 );
 
 export function mergeSubcategoryConfig(
   remote?: Partial<SubcategoryConfig>,
+  categories: readonly string[] = DEFAULT_BUSINESS_CATEGORIES,
 ): SubcategoryConfig {
-  const merged = {} as SubcategoryConfig;
-  for (const [category, defaults] of Object.entries(BUSINESS_SUBCATEGORIES)) {
-    const remoteList = remote?.[category as BusinessCategory];
-    merged[category as BusinessCategory] =
-      Array.isArray(remoteList) && remoteList.length > 0
-        ? remoteList.map(s => String(s).trim()).filter(Boolean)
-        : [...defaults];
+  const merged: SubcategoryConfig = {};
+  for (const category of categories) {
+    const defaults = BUSINESS_SUBCATEGORIES[category];
+    const remoteList = remote?.[category];
+    if (Array.isArray(remoteList) && remoteList.length > 0) {
+      merged[category] = remoteList.map(s => String(s).trim()).filter(Boolean);
+    } else if (defaults) {
+      merged[category] = [...defaults];
+    } else {
+      merged[category] = ['General'];
+    }
   }
   return merged;
 }
@@ -71,7 +75,7 @@ export function getSubcategoriesForCategory(
   category: string,
   config: SubcategoryConfig = DEFAULT_SUBCATEGORY_CONFIG,
 ): readonly string[] {
-  return config[category as BusinessCategory] ?? [];
+  return config[category] ?? [];
 }
 
 export function isValidSubcategoryForCategory(
@@ -85,9 +89,9 @@ export function isValidSubcategoryForCategory(
 export function getCategoryForSubcategory(
   subcategory: string,
   config: SubcategoryConfig = DEFAULT_SUBCATEGORY_CONFIG,
-): BusinessCategory | null {
+): string | null {
   for (const [category, subs] of Object.entries(config)) {
-    if (subs.includes(subcategory)) return category as BusinessCategory;
+    if (subs.includes(subcategory)) return category;
   }
   return SUBCATEGORY_TO_CATEGORY.get(subcategory) ?? null;
 }

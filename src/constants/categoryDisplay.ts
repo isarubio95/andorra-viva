@@ -1,4 +1,4 @@
-import type { BusinessCategory } from '@/constants/businessCategories';
+import type { DefaultBusinessCategory } from '@/constants/businessCategories';
 
 export type CategoryGradient = { from: string; via: string; to: string };
 
@@ -16,6 +16,20 @@ export type CategoryTheme = {
   accent: string;
 };
 
+/** Campos editables desde el admin (URLs remotas o rutas estáticas). */
+export type CategoryThemeOverride = {
+  displayLabel?: string;
+  /** URL de la foto de fondo / portada. */
+  imageUrl?: string;
+  imageSrcSet?: string;
+  /** URL del emblema. */
+  emblem?: string;
+  gradient?: Partial<CategoryGradient>;
+  accent?: string;
+};
+
+export type CategoryThemesConfig = Record<string, CategoryThemeOverride>;
+
 const CATEGORY_IMAGE_SIZES = '(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw';
 
 function categoryImage(stem: string): CategoryImage {
@@ -27,7 +41,18 @@ function categoryImage(stem: string): CategoryImage {
 
 export const CATEGORY_IMAGE_RESPONSIVE_SIZES = CATEGORY_IMAGE_SIZES;
 
-export const CATEGORY_THEMES: Record<BusinessCategory, CategoryTheme> = {
+const DEFAULT_NEW_CATEGORY_THEME: CategoryTheme = {
+  displayLabel: 'Nueva categoría',
+  image: {
+    src: '/categories/cat-experiencias-960.webp',
+    srcSet: '/categories/cat-experiencias-640.webp 640w, /categories/cat-experiencias-960.webp 960w',
+  },
+  emblem: '/categories/emblem-experiencias.png',
+  gradient: { from: '#1e293b', via: '#334155', to: '#0f172a' },
+  accent: '#475569',
+};
+
+export const CATEGORY_THEMES: Record<DefaultBusinessCategory, CategoryTheme> = {
   Gastronomía: {
     displayLabel: 'Dónde comer',
     image: categoryImage('cat-gastronomia'),
@@ -72,8 +97,50 @@ export const CATEGORY_THEMES: Record<BusinessCategory, CategoryTheme> = {
   },
 };
 
-export function getCategoryTheme(category: string): CategoryTheme | null {
-  return CATEGORY_THEMES[category as BusinessCategory] ?? null;
+function baseThemeFor(category: string): CategoryTheme {
+  const known = CATEGORY_THEMES[category as DefaultBusinessCategory];
+  if (known) return known;
+  return {
+    ...DEFAULT_NEW_CATEGORY_THEME,
+    displayLabel: category,
+  };
+}
+
+export function resolveCategoryTheme(
+  category: string,
+  override?: CategoryThemeOverride | null,
+  labelOverride?: string,
+): CategoryTheme {
+  const base = baseThemeFor(category);
+  if (!override && !labelOverride) return base;
+
+  const image: CategoryImage = override?.imageUrl
+    ? {
+        src: override.imageUrl,
+        srcSet: override.imageSrcSet ?? '',
+      }
+    : base.image;
+
+  return {
+    displayLabel: labelOverride || override?.displayLabel || base.displayLabel,
+    image,
+    emblem: override?.emblem || base.emblem,
+    gradient: {
+      from: override?.gradient?.from || base.gradient.from,
+      via: override?.gradient?.via || base.gradient.via,
+      to: override?.gradient?.to || base.gradient.to,
+    },
+    accent: override?.accent || base.accent,
+  };
+}
+
+export function getCategoryTheme(
+  category: string,
+  themes?: CategoryThemesConfig,
+  labels?: Record<string, string>,
+): CategoryTheme | null {
+  if (!category) return null;
+  return resolveCategoryTheme(category, themes?.[category], labels?.[category]);
 }
 
 export function categoryHeroBackground(gradient: CategoryGradient, accent: string): string {
@@ -84,3 +151,17 @@ export function categoryHeroBackground(gradient: CategoryGradient, accent: strin
     `linear-gradient(128deg, ${gradient.from} 0%, ${gradient.via} 38%, ${gradient.to} 100%)`,
   ].join(', ');
 }
+
+export function themeToOverride(theme: CategoryTheme): CategoryThemeOverride {
+  return {
+    displayLabel: theme.displayLabel,
+    imageUrl: theme.image.src,
+    imageSrcSet: theme.image.srcSet || undefined,
+    emblem: theme.emblem,
+    gradient: { ...theme.gradient },
+    accent: theme.accent,
+  };
+}
+
+/** Defaults reexportados. */
+export { DEFAULT_BUSINESS_CATEGORIES } from '@/constants/businessCategories';

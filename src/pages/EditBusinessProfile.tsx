@@ -31,7 +31,6 @@ import { useToast } from '@/hooks/use-toast';
 import { getBusinessById, updateMyBusiness } from '@/services/api';
 import type { Business } from '@/types/domain';
 import { isOwnBusiness } from '@/lib/business-access';
-import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
 import { useSiteContent } from '@/contexts/SiteContentContext';
 import BusinessServicesPicker from '@/components/BusinessServicesPicker';
 import BusinessHoursEditor from '@/components/BusinessHoursEditor';
@@ -163,7 +162,7 @@ export default function EditBusinessProfile() {
   const { businessId } = useParams<{ businessId: string }>();
   const navigate = useNavigate();
   const { user, hasProAccess, planId, role, subscriptionStatus, loading: authLoading } = useAuth();
-  const { getSubcategoriesForCategory } = useSiteContent();
+  const { categories, getSubcategoriesForCategory } = useSiteContent();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -785,7 +784,7 @@ export default function EditBusinessProfile() {
                       >
                         <SelectTrigger><SelectValue placeholder="Categoría" /></SelectTrigger>
                         <SelectContent>
-                          {BUSINESS_CATEGORIES.map(c => (
+                          {categories.map(c => (
                             <SelectItem key={c} value={c}>{c}</SelectItem>
                           ))}
                         </SelectContent>

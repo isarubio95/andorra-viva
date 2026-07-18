@@ -26,9 +26,8 @@ import {
 } from '@/components/ui/carousel';
 import { useCarouselAutoplay } from '@/hooks/use-carousel-autoplay';
 import { SlidersHorizontal, X } from 'lucide-react';
-import { CATEGORY_GROUP_MAP } from '@/constants/categoryGroups';
-import { BUSINESS_CATEGORIES } from '@/constants/businessCategories';
-import { categoryHeroBackground, getCategoryTheme } from '@/constants/categoryDisplay';
+import { buildCategoryGroupMap } from '@/constants/categoryGroups';
+import { categoryHeroBackground } from '@/constants/categoryDisplay';
 import { useSiteContent } from '@/contexts/SiteContentContext';
 
 const PRICE_LABELS: Record<number, string> = {
@@ -118,7 +117,13 @@ function PremiumBusinessesCarousel({
 }
 
 export default function Directory() {
-  const { getCategoryLabel, getAvailableSubcategories } = useSiteContent();
+  const {
+    categories,
+    getCategoryLabel,
+    getCategoryTheme,
+    getAvailableSubcategories,
+  } = useSiteContent();
+  const categoryGroupMap = useMemo(() => buildCategoryGroupMap(categories), [categories]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,8 +144,8 @@ export default function Directory() {
   useEffect(() => {
     const grupo = searchParams.get('grupo');
     const raw = searchParams.get('categoria');
-    if (grupo && CATEGORY_GROUP_MAP[grupo]) {
-      setSelectedCategories(CATEGORY_GROUP_MAP[grupo]);
+    if (grupo && categoryGroupMap[grupo]) {
+      setSelectedCategories(categoryGroupMap[grupo]);
     } else if (raw) {
       const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
       setSelectedCategories(parts);
@@ -154,7 +159,7 @@ export default function Directory() {
     } else {
       setSelectedSubcategories([]);
     }
-  }, [searchParams]);
+  }, [searchParams, categoryGroupMap]);
 
   useEffect(() => {
     setSelectedSubcategories(prev => {
@@ -355,7 +360,7 @@ export default function Directory() {
               <div>
                 <h3 className="mb-3 text-sm font-semibold text-foreground">Categorías</h3>
                 <div className="flex flex-col gap-2">
-                  {BUSINESS_CATEGORIES.map(cat => (
+                  {categories.map(cat => (
                     <label key={cat} className="flex items-center gap-2 text-sm text-card-foreground cursor-pointer">
                       <Checkbox
                         checked={selectedCategories.includes(cat)}
