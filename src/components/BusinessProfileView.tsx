@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import BusinessHoursDisplay from '@/components/BusinessHoursDisplay';
 import BusinessSocialLinks from '@/components/BusinessSocialLinks';
 import { ResponsiveImage } from '@/components/ResponsiveImage';
+import ImageLightbox, { LightboxTrigger } from '@/components/ImageLightbox';
 
 interface BusinessProfileViewProps {
   business: Business;
@@ -110,6 +111,8 @@ export default function BusinessProfileView({
 }: BusinessProfileViewProps) {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const autoplay = useCarouselAutoplay();
 
   const showPremiumBadge = previewPremium ?? business.is_premium;
@@ -184,7 +187,18 @@ export default function BusinessProfileView({
           <CarouselContent className="-ml-0 h-full">
             {photos.map((url, index) => (
               <CarouselItem key={`${url}-${index}`} className="h-full basis-full pl-0">
-                <CarouselSlideImage url={url} alt={`${business.name} — foto ${index + 1}`} />
+                <LightboxTrigger
+                  onOpen={() => {
+                    setLightboxIndex(index);
+                    setLightboxOpen(true);
+                    const autoplayPlugin = carouselApi?.plugins()?.autoplay as
+                      | { stop?: () => void }
+                      | undefined;
+                    autoplayPlugin?.stop?.();
+                  }}
+                >
+                  <CarouselSlideImage url={url} alt={`${business.name} — foto ${index + 1}`} />
+                </LightboxTrigger>
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -220,6 +234,18 @@ export default function BusinessProfileView({
             Recomendado
           </Badge>
         )}
+
+        <ImageLightbox
+          open={lightboxOpen}
+          onOpenChange={setLightboxOpen}
+          images={photos}
+          initialIndex={lightboxIndex}
+          altPrefix={business.name || 'Negocio'}
+          onCloseIndex={index => {
+            setLightboxIndex(index);
+            carouselApi?.scrollTo(index);
+          }}
+        />
       </div>
 
       <div
