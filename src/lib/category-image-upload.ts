@@ -14,11 +14,11 @@ export function getCategoryImageRejection(file: File) {
   return getBusinessImageRejection(file);
 }
 
-/** Sube la foto de fondo (portada) de una categoría. */
+/** Sube la foto de fondo (portada) de una categoría (con variantes responsivas). */
 export async function uploadCategoryCover(
   userId: string,
   file: File,
-): Promise<{ url?: string; error?: string }> {
+): Promise<{ url?: string; srcSet?: string; error?: string }> {
   const rejection = getCategoryImageRejection(file);
   if (rejection === 'type') {
     return { error: 'Formato no válido. Usa JPEG, PNG, WebP o GIF.' };
@@ -41,5 +41,5 @@ export async function uploadCategoryEmblem(
   if (rejection === 'size') {
     return { error: 'La imagen supera el límite de 5 MB.' };
   }
-  return uploadStorageFile(userId, file, { namePrefix: 'category-emblems/' });
+  return uploadStorageFile(userId, file, { namePrefix: 'category-emblems/', variants: false });
 }

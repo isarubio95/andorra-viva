@@ -19,5 +19,5 @@ export async function uploadSubcategoryIcon(
 ): Promise<{ url?: string; error?: string }> {
   const validationError = validateSubcategoryIconFile(file);
   if (validationError) return { error: validationError };
-  return uploadBusinessImage(userId, file, { namePrefix: 'subcat-icon-' });
+  return uploadBusinessImage(userId, file, { namePrefix: 'subcat-icon-', variants: false });
 }

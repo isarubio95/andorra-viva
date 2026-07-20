@@ -8,7 +8,9 @@ import {
 } from '@/components/ui/carousel';
 import { CATEGORY_IMAGE_RESPONSIVE_SIZES, type CategoryTheme } from '@/constants/categoryDisplay';
 import SubcategoryIcon from '@/components/SubcategoryIcon';
+import { ResponsiveImage } from '@/components/ResponsiveImage';
 import { useSiteContent } from '@/contexts/SiteContentContext';
+import { buildResponsiveImage } from '@/lib/responsive-image';
 
 type SubcategoryLink = {
   subcategory: string;
@@ -46,13 +48,12 @@ function CategoryCard({
         aria-label={`Ver ${displayLabel}`}
         className="relative flex h-44 w-full cursor-pointer flex-col items-center justify-center overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70 sm:h-48"
       >
-        <img
+        <ResponsiveImage
           src={card.image.src}
-          {...(card.image.srcSet ? { srcSet: card.image.srcSet } : {})}
+          srcSet={card.image.srcSet || buildResponsiveImage(card.image.src).srcSet}
           sizes={CATEGORY_IMAGE_RESPONSIVE_SIZES}
+          sizesPreset="categoryCover"
           alt=""
-          loading="lazy"
-          decoding="async"
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           aria-hidden
         />

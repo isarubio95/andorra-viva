@@ -35,6 +35,7 @@ type CategoryRow = {
   name: string;
   displayLabel: string;
   imageUrl: string;
+  imageSrcSet?: string;
   emblem: string;
   accent: string;
   gradientFrom: string;
@@ -99,6 +100,7 @@ function categoryRowsFromState(
       name,
       displayLabel: resolved.displayLabel,
       imageUrl: resolved.image.src,
+      imageSrcSet: resolved.image.srcSet || undefined,
       emblem: resolved.emblem,
       accent: resolved.accent,
       gradientFrom: resolved.gradient.from,
@@ -125,9 +127,13 @@ function categoryConfigFromRows(rows: CategoryRow[]): {
     categories.push(name);
     labels[name] = row.displayLabel.trim() || name;
 
+    const base = resolveCategoryTheme(name);
     const override: CategoryThemeOverride = {
       displayLabel: labels[name],
       imageUrl: row.imageUrl,
+      ...(row.imageSrcSet && row.imageUrl !== base.image.src
+        ? { imageSrcSet: row.imageSrcSet }
+        : {}),
       emblem: row.emblem,
       accent: row.accent,
       gradient: {
@@ -138,9 +144,9 @@ function categoryConfigFromRows(rows: CategoryRow[]): {
     };
 
     // Solo persistir si hay algo distinto del default estático.
-    const base = resolveCategoryTheme(name);
     const differs =
       override.imageUrl !== base.image.src ||
+      Boolean(override.imageSrcSet) ||
       override.emblem !== base.emblem ||
       override.accent !== base.accent ||
       override.gradient?.from !== base.gradient.from ||
@@ -539,7 +545,12 @@ export default function AdminCategories() {
                     hint="Imagen de fondo de la tarjeta en la home (JPEG, PNG o WebP, máx. 5 MB)."
                     value={row.imageUrl}
                     defaultValue={row.defaultImageUrl}
-                    onChange={imageUrl => updateCategoryRow(index, { imageUrl })}
+                    onChange={({ url, srcSet }) =>
+                      updateCategoryRow(index, {
+                        imageUrl: url,
+                        imageSrcSet: srcSet,
+                      })
+                    }
                   />
                   <CategoryImageField
                     kind="emblem"
@@ -547,7 +558,7 @@ export default function AdminCategories() {
                     hint="Icono circular sobre la foto (PNG transparente recomendado, máx. 5 MB)."
                     value={row.emblem}
                     defaultValue={row.defaultEmblem}
-                    onChange={emblem => updateCategoryRow(index, { emblem })}
+                    onChange={({ url }) => updateCategoryRow(index, { emblem: url })}
                   />
                 </div>
 

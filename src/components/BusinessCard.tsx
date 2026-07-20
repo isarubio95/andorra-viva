@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Star, Heart, Medal } from 'lucide-react';
 import { BUSINESS_IMAGE_FALLBACK, resolveBusinessImageUrl } from '@/lib/business-image';
+import { ResponsiveImage } from '@/components/ResponsiveImage';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -14,17 +14,17 @@ interface BusinessCardProps {
 }
 
 export default function BusinessCard({ business, onClick }: BusinessCardProps) {
-  const [imgSrc, setImgSrc] = useState(() => resolveBusinessImageUrl(business.image_url));
   const { user } = useAuth();
-
-  useEffect(() => {
-    setImgSrc(resolveBusinessImageUrl(business.image_url));
-  }, [business.id, business.image_url]);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { toast } = useToast();
   const liked = isFavorite(business.id);
   const own = isOwnBusiness(user?.id, business);
   const showFavoriteBtn = !own || liked;
+
+  const resolved = resolveBusinessImageUrl(business.image_url);
+  const imgSrc = resolved.startsWith('http')
+    ? `${resolved}${resolved.includes('?') ? '&' : '?'}v=${business.id}`
+    : resolved;
 
   const handleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -50,11 +50,11 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
     >
       {/* Image */}
       <div className="relative aspect-[4/3] shrink-0 overflow-hidden">
-        <img
-          src={`${imgSrc}${imgSrc.startsWith('http') ? `?v=${business.id}` : ''}`}
+        <ResponsiveImage
+          src={imgSrc}
           alt={business.name}
-          loading="lazy"
-          onError={() => setImgSrc(BUSINESS_IMAGE_FALLBACK)}
+          sizesPreset="card"
+          fallbackSrc={BUSINESS_IMAGE_FALLBACK}
           className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]"
         />
         {business.is_premium && (
@@ -96,7 +96,9 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
           <div className="flex items-center gap-1">
             <Star
               className={`h-4 w-4 ${
-                business.is_premium ? 'fill-premium text-premium' : 'fill-muted-foreground/25 text-muted-foreground'
+                business.is_premium
+                  ? 'fill-premium text-premium'
+                  : 'fill-muted-foreground/25 text-muted-foreground'
               }`}
             />
             <span className="text-sm font-semibold">{business.rating}</span>

@@ -4,7 +4,9 @@ import { ArrowUpRight, Newspaper, Store } from 'lucide-react';
 import type { NewsPost } from '@/types/domain';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ResponsiveImage } from '@/components/ResponsiveImage';
 import { cn } from '@/lib/utils';
+import { rewriteSupabaseStorageUrl } from '@/lib/business-image';
 
 type NewsPostDetailProps = {
   post: NewsPost;
@@ -72,11 +74,11 @@ export default function NewsPostDetail({
         inDrawer ? 'aspect-3/2 shrink-0' : 'aspect-video',
       )}
     >
-      <img
-        src={post.image_url}
+      <ResponsiveImage
+        src={rewriteSupabaseStorageUrl(post.image_url) ?? post.image_url}
         alt=""
+        sizesPreset="detail"
         className="h-full w-full object-cover"
-        loading="lazy"
       />
     </div>
   ) : null;

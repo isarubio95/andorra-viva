@@ -29,6 +29,7 @@ import { getMaxPhotosForTier, isProfileGroupAvailable, type ProfilePlanTier } fr
 import { cn } from '@/lib/utils';
 import BusinessHoursDisplay from '@/components/BusinessHoursDisplay';
 import BusinessSocialLinks from '@/components/BusinessSocialLinks';
+import { ResponsiveImage } from '@/components/ResponsiveImage';
 
 interface BusinessProfileViewProps {
   business: Business;
@@ -85,17 +86,12 @@ function trackProfileClick(businessId: string, clickType: BusinessClickType, ena
 }
 
 function CarouselSlideImage({ url, alt }: { url: string; alt: string }) {
-  const [src, setSrc] = useState(() => resolveBusinessImageUrl(url));
-
-  useEffect(() => {
-    setSrc(resolveBusinessImageUrl(url));
-  }, [url]);
-
   return (
-    <img
-      src={src}
+    <ResponsiveImage
+      src={resolveBusinessImageUrl(url)}
       alt={alt}
-      onError={() => setSrc(BUSINESS_IMAGE_FALLBACK)}
+      sizesPreset="detail"
+      fallbackSrc={BUSINESS_IMAGE_FALLBACK}
       className="h-full w-full object-cover"
       draggable={false}
     />

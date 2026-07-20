@@ -725,6 +725,9 @@ export async function deleteMyNewsPost(postId: string): Promise<{ ok: boolean; e
   return { ok: true };
 }
 
-export async function uploadNewsImage(userId: string, file: File): Promise<{ url?: string; error?: string }> {
+export async function uploadNewsImage(
+  userId: string,
+  file: File,
+): Promise<{ url?: string; srcSet?: string; error?: string }> {
   return uploadBusinessImage(userId, file, { namePrefix: 'news-' });
 }

@@ -1,5 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import { BUSINESS_IMAGE_MIME_TYPES } from '@/lib/business-image-upload';
+import { createImageVariants } from '@/lib/image-variants';
+import {
+  CANONICAL_RESPONSIVE_WIDTH,
+  buildSrcSetFromCanonical,
+  type ResponsiveWidth,
+} from '@/lib/responsive-image';
 
 const r2PublicUrl = import.meta.env.VITE_R2_PUBLIC_URL?.replace(/\/$/, '');
 
@@ -12,6 +18,18 @@ export function getR2PublicUrl(key: string): string {
 }
 
 const EXTRA_MIME_TYPES = ['image/svg+xml'];
+
+export type UploadImageOptions = {
+  namePrefix?: string;
+  /** Default true. Iconos, emblemas y SVG deben pasar false. */
+  variants?: boolean;
+};
+
+export type UploadImageResult = {
+  url?: string;
+  srcSet?: string;
+  error?: string;
+};
 
 function resolveContentType(file: File): string {
   if (
@@ -42,30 +60,28 @@ function buildObjectKey(userId: string, file: File, namePrefix = ''): string {
   return `${userId}/${namePrefix}${randomPart}.${ext}`;
 }
 
-export async function uploadStorageFile(
+function buildVariantObjectKey(
   userId: string,
-  file: File,
-  options?: { namePrefix?: string },
-): Promise<{ url?: string; error?: string }> {
-  return uploadBusinessImage(userId, file, options);
+  namePrefix: string,
+  stem: string,
+  width: ResponsiveWidth,
+): string {
+  return `${userId}/${namePrefix}${stem}-w${width}.webp`;
 }
 
-export async function uploadBusinessImage(
-  userId: string,
-  file: File,
-  options?: { namePrefix?: string },
-): Promise<{ url?: string; error?: string }> {
-  if (!userId) return { error: 'Usuario no autenticado' };
-  if (!r2PublicUrl) return { error: 'Almacenamiento R2 no configurado' };
-
-  const key = buildObjectKey(userId, file, options?.namePrefix);
-  const contentType = resolveContentType(file);
-
+async function getAuthToken(): Promise<string | null> {
   const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  if (!token) return { error: 'Usuario no autenticado' };
+  return sessionData.session?.access_token ?? null;
+}
 
+async function uploadSingleObject(
+  key: string,
+  file: File,
+  token: string,
+): Promise<{ url?: string; error?: string }> {
+  const contentType = resolveContentType(file);
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, '');
+
   const presignRes = await fetch(`${supabaseUrl}/functions/v1/r2-upload-url`, {
     method: 'POST',
     headers: {
@@ -99,4 +115,57 @@ export async function uploadBusinessImage(
   }
 
   return { url: publicUrl || getR2PublicUrl(key) };
+}
+
+export async function uploadStorageFile(
+  userId: string,
+  file: File,
+  options?: UploadImageOptions,
+): Promise<UploadImageResult> {
+  return uploadBusinessImage(userId, file, options);
+}
+
+export async function uploadBusinessImage(
+  userId: string,
+  file: File,
+  options?: UploadImageOptions,
+): Promise<UploadImageResult> {
+  if (!userId) return { error: 'Usuario no autenticado' };
+  if (!r2PublicUrl) return { error: 'Almacenamiento R2 no configurado' };
+
+  const token = await getAuthToken();
+  if (!token) return { error: 'Usuario no autenticado' };
+
+  const namePrefix = options?.namePrefix ?? '';
+  const wantVariants = options?.variants !== false;
+
+  if (wantVariants) {
+    const prepared = await createImageVariants(file);
+    if (prepared.kind === 'variants') {
+      let canonicalUrl: string | undefined;
+
+      for (const variant of prepared.variants) {
+        const key = buildVariantObjectKey(userId, namePrefix, prepared.stem, variant.width);
+        const result = await uploadSingleObject(key, variant.file, token);
+        if (result.error || !result.url) {
+          return { error: result.error ?? 'Error al subir la variante' };
+        }
+        if (variant.width === CANONICAL_RESPONSIVE_WIDTH) {
+          canonicalUrl = result.url;
+        }
+      }
+
+      if (!canonicalUrl) {
+        return { error: 'Error al subir la imagen canónica' };
+      }
+
+      return {
+        url: canonicalUrl,
+        srcSet: buildSrcSetFromCanonical(canonicalUrl),
+      };
+    }
+  }
+
+  const key = buildObjectKey(userId, file, namePrefix);
+  return uploadSingleObject(key, file, token);
 }

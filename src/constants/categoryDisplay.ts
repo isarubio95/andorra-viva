@@ -1,4 +1,5 @@
 import type { DefaultBusinessCategory } from '@/constants/businessCategories';
+import { buildResponsiveImage } from '@/lib/responsive-image';
 
 export type CategoryGradient = { from: string; via: string; to: string };
 
@@ -117,7 +118,10 @@ export function resolveCategoryTheme(
   const image: CategoryImage = override?.imageUrl
     ? {
         src: override.imageUrl,
-        srcSet: override.imageSrcSet ?? '',
+        srcSet:
+          override.imageSrcSet ||
+          buildResponsiveImage(override.imageUrl).srcSet ||
+          '',
       }
     : base.image;
 

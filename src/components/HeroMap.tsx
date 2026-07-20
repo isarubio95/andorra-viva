@@ -5,6 +5,7 @@ import type { Map as LeafletMap, Popup as LeafletPopup } from 'leaflet';
 import { toast } from 'sonner';
 import type { Business, BusinessLocation } from '@/types/domain';
 import { resolveBusinessImageUrl } from '@/lib/business-image';
+import { ResponsiveImage } from '@/components/ResponsiveImage';
 import { getBusinessDisplayLocations } from '@/services/api';
 import {
   CATEGORY_MARKER_CONFIG,
@@ -173,13 +174,11 @@ function BusinessMapMarker({
           {branchLabel && (
             <p className="mt-0.5 text-xs font-medium text-foreground/80">{branchLabel}</p>
           )}
-          <img
+          <ResponsiveImage
             src={resolveBusinessImageUrl(biz.image_url)}
             alt={biz.name}
-            onError={e => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = resolveBusinessImageUrl(null);
-            }}
+            sizesPreset="mapThumb"
+            fallbackSrc={resolveBusinessImageUrl(null)}
             className="mt-1.5 block h-20 w-full rounded-md border border-border/70 object-cover"
           />
           <p className="mt-1.5 text-xs leading-snug text-muted-foreground">

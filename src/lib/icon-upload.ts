@@ -34,5 +34,5 @@ export async function uploadSubcategoryIcon(
   if (rejection === 'size') {
     return { error: 'El icono supera el límite de 256 KB.' };
   }
-  return uploadStorageFile(userId, file, { namePrefix: 'subcategory-icons/' });
+  return uploadStorageFile(userId, file, { namePrefix: 'subcategory-icons/', variants: false });
 }

@@ -11,13 +11,18 @@ import {
 
 type ImageKind = 'cover' | 'emblem';
 
+export type CategoryImageChange = {
+  url: string;
+  srcSet?: string;
+};
+
 interface CategoryImageFieldProps {
   kind: ImageKind;
   label: string;
   hint: string;
   value: string;
   defaultValue: string;
-  onChange: (url: string) => void;
+  onChange: (change: CategoryImageChange) => void;
   previewClassName?: string;
 }
 
@@ -52,7 +57,10 @@ export default function CategoryImageField({
       toast({ title: 'Error al subir la imagen', description: res.error, variant: 'destructive' });
       return;
     }
-    onChange(res.url);
+    onChange({
+      url: res.url,
+      ...(kind === 'cover' && res.srcSet ? { srcSet: res.srcSet } : {}),
+    });
   };
 
   return (
@@ -94,7 +102,7 @@ export default function CategoryImageField({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => onChange(defaultValue)}
+              onClick={() => onChange({ url: defaultValue })}
               aria-label="Restaurar imagen por defecto"
             >
               <RotateCcw className="mr-1 h-4 w-4" />
