@@ -9,10 +9,12 @@ import {
   Phone,
   Globe,
   MapPin,
+  Plus,
   Save,
   Share2,
   Sparkles,
   Store,
+  Trash2,
   X,
 } from 'lucide-react';
 import Header from '@/components/Header';
@@ -28,8 +30,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getBusinessById, updateMyBusiness } from '@/services/api';
-import type { Business } from '@/types/domain';
+import { getBusinessById, updateMyBusiness, upsertSecondaryBusinessLocation, deleteSecondaryBusinessLocation } from '@/services/api';
+import type { Business, BusinessLocation } from '@/types/domain';
 import { isOwnBusiness } from '@/lib/business-access';
 import { useSiteContent } from '@/contexts/SiteContentContext';
 import BusinessServicesPicker from '@/components/BusinessServicesPicker';
@@ -46,9 +48,11 @@ import { uploadBusinessImage } from '@/lib/object-storage';
 import {
   getMaxPhotosForTier,
   getMaxServicesForTier,
+  getMaxLocationsForTier,
   getNextPlanTier,
   isProfileGroupAvailable,
   planLabelForTier,
+  PROFILE_LOCATION_LIMITS,
   requiredPlanForGroup,
   resolveProfilePlanTier,
   type ProfileFieldGroup,
@@ -126,6 +130,16 @@ function coordsChanged(
   return currentLat !== storedLat || currentLng !== storedLng;
 }
 
+function emptyAddressValue(): BusinessAddressValue {
+  return {
+    address: '',
+    portal: '',
+    floor: '',
+    lat: null,
+    lng: null,
+  };
+}
+
 function LockedSection({
   group,
   tier,
@@ -174,14 +188,14 @@ export default function EditBusinessProfile() {
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [location, setLocation] = useState('');
-  const [addressValue, setAddressValue] = useState<BusinessAddressValue>({
-    address: '',
-    portal: '',
-    floor: '',
-    lat: null,
-    lng: null,
-  });
+  const [addressValue, setAddressValue] = useState<BusinessAddressValue>(emptyAddressValue);
   const [addressTouched, setAddressTouched] = useState(false);
+  const [secondaryEnabled, setSecondaryEnabled] = useState(false);
+  const [secondaryId, setSecondaryId] = useState<string | null>(null);
+  const [secondaryLabel, setSecondaryLabel] = useState('Sucursal');
+  const [secondaryLocation, setSecondaryLocation] = useState('');
+  const [secondaryAddressValue, setSecondaryAddressValue] = useState<BusinessAddressValue>(emptyAddressValue);
+  const [secondaryAddressTouched, setSecondaryAddressTouched] = useState(false);
   const [description, setDescription] = useState('');
   const [phone, setPhone] = useState('');
   const [website, setWebsite] = useState('');
@@ -198,6 +212,8 @@ export default function EditBusinessProfile() {
   const planTier = resolveProfilePlanTier(planId, role);
   const maxServices = getMaxServicesForTier(planTier);
   const maxPhotos = getMaxPhotosForTier(planTier);
+  const maxLocations = getMaxLocationsForTier(planTier);
+  const canEditSecondaryLocation = isProfileGroupAvailable(planTier, 'locations');
   const upgradePlanTier = getNextPlanTier(planTier);
   const upgradeMaxServices = upgradePlanTier ? getMaxServicesForTier(upgradePlanTier) : null;
   const upgradeMaxPhotos = upgradePlanTier ? getMaxPhotosForTier(upgradePlanTier) : null;
@@ -239,6 +255,26 @@ export default function EditBusinessProfile() {
           lat: row.latitude,
           lng: row.longitude,
         });
+        const secondary = row.locations?.find(loc => !loc.is_primary) ?? null;
+        if (secondary) {
+          setSecondaryEnabled(true);
+          setSecondaryId(secondary.id);
+          setSecondaryLabel(secondary.label?.trim() || 'Sucursal');
+          setSecondaryLocation(secondary.location);
+          const parsedSecondary = parseStoredAddress(secondary.address);
+          setSecondaryAddressValue({
+            ...parsedSecondary,
+            lat: secondary.latitude,
+            lng: secondary.longitude,
+          });
+        } else {
+          setSecondaryEnabled(false);
+          setSecondaryId(null);
+          setSecondaryLabel('Sucursal');
+          setSecondaryLocation('');
+          setSecondaryAddressValue(emptyAddressValue());
+        }
+        setSecondaryAddressTouched(false);
         setDescription(row.description);
         setPhone(row.phone ?? '');
         setWebsite(row.website ?? '');
@@ -276,6 +312,38 @@ export default function EditBusinessProfile() {
       previewImages.length > 0
         ? previewImages
         : business?.gallery?.slice(0, maxPhotos);
+
+    const primaryLoc: BusinessLocation = {
+      id: `${business?.id ?? businessId ?? 'preview'}-primary`,
+      business_id: business?.id ?? businessId ?? '',
+      label: 'Principal',
+      location,
+      address: formatStoredAddress(addressValue) || null,
+      latitude: addressValue.lat ?? business?.latitude ?? 42.5063,
+      longitude: addressValue.lng ?? business?.longitude ?? 1.5218,
+      is_primary: true,
+      sort_order: 0,
+    };
+    const locations: BusinessLocation[] = [primaryLoc];
+    if (
+      canEditSecondaryLocation &&
+      secondaryEnabled &&
+      secondaryLocation &&
+      isAddressConfirmed(secondaryAddressValue)
+    ) {
+      locations.push({
+        id: secondaryId ?? `${primaryLoc.business_id}-secondary`,
+        business_id: primaryLoc.business_id,
+        label: secondaryLabel.trim() || 'Sucursal',
+        location: secondaryLocation,
+        address: formatStoredAddress(secondaryAddressValue) || null,
+        latitude: secondaryAddressValue.lat!,
+        longitude: secondaryAddressValue.lng!,
+        is_primary: false,
+        sort_order: 1,
+      });
+    }
+
     return {
       id: business?.id ?? businessId ?? '',
       name,
@@ -310,6 +378,7 @@ export default function EditBusinessProfile() {
       is_recommended: business?.is_recommended ?? false,
       is_premium: showPremiumPreview,
       opening_hours: openingHours,
+      locations,
     };
   }, [
     business,
@@ -334,6 +403,12 @@ export default function EditBusinessProfile() {
     maxPhotos,
     maxServices,
     openingHours,
+    canEditSecondaryLocation,
+    secondaryEnabled,
+    secondaryId,
+    secondaryLabel,
+    secondaryLocation,
+    secondaryAddressValue,
   ]);
 
   const hasChanges = useMemo(() => {
@@ -387,6 +462,26 @@ export default function EditBusinessProfile() {
       if (currentMinAge !== business.min_age) return true;
     }
 
+    const originalSecondary = business.locations?.find(loc => !loc.is_primary) ?? null;
+    if (canEditSecondaryLocation) {
+      if (Boolean(originalSecondary) !== secondaryEnabled) return true;
+      if (secondaryEnabled) {
+        if ((secondaryLabel.trim() || 'Sucursal') !== (originalSecondary?.label?.trim() || 'Sucursal')) return true;
+        if (secondaryLocation !== (originalSecondary?.location ?? '')) return true;
+        if (formatStoredAddress(secondaryAddressValue) !== (originalSecondary?.address?.trim() || '')) return true;
+        if (
+          coordsChanged(
+            secondaryAddressValue.lat,
+            secondaryAddressValue.lng,
+            originalSecondary?.latitude,
+            originalSecondary?.longitude,
+          )
+        ) {
+          return true;
+        }
+      }
+    }
+
     return false;
   }, [
     business,
@@ -407,6 +502,11 @@ export default function EditBusinessProfile() {
     minAge,
     planTier,
     openingHours,
+    canEditSecondaryLocation,
+    secondaryEnabled,
+    secondaryLabel,
+    secondaryLocation,
+    secondaryAddressValue,
   ]);
 
   const leaveGuard = useUnsavedChangesGuard({ enabled: hasChanges && !saving });
@@ -511,7 +611,13 @@ export default function EditBusinessProfile() {
     return url;
   };
 
-  const syncBusinessBaseline = (allImages: string[], lat: number, lon: number, address: string | null) => {
+  const syncBusinessBaseline = (
+    allImages: string[],
+    lat: number,
+    lon: number,
+    address: string | null,
+    locations: BusinessLocation[],
+  ) => {
     if (!business) return;
     setBusiness({
       ...business,
@@ -547,6 +653,7 @@ export default function EditBusinessProfile() {
       image_url: allImages[0] || business.image_url,
       gallery: allImages.length > 0 ? allImages : business.gallery,
       opening_hours: openingHours,
+      locations,
     });
     photos.filter(photo => photo.kind === 'new').forEach(photo => URL.revokeObjectURL(photo.preview));
     setPhotos(allImages.map(url => ({ id: createPhotoId(), kind: 'existing', url })));
@@ -595,6 +702,38 @@ export default function EditBusinessProfile() {
       return false;
     }
 
+    const originalSecondary = business.locations?.find(loc => !loc.is_primary) ?? null;
+    const wantsSecondary = canEditSecondaryLocation && secondaryEnabled;
+
+    if (wantsSecondary) {
+      if (!secondaryLocation.trim()) {
+        toast({ title: 'Elige la parroquia de la sucursal', variant: 'destructive' });
+        return false;
+      }
+      if (!isAddressConfirmed(secondaryAddressValue)) {
+        setSecondaryAddressTouched(true);
+        toast({
+          title: 'Confirma la dirección de la sucursal',
+          description: 'Busca la calle y selecciónala de la lista de sugerencias.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+      const secondaryMatchesParish = await addressMatchesSelectedLocation(
+        { lat: secondaryAddressValue.lat!, lng: secondaryAddressValue.lng! },
+        secondaryLocation,
+      );
+      if (!secondaryMatchesParish) {
+        setSecondaryAddressTouched(true);
+        toast({
+          title: 'Sucursal fuera de la parroquia',
+          description: `La dirección seleccionada no pertenece a ${secondaryLocation}.`,
+          variant: 'destructive',
+        });
+        return false;
+      }
+    }
+
     if (selectedServices.length > maxServices) {
       toast({
         title: `Máximo ${maxServices} servicios`,
@@ -626,12 +765,13 @@ export default function EditBusinessProfile() {
         if (url) allImages.push(url);
       }
 
+      const storedAddress = formatStoredAddress(addressValue) || business.address || null;
       const payload: Record<string, unknown> = {
         name: name.trim(),
         category,
         subcategory: subcategory || null,
         location,
-        address: formatStoredAddress(addressValue) || business.address || null,
+        address: storedAddress,
         description: description.trim(),
         latitude: lat,
         longitude: lon,
@@ -673,7 +813,64 @@ export default function EditBusinessProfile() {
         return false;
       }
 
-      syncBusinessBaseline(allImages, lat, lon, formatStoredAddress(addressValue) || business.address || null);
+      let nextSecondary: BusinessLocation | null = originalSecondary;
+      if (canEditSecondaryLocation) {
+        if (wantsSecondary) {
+          const secondaryResult = await upsertSecondaryBusinessLocation(
+            businessId,
+            {
+              label: secondaryLabel.trim() || 'Sucursal',
+              location: secondaryLocation,
+              address: formatStoredAddress(secondaryAddressValue) || null,
+              latitude: secondaryAddressValue.lat!,
+              longitude: secondaryAddressValue.lng!,
+            },
+            secondaryId ?? originalSecondary?.id,
+          );
+          if (!secondaryResult.ok || !secondaryResult.location) {
+            toast({
+              title: 'No se pudo guardar la sucursal',
+              description: secondaryResult.error,
+              variant: 'destructive',
+            });
+            return false;
+          }
+          nextSecondary = secondaryResult.location;
+          setSecondaryId(secondaryResult.location.id);
+        } else if (originalSecondary || secondaryId) {
+          const deleteId = secondaryId ?? originalSecondary?.id;
+          if (deleteId) {
+            const deleteResult = await deleteSecondaryBusinessLocation(businessId, deleteId);
+            if (!deleteResult.ok) {
+              toast({
+                title: 'No se pudo eliminar la sucursal',
+                description: deleteResult.error,
+                variant: 'destructive',
+              });
+              return false;
+            }
+          }
+          nextSecondary = null;
+          setSecondaryId(null);
+        }
+      }
+
+      const nextLocations: BusinessLocation[] = [
+        {
+          id: business.locations?.find(loc => loc.is_primary)?.id ?? `${businessId}-primary`,
+          business_id: businessId,
+          label: 'Principal',
+          location,
+          address: storedAddress,
+          latitude: lat,
+          longitude: lon,
+          is_primary: true,
+          sort_order: 0,
+        },
+        ...(nextSecondary ? [nextSecondary] : []),
+      ];
+
+      syncBusinessBaseline(allImages, lat, lon, storedAddress, nextLocations);
       toast({ title: 'Perfil actualizado', description: 'Los cambios ya son visibles en el directorio.' });
       if (navigateAfterSave) {
         leaveGuard.allowNextNavigation();
@@ -824,6 +1021,90 @@ export default function EditBusinessProfile() {
                     onParishSuggest={setLocation}
                     showError={addressTouched}
                   />
+
+                  <div className="space-y-3 rounded-lg border border-border/70 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Segunda ubicación (sucursal)</p>
+                        <p className="text-xs text-muted-foreground">
+                          Plan Premium: hasta {PROFILE_LOCATION_LIMITS.premium} ubicaciones del mismo negocio.
+                        </p>
+                      </div>
+                      {canEditSecondaryLocation && secondaryEnabled && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="shrink-0 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setSecondaryEnabled(false);
+                            setSecondaryLocation('');
+                            setSecondaryAddressValue(emptyAddressValue());
+                            setSecondaryAddressTouched(false);
+                            setSecondaryLabel('Sucursal');
+                          }}
+                        >
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          Quitar
+                        </Button>
+                      )}
+                    </div>
+
+                    <LockedSection group="locations" tier={planTier}>
+                      {canEditSecondaryLocation && !secondaryEnabled ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => {
+                            setSecondaryEnabled(true);
+                            if (!secondaryLocation) setSecondaryLocation(location);
+                          }}
+                          disabled={maxLocations < 2}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Añadir sucursal
+                        </Button>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <Label htmlFor="secondary-label">Nombre de la sucursal</Label>
+                            <Input
+                              id="secondary-label"
+                              value={secondaryLabel}
+                              onChange={e => setSecondaryLabel(e.target.value)}
+                              placeholder="Sucursal"
+                              maxLength={60}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Parroquia / localidad</Label>
+                            <Select
+                              value={secondaryLocation || undefined}
+                              onValueChange={setSecondaryLocation}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Parroquia" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {BUSINESS_LOCATIONS.map(l => (
+                                  <SelectItem key={l} value={l}>{l}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <BusinessAddressPicker
+                            id="edit-secondary-address"
+                            value={secondaryAddressValue}
+                            onChange={setSecondaryAddressValue}
+                            parish={secondaryLocation || location}
+                            onParishSuggest={setSecondaryLocation}
+                            showError={secondaryAddressTouched}
+                          />
+                        </div>
+                      )}
+                    </LockedSection>
+                  </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="edit-desc">Descripción *</Label>

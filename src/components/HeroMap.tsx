@@ -3,8 +3,9 @@ import { LocateFixed, MapPin, Minus, Plus, Star } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { Map as LeafletMap, Popup as LeafletPopup } from 'leaflet';
 import { toast } from 'sonner';
-import type { Business } from '@/types/domain';
+import type { Business, BusinessLocation } from '@/types/domain';
 import { resolveBusinessImageUrl } from '@/lib/business-image';
+import { getBusinessDisplayLocations } from '@/services/api';
 import {
   CATEGORY_MARKER_CONFIG,
   CATEGORY_MARKER_DEFAULT_COLOR,
@@ -42,6 +43,11 @@ interface HeroMapProps {
   /** Desplaza controles del mapa bajo el header visible en móvil. */
   mobileControlsOffset?: boolean;
 }
+
+type MapBusinessMarker = {
+  biz: Business;
+  loc: BusinessLocation;
+};
 
 function MapInteractionBridge({ onInteract }: { onInteract?: () => void }) {
   const map = useMap();
@@ -119,28 +125,32 @@ function centerPopupInViewport(map: LeafletMap, popup: LeafletPopup) {
   });
 }
 
-function getMarkerAccessibleName(biz: Business): string {
+function getMarkerAccessibleName(biz: Business, loc: BusinessLocation): string {
   const type = biz.subcategory ?? biz.category;
-  return `Ver ${biz.name}, ${type}${biz.location ? `, ${biz.location}` : ''}`;
+  const branch = !loc.is_primary && loc.label ? `, ${loc.label}` : '';
+  return `Ver ${biz.name}${branch}, ${type}${loc.location ? `, ${loc.location}` : ''}`;
 }
 
 function BusinessMapMarker({
   biz,
+  loc,
   onBusinessClick,
 }: {
   biz: Business;
+  loc: BusinessLocation;
   onBusinessClick: (business: Business) => void;
 }) {
   const map = useMap();
+  const branchLabel = !loc.is_primary ? (loc.label?.trim() || 'Sucursal') : null;
 
   return (
     <Marker
-      position={[biz.latitude, biz.longitude]}
+      position={[loc.latitude, loc.longitude]}
       icon={getBusinessCategoryDivIcon(biz.category)}
       eventHandlers={{
         add: event => {
           const el = event.target.getElement?.() as HTMLElement | undefined;
-          const label = getMarkerAccessibleName(biz);
+          const label = getMarkerAccessibleName(biz, loc);
           if (el) {
             el.setAttribute('aria-label', label);
           }
@@ -160,6 +170,9 @@ function BusinessMapMarker({
       >
         <div>
           <h3 className="font-bold text-sm leading-tight">{biz.name}</h3>
+          {branchLabel && (
+            <p className="mt-0.5 text-xs font-medium text-foreground/80">{branchLabel}</p>
+          )}
           <img
             src={resolveBusinessImageUrl(biz.image_url)}
             alt={biz.name}
@@ -170,7 +183,7 @@ function BusinessMapMarker({
             className="mt-1.5 block h-20 w-full rounded-md border border-border/70 object-cover"
           />
           <p className="mt-1.5 text-xs leading-snug text-muted-foreground">
-            {biz.subcategory ?? biz.category} · {biz.location}
+            {biz.subcategory ?? biz.category} · {loc.location}
           </p>
           <div className="mt-1 flex items-center gap-1">
             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
@@ -197,7 +210,7 @@ export default function HeroMap({
   mobileFullBleed = false,
   mobileControlsOffset = false,
 }: HeroMapProps) {
-  const { categories, getSubcategoriesForCategory, mapTheme } = useSiteContent();
+  const { categories, getSubcategoriesForCategory, mapTheme, mapThemeReady } = useSiteContent();
   const mapThemeConfig = useMemo(() => getMapThemeConfig(mapTheme), [mapTheme]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedParish, setSelectedParish] = useState<AndorraParish | null>(null);
@@ -294,17 +307,23 @@ export default function HeroMap({
     );
   };
 
-  const visibleBusinesses = useMemo(() => {
-    let result = businesses;
-    if (selectedParish) {
-      result = result.filter(b => getParishForLocation(b.location) === selectedParish);
-    }
-    if (!selectedCategory) return result;
-    const inCategory = result.filter(b => b.category === selectedCategory);
-    if (selectedSubcategories.length === 0) return inCategory;
-    return inCategory.filter(
-      b => b.subcategory && selectedSubcategories.includes(b.subcategory),
+  const visibleMarkers = useMemo(() => {
+    let markers: MapBusinessMarker[] = businesses.flatMap(biz =>
+      getBusinessDisplayLocations(biz).map(loc => ({ biz, loc })),
     );
+
+    if (selectedParish) {
+      markers = markers.filter(m => getParishForLocation(m.loc.location) === selectedParish);
+    }
+    if (selectedCategory) {
+      markers = markers.filter(m => m.biz.category === selectedCategory);
+      if (selectedSubcategories.length > 0) {
+        markers = markers.filter(
+          m => m.biz.subcategory && selectedSubcategories.includes(m.biz.subcategory),
+        );
+      }
+    }
+    return markers;
   }, [businesses, selectedParish, selectedCategory, selectedSubcategories]);
 
   useEffect(() => {
@@ -474,11 +493,13 @@ export default function HeroMap({
         <AttributionPrefixCleaner />
         <MapInstanceBridge onReady={handleMapReady} />
         <MapInteractionBridge onInteract={onMapInteraction} />
-        <TileLayer
-          key={mapThemeConfig.id}
-          attribution={mapThemeConfig.attribution}
-          url={mapThemeConfig.url}
-        />
+        {mapThemeReady && (
+          <TileLayer
+            key={mapThemeConfig.id}
+            attribution={mapThemeConfig.attribution}
+            url={mapThemeConfig.url}
+          />
+        )}
         {userPosition && (
           <CircleMarker
             center={userPosition}
@@ -491,8 +512,13 @@ export default function HeroMap({
             }}
           />
         )}
-        {visibleBusinesses.map(biz => (
-          <BusinessMapMarker key={biz.id} biz={biz} onBusinessClick={onBusinessClick} />
+        {visibleMarkers.map(({ biz, loc }) => (
+          <BusinessMapMarker
+            key={`${biz.id}-${loc.id}`}
+            biz={biz}
+            loc={loc}
+            onBusinessClick={onBusinessClick}
+          />
         ))}
       </MapContainer>
 

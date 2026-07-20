@@ -90,6 +90,7 @@ export default function BusinessCard({ business, onClick }: BusinessCardProps) {
         </h3>
         <p className="line-clamp-1 h-4 text-xs text-muted-foreground">
           {business.location} · {business.subcategory ?? business.category}
+          {(business.locations?.length ?? 0) > 1 ? ' · 2 ubicaciones' : ''}
         </p>
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-1">

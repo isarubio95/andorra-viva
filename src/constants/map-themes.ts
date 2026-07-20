@@ -132,3 +132,32 @@ export function resolveMapTheme(value: unknown): MapThemeId {
 export function getMapThemeConfig(themeId: MapThemeId): MapThemeConfig {
   return MAP_THEMES[themeId] ?? MAP_THEMES[DEFAULT_MAP_THEME];
 }
+
+/** Persistido en el cliente para pintar el mapa con el tema del admin desde el primer frame. */
+const MAP_THEME_STORAGE_KEY = 'andorra-viva:map-theme';
+
+export function readCachedMapTheme(): MapThemeId | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(MAP_THEME_STORAGE_KEY);
+    if (raw === null) return null;
+    if (raw in MAP_THEMES) return raw as MapThemeId;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Tema inicial síncrono: caché del admin si existe; si no, el fallback. */
+export function getInitialMapTheme(): MapThemeId {
+  return readCachedMapTheme() ?? DEFAULT_MAP_THEME;
+}
+
+export function writeCachedMapTheme(themeId: MapThemeId): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(MAP_THEME_STORAGE_KEY, themeId);
+  } catch {
+    // ignore quota / private mode
+  }
+}

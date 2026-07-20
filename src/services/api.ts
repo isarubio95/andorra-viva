@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { clearStoredVisitorKey, getStoredVisitorKey } from '@/lib/visitor-key';
-import type { Business, NewsMonthlyQuota, NewsPost, Plan, Review } from '@/types/domain';
+import type { Business, BusinessLocation, NewsMonthlyQuota, NewsPost, Plan, Review } from '@/types/domain';
 import { rewriteSupabaseStorageUrl } from '@/lib/business-image';
 import { uploadBusinessImage } from '@/lib/object-storage';
 import { parseOpeningHours } from '@/lib/business-hours';
@@ -40,9 +40,82 @@ export interface BusinessMetricRow {
   daily_clicks: { date: string; clicks: number }[];
 }
 
+export type SecondaryBusinessLocationInput = {
+  label?: string | null;
+  location: string;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+};
+
+function normalizeBusinessLocationRow(row: unknown): BusinessLocation | null {
+  if (!row || typeof row !== 'object') return null;
+  const r = row as Record<string, unknown>;
+  const id = r.id != null ? String(r.id) : '';
+  const businessId = r.business_id != null ? String(r.business_id) : '';
+  const location = r.location != null ? String(r.location) : '';
+  const latitude = Number(r.latitude);
+  const longitude = Number(r.longitude);
+  if (!id || !businessId || !location || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null;
+  }
+  return {
+    id,
+    business_id: businessId,
+    label: r.label != null && String(r.label).trim() !== '' ? String(r.label).trim() : null,
+    location,
+    address: r.address != null && String(r.address).trim() !== '' ? String(r.address) : null,
+    latitude,
+    longitude,
+    is_primary: Boolean(r.is_primary),
+    sort_order: Number(r.sort_order ?? 0),
+  };
+}
+
+function extractLocations(row: Record<string, unknown>): BusinessLocation[] | undefined {
+  const raw = row.locations ?? row.business_locations;
+  if (!Array.isArray(raw)) return undefined;
+  const locations = raw
+    .map(normalizeBusinessLocationRow)
+    .filter((loc): loc is BusinessLocation => loc != null)
+    .sort((a, b) => {
+      if (a.is_primary !== b.is_primary) return a.is_primary ? -1 : 1;
+      return a.sort_order - b.sort_order;
+    });
+  return locations;
+}
+
+/** Ubicaciones a mostrar (API o fallback a la primaria del negocio). */
+export function getBusinessDisplayLocations(business: Business): BusinessLocation[] {
+  if (business.locations && business.locations.length > 0) {
+    return business.locations;
+  }
+  return [
+    {
+      id: `${business.id}-primary`,
+      business_id: business.id,
+      label: 'Principal',
+      location: business.location,
+      address: business.address ?? null,
+      latitude: business.latitude,
+      longitude: business.longitude,
+      is_primary: true,
+      sort_order: 0,
+    },
+  ];
+}
+
+const BUSINESS_SELECT_WITH_LOCATIONS = '*, locations:business_locations(*)';
+
 /** Asegura campos coherentes con la app (p. ej. `is_premium`, arrays). */
 export function normalizeBusinessRow(row: unknown): Business {
-  const r = row as Business & { is_premium?: boolean; services?: unknown; gallery?: unknown };
+  const r = row as Business & {
+    is_premium?: boolean;
+    services?: unknown;
+    gallery?: unknown;
+    locations?: unknown;
+    business_locations?: unknown;
+  };
   const services = Array.isArray(r.services) ? (r.services as string[]) : [];
   const gallery = Array.isArray(r.gallery)
     ? (r.gallery as string[])
@@ -50,6 +123,7 @@ export function normalizeBusinessRow(row: unknown): Business {
         .filter((url): url is string => !!url)
     : undefined;
   const imageUrl = rewriteSupabaseStorageUrl(r.image_url) ?? r.image_url;
+  const locations = extractLocations(r as unknown as Record<string, unknown>);
 
   return {
     ...r,
@@ -61,6 +135,7 @@ export function normalizeBusinessRow(row: unknown): Business {
     is_premium: !!r.is_premium,
     image_url: imageUrl,
     gallery,
+    locations,
     opening_hours: parseOpeningHours((r as { opening_hours?: unknown }).opening_hours),
   };
 }
@@ -90,7 +165,7 @@ export function normalizePlanRow(row: unknown): Plan {
 export async function getBusinesses(): Promise<Business[]> {
   const { data, error } = await supabase
     .from('businesses')
-    .select('*')
+    .select(BUSINESS_SELECT_WITH_LOCATIONS)
     .order('is_premium', { ascending: false })
     .order('is_recommended', { ascending: false });
 
@@ -104,7 +179,7 @@ export async function getBusinesses(): Promise<Business[]> {
 export async function getMyBusinesses(userId: string): Promise<Business[]> {
   const { data, error } = await supabase
     .from('businesses')
-    .select('*')
+    .select(BUSINESS_SELECT_WITH_LOCATIONS)
     .eq('owner_id', userId)
     .order('created_at', { ascending: false });
 
@@ -150,7 +225,7 @@ export async function deleteMyBusiness(
 export async function getBusinessById(id: string): Promise<Business | null> {
   const { data, error } = await supabase
     .from('businesses')
-    .select('*')
+    .select(BUSINESS_SELECT_WITH_LOCATIONS)
     .eq('id', id)
     .single();
 
@@ -159,6 +234,97 @@ export async function getBusinessById(id: string): Promise<Business | null> {
     return null;
   }
   return normalizeBusinessRow(data);
+}
+
+export async function getBusinessLocations(businessId: string): Promise<BusinessLocation[]> {
+  if (!businessId) return [];
+
+  const { data, error } = await supabase
+    .from('business_locations')
+    .select('*')
+    .eq('business_id', businessId)
+    .order('is_primary', { ascending: false })
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching business locations:', error);
+    return [];
+  }
+  return (data ?? [])
+    .map(normalizeBusinessLocationRow)
+    .filter((loc): loc is BusinessLocation => loc != null);
+}
+
+export async function upsertSecondaryBusinessLocation(
+  businessId: string,
+  input: SecondaryBusinessLocationInput,
+  existingId?: string | null,
+): Promise<{ ok: boolean; location?: BusinessLocation; error?: string }> {
+  if (!businessId) return { ok: false, error: 'Negocio inválido' };
+
+  const payload = {
+    business_id: businessId,
+    label: input.label?.trim() || 'Sucursal',
+    location: input.location,
+    address: input.address,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    is_primary: false,
+    sort_order: 1,
+  };
+
+  if (existingId) {
+    const { data, error } = await supabase
+      .from('business_locations')
+      .update(payload)
+      .eq('id', existingId)
+      .eq('business_id', businessId)
+      .eq('is_primary', false)
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error updating secondary location:', error);
+      return { ok: false, error: error.message };
+    }
+    const location = normalizeBusinessLocationRow(data);
+    if (!location) return { ok: false, error: 'No se pudo actualizar la sucursal' };
+    return { ok: true, location };
+  }
+
+  const { data, error } = await supabase
+    .from('business_locations')
+    .insert(payload)
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error creating secondary location:', error);
+    return { ok: false, error: error.message };
+  }
+  const location = normalizeBusinessLocationRow(data);
+  if (!location) return { ok: false, error: 'No se pudo crear la sucursal' };
+  return { ok: true, location };
+}
+
+export async function deleteSecondaryBusinessLocation(
+  businessId: string,
+  locationId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!businessId || !locationId) return { ok: false, error: 'Ubicación inválida' };
+
+  const { error } = await supabase
+    .from('business_locations')
+    .delete()
+    .eq('id', locationId)
+    .eq('business_id', businessId)
+    .eq('is_primary', false);
+
+  if (error) {
+    console.error('Error deleting secondary location:', error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }
 
 export async function getReviewsByBusiness(businessId: string): Promise<Review[]> {
@@ -339,7 +505,7 @@ export async function getTopVisitedBusinessesOfMonth(limit = 6): Promise<TopVisi
   const ids = rows.map(r => r.business_id);
   const { data: businesses, error: businessesError } = await supabase
     .from('businesses')
-    .select('*')
+    .select(BUSINESS_SELECT_WITH_LOCATIONS)
     .in('id', ids);
 
   if (businessesError) {

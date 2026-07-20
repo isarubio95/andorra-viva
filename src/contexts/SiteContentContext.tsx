@@ -31,7 +31,13 @@ import {
   type LegalPageDocument,
   type LegalPageKey,
 } from '@/constants/legal-pages-defaults';
-import { DEFAULT_MAP_THEME, type MapThemeId } from '@/constants/map-themes';
+import {
+  DEFAULT_MAP_THEME,
+  getInitialMapTheme,
+  readCachedMapTheme,
+  writeCachedMapTheme,
+  type MapThemeId,
+} from '@/constants/map-themes';
 import {
   DEFAULT_SUBCATEGORY_LABELS,
   getSubcategoryDisplayLabel,
@@ -40,6 +46,8 @@ import { fetchSiteSettings } from '@/services/admin-api';
 
 interface SiteContentContextValue {
   loading: boolean;
+  /** true cuando el tema del mapa es el del admin (caché local o fetch remoto). */
+  mapThemeReady: boolean;
   getText: (key: SiteTextKey) => string;
   getCategoryLabel: (category: string) => string;
   getCategoryTheme: (category: string) => CategoryTheme | null;
@@ -61,6 +69,7 @@ interface SiteContentContextValue {
 
 const SiteContentContext = createContext<SiteContentContextValue>({
   loading: true,
+  mapThemeReady: false,
   getText: key => DEFAULT_SITE_TEXTS[key],
   getCategoryLabel: category => DEFAULT_CATEGORY_LABELS[category] ?? String(category),
   getCategoryTheme: category => resolveTheme(category),
@@ -98,7 +107,8 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
   const [subcategoryIcons, setSubcategoryIcons] = useState<Record<string, string>>({});
   const [legalPages, setLegalPages] =
     useState<Record<LegalPageKey, LegalPageDocument>>(DEFAULT_LEGAL_PAGES);
-  const [mapTheme, setMapTheme] = useState<MapThemeId>(DEFAULT_MAP_THEME);
+  const [mapTheme, setMapTheme] = useState<MapThemeId>(getInitialMapTheme);
+  const [mapThemeReady, setMapThemeReady] = useState(() => readCachedMapTheme() !== null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,7 +139,9 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       ),
     );
     setLegalPages(mergeLegalPages(remoteLegal));
+    writeCachedMapTheme(remoteMapTheme);
     setMapTheme(remoteMapTheme);
+    setMapThemeReady(true);
     setLoading(false);
   }, []);
 
@@ -177,6 +189,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       loading,
+      mapThemeReady,
       getText,
       getCategoryLabel,
       getCategoryTheme,
@@ -197,6 +210,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
     }),
     [
       loading,
+      mapThemeReady,
       getText,
       getCategoryLabel,
       getCategoryTheme,

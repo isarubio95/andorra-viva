@@ -24,7 +24,7 @@ import type { Business, Review } from '@/types/domain';
 import { BUSINESS_IMAGE_FALLBACK, resolveBusinessImageUrl } from '@/lib/business-image';
 import { buildWhatsAppUrl } from '@/lib/whatsapp';
 import { getOrCreateVisitorKey } from '@/lib/visitor-key';
-import { trackBusinessClick, type BusinessClickType } from '@/services/api';
+import { getBusinessDisplayLocations, trackBusinessClick, type BusinessClickType } from '@/services/api';
 import { getMaxPhotosForTier, isProfileGroupAvailable, type ProfilePlanTier } from '@/lib/business-profile-plan';
 import { cn } from '@/lib/utils';
 import BusinessHoursDisplay from '@/components/BusinessHoursDisplay';
@@ -156,6 +156,7 @@ export default function BusinessProfileView({
         )
       : null;
   const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`;
+  const displayLocations = getBusinessDisplayLocations(business);
   const websiteUrl =
     showContact && business.website ? normalizeWebsiteUrl(business.website) : null;
   const trackClicks = !planTier;
@@ -316,12 +317,39 @@ export default function BusinessProfileView({
         )}
 
         <div className="space-y-2 text-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <MapPin className="h-4 w-4 shrink-0" />
-            {business.address?.trim()
-              ? business.address
-              : `Ubicación en ${business.location || '—'}, Andorra`}
-          </div>
+          {displayLocations.map(loc => {
+            const addressText = loc.address?.trim()
+              ? loc.address
+              : `Ubicación en ${loc.location || '—'}, Andorra`;
+            const locDirectionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${loc.latitude},${loc.longitude}`;
+            const locLabel = loc.is_primary
+              ? null
+              : loc.label?.trim() || 'Sucursal';
+
+            return (
+              <div key={loc.id} className="flex items-start gap-2 text-muted-foreground">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  {locLabel && (
+                    <p className="text-xs font-medium text-foreground/80">{locLabel}</p>
+                  )}
+                  <p>{addressText}</p>
+                  {displayLocations.length > 1 && (
+                    <a
+                      href={locDirectionsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                      onClick={() => trackProfileClick(business.id, 'directions', trackClicks)}
+                    >
+                      <Navigation className="h-3 w-3" />
+                      Cómo llegar
+                    </a>
+                  )}
+                </div>
+              </div>
+            );
+          })}
           {websiteUrl && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Globe className="h-4 w-4 shrink-0" />

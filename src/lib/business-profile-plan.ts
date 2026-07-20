@@ -1,6 +1,14 @@
 export type ProfilePlanTier = 'free' | 'basic' | 'pro' | 'premium';
 
-export type ProfileFieldGroup = 'essential' | 'contact' | 'services' | 'gallery' | 'actions' | 'details' | 'social';
+export type ProfileFieldGroup =
+  | 'essential'
+  | 'contact'
+  | 'services'
+  | 'gallery'
+  | 'actions'
+  | 'details'
+  | 'social'
+  | 'locations';
 
 const GROUP_MIN_TIER: Record<ProfileFieldGroup, ProfilePlanTier> = {
   essential: 'free',
@@ -10,6 +18,7 @@ const GROUP_MIN_TIER: Record<ProfileFieldGroup, ProfilePlanTier> = {
   gallery: 'free',
   actions: 'basic',
   social: 'pro',
+  locations: 'premium',
 };
 
 export const PROFILE_SERVICE_LIMITS: Record<ProfilePlanTier, number> = {
@@ -24,6 +33,14 @@ export const PROFILE_PHOTO_LIMITS: Record<ProfilePlanTier, number> = {
   basic: 3,
   pro: 6,
   premium: 10,
+};
+
+/** Máximo de ubicaciones (principal + sucursales). Solo Premium permite 2. */
+export const PROFILE_LOCATION_LIMITS: Record<ProfilePlanTier, number> = {
+  free: 1,
+  basic: 1,
+  pro: 1,
+  premium: 2,
 };
 
 const TIER_RANK: Record<ProfilePlanTier, number> = {
@@ -58,6 +75,10 @@ export function getMaxServicesForTier(tier: ProfilePlanTier): number {
 
 export function getMaxPhotosForTier(tier: ProfilePlanTier): number {
   return PROFILE_PHOTO_LIMITS[tier];
+}
+
+export function getMaxLocationsForTier(tier: ProfilePlanTier): number {
+  return PROFILE_LOCATION_LIMITS[tier];
 }
 
 export function planLabelForTier(tier: ProfilePlanTier): string {

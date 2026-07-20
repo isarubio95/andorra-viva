@@ -2,6 +2,18 @@
 
 import type { BusinessOpeningHours } from '@/lib/business-hours';
 
+export interface BusinessLocation {
+  id: string;
+  business_id: string;
+  label: string | null;
+  location: string;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+  is_primary: boolean;
+  sort_order: number;
+}
+
 export interface Business {
   id: string;
   name: string;
@@ -28,6 +40,8 @@ export interface Business {
   facebook_url?: string | null;
   x_url?: string | null;
   opening_hours?: BusinessOpeningHours | null;
+  /** Ubicaciones (primaria + sucursal Premium). Si falta, usar location/lat/lng del negocio. */
+  locations?: BusinessLocation[];
   created_at?: string;
 }
 

@@ -6,7 +6,7 @@ import type { SubcategoryConfig } from '@/constants/businessSubcategories';
 import { DEFAULT_SUBCATEGORY_LABELS } from '@/constants/subcategory-display';
 import type { SiteTextKey } from '@/constants/site-content-defaults';
 import type { LegalPageDocument, LegalPageKey } from '@/constants/legal-pages-defaults';
-import { DEFAULT_MAP_THEME, resolveMapTheme, type MapThemeId } from '@/constants/map-themes';
+import { DEFAULT_MAP_THEME, resolveMapTheme, writeCachedMapTheme, type MapThemeId } from '@/constants/map-themes';
 import type { Business } from '@/types/domain';
 import type { NewsPost, Plan, Review } from '@/types/domain';
 import { normalizeBusinessRow, normalizePlanRow } from '@/services/api';
@@ -288,6 +288,7 @@ export async function saveMapTheme(
     updated_at: new Date().toISOString(),
   });
   if (error) return { ok: false, error: error.message };
+  writeCachedMapTheme(themeId);
   return { ok: true };
 }
 
