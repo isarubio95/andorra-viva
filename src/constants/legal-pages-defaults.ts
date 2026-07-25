@@ -352,7 +352,7 @@ const TERMS_BODY = `
     <li>El usuario debe facilitar información veraz y mantenerla actualizada.</li>
     <li>Es responsable de la confidencialidad de sus credenciales de acceso.</li>
     <li>Debe notificar sin demora cualquier uso no autorizado de su cuenta.</li>
-    <li>El registro requiere la aceptación expresa de la Política de Protección de Datos.</li>
+    <li>El registro requiere la aceptación expresa de la Política de Protección de Datos y de estas Condiciones de Uso.</li>
     <li>${COMPANY} puede suspender o cancelar cuentas que incumplan estas condiciones.</li>
   </ul>
 </section>
@@ -493,8 +493,8 @@ export const DEFAULT_LEGAL_PAGES: Record<LegalPageKey, LegalPageDocument> = {
   },
   terms_of_use: {
     title: 'Condiciones de Uso',
-    lastUpdated: '8 de julio de 2026',
-    version: '2026-07-08',
+    lastUpdated: '25 de julio de 2026',
+    version: '2026-07-25',
     summary: `Condiciones que regulan el acceso y uso de la plataforma <strong>${PLATFORM}</strong>, prestada por <strong>${COMPANY}</strong>.`,
     bodyHtml: TERMS_BODY,
   },

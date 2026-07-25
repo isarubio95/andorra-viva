@@ -725,6 +725,32 @@ export async function deleteMyNewsPost(postId: string): Promise<{ ok: boolean; e
   return { ok: true };
 }
 
+export async function updateMyNewsPost(params: {
+  postId: string;
+  title: string;
+  body: string;
+  imageUrl?: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const title = params.title.trim();
+  const body = params.body.trim();
+  if (!params.postId) return { ok: false, error: 'Noticia inválida' };
+  if (!title) return { ok: false, error: 'El título es obligatorio' };
+  if (!body) return { ok: false, error: 'El contenido es obligatorio' };
+
+  const { error } = await supabase.rpc('update_my_news_post', {
+    p_post_id: params.postId,
+    p_title: title,
+    p_body: body,
+    p_image_url: params.imageUrl?.trim() || null,
+  });
+
+  if (error) {
+    console.error('Error updating news post:', error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
 export async function uploadNewsImage(
   userId: string,
   file: File,

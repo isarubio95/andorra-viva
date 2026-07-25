@@ -7,6 +7,14 @@ const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? '';
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
+function mapStripeStatus(status: Stripe.Subscription.Status): string {
+  if (status === 'trialing') return 'trialing';
+  if (status === 'active') return 'active';
+  if (status === 'past_due') return 'past_due';
+  if (status === 'canceled') return 'canceled';
+  return 'active';
+}
+
 serve(async req => {
   const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
   const signature = req.headers.get('stripe-signature');
@@ -73,17 +81,22 @@ serve(async req => {
 
         if (userId && session.subscription) {
           let subscriptionStatus = 'active';
+          let currentPeriodEnd: string | null = null;
           if (typeof session.subscription === 'string') {
             const stripeSubscription = await stripe.subscriptions.retrieve(session.subscription);
             subscriptionStatus =
               stripeSubscription.status === 'trialing' ? 'trialing' : 'active';
+            currentPeriodEnd = new Date(stripeSubscription.current_period_end * 1000).toISOString();
           }
 
           await supabase
             .from('subscriptions')
             .update({
               plan_id: planId,
+              pending_plan_id: null,
+              cancel_at_period_end: false,
               status: subscriptionStatus,
+              current_period_end: currentPeriodEnd,
               stripe_customer_id:
                 typeof session.customer === 'string' ? session.customer : null,
               stripe_subscription_id:
@@ -123,19 +136,42 @@ serve(async req => {
         const { data: subRow } = customerId
           ? await supabase
               .from('subscriptions')
-              .select('user_id')
+              .select('user_id, pending_plan_id')
               .eq('stripe_customer_id', customerId)
               .maybeSingle()
           : { data: null };
 
         if (subRow?.user_id) {
+          let currentPeriodEnd: string | null = null;
+          let metadataPlanId: string | undefined;
+          if (subscriptionId) {
+            const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+            currentPeriodEnd = new Date(stripeSubscription.current_period_end * 1000).toISOString();
+            metadataPlanId = stripeSubscription.metadata?.plan_id;
+          }
+
+          const updatePayload: Record<string, unknown> = {
+            status: event.type === 'invoice.paid' ? 'active' : 'past_due',
+            stripe_subscription_id: subscriptionId,
+            ...(currentPeriodEnd ? { current_period_end: currentPeriodEnd } : {}),
+            updated_at: new Date().toISOString(),
+          };
+
+          // Tras renovar, si el metadata de Stripe ya refleja el plan pendiente, aplicarlo.
+          if (
+            event.type === 'invoice.paid' &&
+            subRow.pending_plan_id &&
+            metadataPlanId &&
+            metadataPlanId === subRow.pending_plan_id
+          ) {
+            updatePayload.plan_id = metadataPlanId;
+            updatePayload.pending_plan_id = null;
+            updatePayload.cancel_at_period_end = false;
+          }
+
           await supabase
             .from('subscriptions')
-            .update({
-              status: event.type === 'invoice.paid' ? 'active' : 'past_due',
-              stripe_subscription_id: subscriptionId,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updatePayload)
             .eq('user_id', subRow.user_id);
         }
 
@@ -160,31 +196,44 @@ serve(async req => {
         const { data: subRow } = customerId
           ? await supabase
               .from('subscriptions')
-              .select('user_id')
+              .select('user_id, plan_id, pending_plan_id')
               .eq('stripe_customer_id', customerId)
               .maybeSingle()
           : { data: null };
 
         if (subRow?.user_id) {
-          const status =
-            subscription.status === 'trialing'
-              ? 'trialing'
-              : subscription.status === 'active'
-                ? 'active'
-                : subscription.status === 'past_due'
-                  ? 'past_due'
-                  : subscription.status === 'canceled'
-                    ? 'canceled'
-                    : 'active';
+          const updatePayload: Record<string, unknown> = {
+            status: mapStripeStatus(subscription.status),
+            stripe_subscription_id: subscription.id,
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            cancel_at_period_end: !!subscription.cancel_at_period_end,
+            updated_at: new Date().toISOString(),
+          };
+
+          if (planId) {
+            if (subRow.pending_plan_id) {
+              // Solo aplicar el plan cuando Stripe ya activó el precio/metadata pendiente.
+              if (planId === subRow.pending_plan_id) {
+                updatePayload.plan_id = planId;
+                updatePayload.pending_plan_id = null;
+              }
+              // Si metadata sigue siendo el plan actual, no tocar plan_id ni pending.
+            } else {
+              updatePayload.plan_id = planId;
+            }
+          }
+
+          // Cancelación al final del periodo ⇒ pendiente free si aún no hay pending.
+          if (subscription.cancel_at_period_end && !subRow.pending_plan_id) {
+            updatePayload.pending_plan_id = 'free';
+          }
+          if (!subscription.cancel_at_period_end && subRow.pending_plan_id === 'free') {
+            updatePayload.pending_plan_id = null;
+          }
 
           await supabase
             .from('subscriptions')
-            .update({
-              status,
-              ...(planId ? { plan_id: planId } : {}),
-              stripe_subscription_id: subscription.id,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updatePayload)
             .eq('user_id', subRow.user_id);
         }
 
@@ -218,6 +267,9 @@ serve(async req => {
             .update({
               status: 'canceled',
               plan_id: 'free',
+              pending_plan_id: null,
+              cancel_at_period_end: false,
+              stripe_subscription_id: null,
               updated_at: new Date().toISOString(),
             })
             .eq('user_id', subRow.user_id);

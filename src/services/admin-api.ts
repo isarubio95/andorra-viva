@@ -505,7 +505,16 @@ export async function adminUpdatePlan(
 
 export async function createStripeCheckoutSession(
   planId: string,
-): Promise<{ url?: string; updated?: boolean; planId?: string; error?: string }> {
+): Promise<{
+  url?: string;
+  updated?: boolean;
+  scheduled?: boolean;
+  planId?: string;
+  pendingPlanId?: string;
+  currentPeriodEnd?: string;
+  localOnly?: boolean;
+  error?: string;
+}> {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) return { error: 'Sesión no válida' };
@@ -526,11 +535,27 @@ export async function createStripeCheckoutSession(
     const body = (await res.json()) as {
       url?: string;
       updated?: boolean;
+      scheduled?: boolean;
       planId?: string;
+      pendingPlanId?: string;
+      currentPeriodEnd?: string;
+      localOnly?: boolean;
       error?: string;
     };
-    if (!res.ok) return { error: body.error ?? 'Error al crear sesión de pago' };
-    return { url: body.url, updated: body.updated, planId: body.planId };
+    if (!res.ok) {
+      return {
+        error: body.error ?? 'Error al crear sesión de pago',
+        localOnly: body.localOnly,
+      };
+    }
+    return {
+      url: body.url,
+      updated: body.updated,
+      scheduled: body.scheduled,
+      planId: body.planId,
+      pendingPlanId: body.pendingPlanId,
+      currentPeriodEnd: body.currentPeriodEnd,
+    };
   } catch {
     return { error: 'No se pudo conectar con Stripe. ¿Está desplegada la Edge Function?' };
   }

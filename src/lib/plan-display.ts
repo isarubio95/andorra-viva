@@ -13,6 +13,76 @@ function moveFeatureLast(features: string[], label: string): string[] {
 /** Plan gratuito: oculto en la pestaña de upgrade del dashboard profesional. */
 export const DASHBOARD_HIDDEN_PLAN_IDS = new Set(['free']);
 
+const PAID_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing']);
+
+function formatPeriodEndDate(end: Date): string {
+  return end.toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+/** Texto con días restantes hasta la renovación automática del plan. */
+export function getPlanRenewalDaysLabel(
+  currentPeriodEnd: string | null | undefined,
+  options?: {
+    planId?: string | null;
+    planName?: string | null;
+    pendingPlanId?: string | null;
+    pendingPlanName?: string | null;
+    subscriptionStatus?: string | null;
+    now?: Date;
+  },
+): string | null {
+  const planId = options?.planId;
+  const status = options?.subscriptionStatus;
+  if (planId && DASHBOARD_HIDDEN_PLAN_IDS.has(planId)) return null;
+  if (status && !PAID_SUBSCRIPTION_STATUSES.has(status)) return null;
+  if (!currentPeriodEnd) return null;
+
+  const end = new Date(currentPeriodEnd);
+  if (Number.isNaN(end.getTime())) return null;
+
+  const now = options?.now ?? new Date();
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const days = Math.ceil((end.getTime() - now.getTime()) / msPerDay);
+  if (days < 0) return null;
+
+  const planLabel = (options?.planName ?? planId ?? 'actual').trim() || 'actual';
+  const pendingPlanId = options?.pendingPlanId;
+  const pendingLabel =
+    (options?.pendingPlanName ?? pendingPlanId ?? '').trim() || pendingPlanId || null;
+  const endLabel = formatPeriodEndDate(end);
+
+  if (pendingPlanId && pendingLabel) {
+    if (pendingPlanId === 'free') {
+      if (days === 0) {
+        return `Hoy termina tu plan ${planLabel}. Pasarás al plan gratuito.`;
+      }
+      if (days === 1) {
+        return `Queda 1 día de plan ${planLabel}. El ${endLabel} pasarás al plan gratuito.`;
+      }
+      return `Quedan ${days} días de plan ${planLabel}. El ${endLabel} pasarás al plan gratuito.`;
+    }
+    if (days === 0) {
+      return `Hoy terminas el plan ${planLabel} y pasarás a ${pendingLabel}.`;
+    }
+    if (days === 1) {
+      return `Queda 1 día de plan ${planLabel}. El ${endLabel} pasarás a ${pendingLabel}.`;
+    }
+    return `Quedan ${days} días de plan ${planLabel}. El ${endLabel} pasarás a ${pendingLabel}.`;
+  }
+
+  if (days === 0) {
+    return `Tu plan ${planLabel} se renueva automáticamente hoy.`;
+  }
+  if (days === 1) {
+    return `Queda 1 día de plan ${planLabel} hasta la renovación automática.`;
+  }
+  return `Quedan ${days} días de plan ${planLabel} hasta la renovación automática.`;
+}
+
 export function normalizePlanFeatures(features: string[]): string[] {
   return (features ?? []).map(f => f.trim()).filter(f => f.length > 0 && !META_PREFIX.test(f));
 }

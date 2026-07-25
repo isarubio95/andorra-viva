@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowUpRight, Newspaper, Store } from 'lucide-react';
@@ -14,6 +15,7 @@ type NewsPostDetailProps = {
   onReadMore?: () => void;
   inDrawer?: boolean;
   className?: string;
+  headerAction?: ReactNode;
 };
 
 export default function NewsPostDetail({
@@ -22,6 +24,7 @@ export default function NewsPostDetail({
   onReadMore,
   inDrawer = false,
   className,
+  headerAction,
 }: NewsPostDetailProps) {
   const publishedAt = format(new Date(post.created_at), "d 'de' MMMM yyyy", { locale: es });
 
@@ -85,7 +88,10 @@ export default function NewsPostDetail({
 
   if (inDrawer) {
     return (
-      <div className={cn('flex h-full min-h-0 flex-col bg-card', className)}>
+      <div className={cn('relative flex h-full min-h-0 flex-col bg-card', className)}>
+        {headerAction ? (
+          <div className="absolute right-3 top-3 z-10">{headerAction}</div>
+        ) : null}
         {image}
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-6">
           <div className="space-y-3">
@@ -99,9 +105,12 @@ export default function NewsPostDetail({
   }
 
   return (
-    <Card className={cn('overflow-hidden', className)}>
+    <Card className={cn('relative overflow-hidden', className)}>
+      {headerAction ? (
+        <div className="absolute right-2 top-2 z-10">{headerAction}</div>
+      ) : null}
       {image}
-      <CardHeader className="space-y-3 p-5">
+      <CardHeader className={cn('space-y-3 p-5', headerAction && 'pr-44')}>
         {meta}
         {title}
         {readMoreLink}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Crown, ImagePlus, Loader2, Newspaper, Trash2 } from 'lucide-react';
+import { Crown, ImagePlus, Loader2, Newspaper, Pencil, Trash2 } from 'lucide-react';
 import NewsCard from '@/components/NewsCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,12 +26,13 @@ import {
   filterBusinessImageFiles,
 } from '@/lib/business-image-upload';
 import { accountDashboardPath } from '@/lib/account-dashboard';
-import { canPublishNews } from '@/lib/news-access';
+import { canPublishNews, isNewsPostEditable } from '@/lib/news-access';
 import {
   deleteMyNewsPost,
   getMyNewsMonthlyQuota,
   getMyNewsPosts,
   submitNewsPost,
+  updateMyNewsPost,
   uploadNewsImage,
 } from '@/services/api';
 import type { NewsMonthlyQuota, NewsPost } from '@/types/domain';
@@ -60,6 +61,45 @@ function PremiumRequiredNotice({ hasProAccess }: { hasProAccess: boolean }) {
   );
 }
 
+function PostActions({
+  post,
+  onEdit,
+  onDelete,
+}: {
+  post: NewsPost;
+  onEdit: (post: NewsPost) => void;
+  onDelete: (postId: string) => void;
+}) {
+  const canEdit = isNewsPostEditable(post.created_at);
+
+  return (
+    <div className="flex shrink-0 items-start gap-2">
+      {canEdit ? (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="gap-2 bg-background/95 shadow-sm hover:bg-background"
+          onClick={() => onEdit(post)}
+        >
+          <Pencil className="h-4 w-4" />
+          Editar
+        </Button>
+      ) : null}
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        className="gap-2 bg-background/95 text-destructive shadow-sm hover:bg-background hover:text-destructive"
+        onClick={() => onDelete(post.id)}
+      >
+        <Trash2 className="h-4 w-4" />
+        Eliminar
+      </Button>
+    </div>
+  );
+}
+
 export default function NewsPublisherPanel() {
   const { user, hasProAccess, roleLoading, planId, subscriptionStatus } = useAuth();
   const { toast } = useToast();
@@ -75,14 +115,19 @@ export default function NewsPublisherPanel() {
   const [body, setBody] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletePostId, setDeletePostId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const canPublishNow = useMemo(
-    () => isPremiumPublisher && !!quota?.can_publish && (quota.remaining_this_month ?? 0) > 0,
-    [isPremiumPublisher, quota],
-  );
+  const isEditing = !!editingPostId;
+
+  const canSubmitForm = useMemo(() => {
+    if (isEditing) return true;
+    if (!isPremiumPublisher) return false;
+    return !!quota?.can_publish && (quota.remaining_this_month ?? 0) > 0;
+  }, [isPremiumPublisher, isEditing, quota]);
 
   const loadPosts = async () => {
     setPostsLoading(true);
@@ -110,20 +155,40 @@ export default function NewsPublisherPanel() {
   }, [roleLoading, isPremiumPublisher]);
 
   useEffect(() => {
-    if (!imageFile) {
-      setImagePreview(null);
-      return;
+    if (imageFile) {
+      const url = URL.createObjectURL(imageFile);
+      setImagePreview(url);
+      return () => URL.revokeObjectURL(url);
     }
-    const url = URL.createObjectURL(imageFile);
-    setImagePreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [imageFile]);
+    setImagePreview(existingImageUrl);
+    return undefined;
+  }, [imageFile, existingImageUrl]);
 
   const resetForm = () => {
     setTitle('');
     setBody('');
     setImageFile(null);
+    setExistingImageUrl(null);
+    setEditingPostId(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const startEdit = (post: NewsPost) => {
+    if (!isNewsPostEditable(post.created_at)) {
+      toast({
+        title: 'No se puede editar',
+        description: 'Solo puedes editar una noticia durante el primer mes tras publicarla.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setEditingPostId(post.id);
+    setTitle(post.title);
+    setBody(post.body);
+    setImageFile(null);
+    setExistingImageUrl(post.image_url);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,12 +219,18 @@ export default function NewsPublisherPanel() {
     setImageFile(accepted[0] ?? null);
   };
 
+  const clearImage = () => {
+    setImageFile(null);
+    setExistingImageUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!user?.id || !canPublishNow) return;
+    if (!user?.id || !canSubmitForm) return;
 
     setSubmitting(true);
-    let imageUrl: string | null = null;
+    let imageUrl: string | null = existingImageUrl;
 
     if (imageFile) {
       const upload = await uploadNewsImage(user.id, imageFile);
@@ -175,19 +246,32 @@ export default function NewsPublisherPanel() {
       imageUrl = upload.url;
     }
 
-    const result = await submitNewsPost({ title, body, imageUrl });
+    const result = isEditing
+      ? await updateMyNewsPost({
+          postId: editingPostId,
+          title,
+          body,
+          imageUrl,
+        })
+      : await submitNewsPost({ title, body, imageUrl });
+
     setSubmitting(false);
 
     if (!result.ok) {
       toast({
-        title: 'No se pudo publicar',
+        title: isEditing ? 'No se pudo guardar' : 'No se pudo publicar',
         description: result.error ?? 'Inténtalo de nuevo.',
         variant: 'destructive',
       });
       return;
     }
 
-    toast({ title: 'Noticia publicada', description: 'Ya está visible en la sección de noticias.' });
+    toast({
+      title: isEditing ? 'Noticia actualizada' : 'Noticia publicada',
+      description: isEditing
+        ? 'Los cambios ya son visibles en la sección de noticias.'
+        : 'Ya está visible en la sección de noticias.',
+    });
     resetForm();
     await refreshData();
   };
@@ -208,6 +292,7 @@ export default function NewsPublisherPanel() {
       return;
     }
 
+    if (editingPostId === deletePostId) resetForm();
     toast({ title: 'Noticia eliminada' });
     await refreshData();
   };
@@ -245,28 +330,34 @@ export default function NewsPublisherPanel() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Newspaper className="h-5 w-5" />
-              Publicar noticia
+              {isEditing ? 'Editar noticia' : 'Publicar noticia'}
             </CardTitle>
             <CardDescription>
-              {isPremiumPublisher
-                ? 'Comparte novedades de tu negocio. Puedes publicar 1 noticia al mes con foto opcional.'
-                : 'Publica novedades de tu negocio en la sección pública de noticias.'}
+              {isEditing
+                ? 'Puedes modificar esta noticia durante el primer mes tras publicarla.'
+                : isPremiumPublisher
+                  ? 'Comparte novedades de tu negocio. Puedes publicar 1 noticia al mes con foto opcional.'
+                  : 'Publica novedades de tu negocio en la sección pública de noticias.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!isPremiumPublisher ? (
+            {!isPremiumPublisher && !isEditing ? (
               <PremiumRequiredNotice hasProAccess={hasProAccess} />
             ) : (
               <>
-                {quotaLoading ? (
-                  <Skeleton className="h-6 w-48" />
-                ) : quota?.posted_this_month ? (
-                  <Badge variant="secondary">Ya has publicado una noticia este mes</Badge>
-                ) : quota?.can_publish ? (
-                  <Badge className="recommended-badge border-0">Te queda 1 publicación este mes</Badge>
-                ) : null}
+                {!isEditing ? (
+                  quotaLoading ? (
+                    <Skeleton className="h-6 w-48" />
+                  ) : quota?.posted_this_month ? (
+                    <Badge variant="secondary">Ya has publicado una noticia este mes</Badge>
+                  ) : quota?.can_publish ? (
+                    <Badge className="recommended-badge border-0">Te queda 1 publicación este mes</Badge>
+                  ) : null
+                ) : (
+                  <Badge variant="secondary">Editando publicación</Badge>
+                )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={e => void handleSubmit(e)} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="news-title">Título</Label>
                     <Input
@@ -275,7 +366,7 @@ export default function NewsPublisherPanel() {
                       onChange={e => setTitle(e.target.value)}
                       placeholder="Título de la noticia"
                       maxLength={120}
-                      disabled={!canPublishNow || submitting}
+                      disabled={!canSubmitForm || submitting}
                       required
                     />
                   </div>
@@ -288,7 +379,7 @@ export default function NewsPublisherPanel() {
                       placeholder="Escribe la noticia..."
                       rows={6}
                       maxLength={4000}
-                      disabled={!canPublishNow || submitting}
+                      disabled={!canSubmitForm || submitting}
                       required
                     />
                   </div>
@@ -298,11 +389,11 @@ export default function NewsPublisherPanel() {
                       <Button
                         type="button"
                         variant="outline"
-                        disabled={!canPublishNow || submitting}
+                        disabled={!canSubmitForm || submitting}
                         onClick={() => fileInputRef.current?.click()}
                       >
                         <ImagePlus className="mr-2 h-4 w-4" />
-                        {imageFile ? 'Cambiar imagen' : 'Añadir imagen'}
+                        {imageFile || existingImageUrl ? 'Cambiar imagen' : 'Añadir imagen'}
                       </Button>
                       <input
                         ref={fileInputRef}
@@ -311,18 +402,15 @@ export default function NewsPublisherPanel() {
                         accept={BUSINESS_IMAGE_ACCEPT}
                         className="hidden"
                         onChange={handleImageChange}
-                        disabled={!canPublishNow || submitting}
+                        disabled={!canSubmitForm || submitting}
                       />
-                      {imageFile ? (
+                      {imageFile || existingImageUrl ? (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           disabled={submitting}
-                          onClick={() => {
-                            setImageFile(null);
-                            if (fileInputRef.current) fileInputRef.current.value = '';
-                          }}
+                          onClick={clearImage}
                         >
                           Quitar imagen
                         </Button>
@@ -334,16 +422,25 @@ export default function NewsPublisherPanel() {
                       </div>
                     ) : null}
                   </div>
-                  <Button type="submit" disabled={!canPublishNow || submitting}>
-                    {submitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Publicando…
-                      </>
-                    ) : (
-                      'Publicar noticia'
-                    )}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="submit" disabled={!canSubmitForm || submitting}>
+                      {submitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {isEditing ? 'Guardando…' : 'Publicando…'}
+                        </>
+                      ) : isEditing ? (
+                        'Guardar cambios'
+                      ) : (
+                        'Publicar noticia'
+                      )}
+                    </Button>
+                    {isEditing ? (
+                      <Button type="button" variant="outline" disabled={submitting} onClick={resetForm}>
+                        Cancelar
+                      </Button>
+                    ) : null}
+                  </div>
                 </form>
               </>
             )}
@@ -365,21 +462,17 @@ export default function NewsPublisherPanel() {
               <p className="text-sm text-muted-foreground">Aún no has publicado ninguna noticia.</p>
             ) : (
               posts.map(post => (
-                <div key={post.id} className="space-y-2">
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setDeletePostId(post.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Eliminar
-                    </Button>
-                  </div>
-                  <NewsCard post={post} />
-                </div>
+                <NewsCard
+                  key={post.id}
+                  post={post}
+                  headerAction={
+                    <PostActions
+                      post={post}
+                      onEdit={startEdit}
+                      onDelete={setDeletePostId}
+                    />
+                  }
+                />
               ))
             )}
           </CardContent>

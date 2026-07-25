@@ -56,12 +56,13 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(false);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { getLegalPage } = useSiteContent();
   const privacyPolicyVersion = getLegalPage('privacy_policy').version;
+  const termsOfUseVersion = getLegalPage('terms_of_use').version;
 
   const pushWizardParams = (updates: { step?: SignupStep; role?: UserRole; plan?: string }) => {
     setSearchParams(current => buildSignupSearchParams(current, updates));
@@ -185,10 +186,11 @@ export default function Signup() {
       toast({ title: 'Contraseña muy corta', description: 'Mínimo 6 caracteres.', variant: 'destructive' });
       return;
     }
-    if (!acceptedPrivacyPolicy) {
+    if (!acceptedLegal) {
       toast({
-        title: 'Debes aceptar la política de protección de datos',
-        description: 'Lee y marca la casilla de la política de protección de datos para crear tu cuenta.',
+        title: 'Debes aceptar las condiciones legales',
+        description:
+          'Lee y marca la casilla de la Política de Protección de Datos y las Condiciones de Uso para crear tu cuenta.',
         variant: 'destructive',
       });
       return;
@@ -196,6 +198,7 @@ export default function Signup() {
 
     setLoading(true);
 
+    const acceptedAt = new Date().toISOString();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -203,8 +206,10 @@ export default function Signup() {
         data: {
           full_name: fullName,
           role: selectedRole,
-          privacy_policy_accepted_at: new Date().toISOString(),
+          privacy_policy_accepted_at: acceptedAt,
           privacy_policy_version: privacyPolicyVersion,
+          terms_of_use_accepted_at: acceptedAt,
+          terms_of_use_version: termsOfUseVersion,
           ...(selectedRole === 'professional' ? { plan: selectedPlan } : {}),
         },
         emailRedirectTo: window.location.origin,
@@ -262,7 +267,18 @@ export default function Signup() {
     <div className="flex min-h-screen items-center justify-center bg-transparent px-4 py-8">
       <div className={cn('w-full space-y-8', step === 'plan' ? 'max-w-7xl' : 'max-w-lg')}>
         <div className="flex flex-col items-center gap-3">
-          <AppLogo size="md" asLink />
+          <div className="relative flex w-full items-center justify-center">
+            {step === 'plan' && !upgradeFlow && (
+              <Button
+                variant="outline"
+                onClick={goBack}
+                className="absolute left-0 top-1/2 -translate-y-1/2 gap-1"
+              >
+                <ArrowLeft className="h-4 w-4" /> Atrás
+              </Button>
+            )}
+            <AppLogo size="md" asLink />
+          </div>
           <p className="text-sm text-muted-foreground">
             {reviewMode && 'Cuenta personal para valorar negocios'}
             {upgradeFlow && step === 'plan' && 'Elige tu plan profesional'}
@@ -402,13 +418,6 @@ export default function Signup() {
               })}
             />
             <PlanBenefitsBar className="mt-6 w-full" />
-            {!upgradeFlow && (
-              <div className="flex">
-                <Button variant="outline" onClick={goBack} className="gap-1">
-                  <ArrowLeft className="h-4 w-4" /> Atrás
-                </Button>
-              </div>
-            )}
           </div>
         )}
 
@@ -498,12 +507,12 @@ export default function Signup() {
 
                 <div className="flex items-start gap-2 mt-1">
                   <Checkbox
-                    id="privacyPolicy"
-                    checked={acceptedPrivacyPolicy}
-                    onCheckedChange={value => setAcceptedPrivacyPolicy(value === true)}
+                    id="acceptedLegal"
+                    checked={acceptedLegal}
+                    onCheckedChange={value => setAcceptedLegal(value === true)}
                     className="mt-0.5"
                   />
-                  <label htmlFor="privacyPolicy" className="cursor-pointer text-xs leading-snug text-muted-foreground">
+                  <label htmlFor="acceptedLegal" className="cursor-pointer text-xs leading-snug text-muted-foreground">
                     He leído y acepto la{' '}
                     <Link
                       to="/politica-proteccion-datos"
@@ -513,13 +522,23 @@ export default function Signup() {
                       onClick={e => e.stopPropagation()}
                     >
                       Política de Protección de Datos
+                    </Link>{' '}
+                    y las{' '}
+                    <Link
+                      to="/condiciones-de-uso"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-primary hover:underline"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      Condiciones de Uso
                     </Link>
                   </label>
                 </div>
               </CardContent>
 
               <CardFooter className="flex flex-col gap-4">
-                <Button type="submit" className="w-full" disabled={loading || !acceptedPrivacyPolicy}>
+                <Button type="submit" className="w-full" disabled={loading || !acceptedLegal}>
                   {loading ? 'Creando cuenta…' : 'Crear Cuenta'}
                 </Button>
                 {!reviewMode && (

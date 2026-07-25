@@ -5,7 +5,7 @@ import Footer from '@/components/Footer';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import BusinessCard from '@/components/BusinessCard';
 import ReviewsPanel from '@/components/ReviewsPanel';
-import { getBusinesses } from '@/services/api';
+import { getBusinessDisplayLocations, getBusinesses } from '@/services/api';
 import type { Business } from '@/types/domain';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -28,6 +28,7 @@ import { useCarouselAutoplay } from '@/hooks/use-carousel-autoplay';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { buildCategoryGroupMap } from '@/constants/categoryGroups';
 import { categoryHeroBackground } from '@/constants/categoryDisplay';
+import { ANDORRA_PARISHES, getParishForLocation } from '@/constants/businessForm';
 import { useSiteContent } from '@/contexts/SiteContentContext';
 
 const PRICE_LABELS: Record<number, string> = {
@@ -133,6 +134,7 @@ export default function Directory() {
   // Filters
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
+  const [selectedParishes, setSelectedParishes] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([1, 3]);
   const [minAge, setMinAge] = useState<number>(0);
 
@@ -158,6 +160,19 @@ export default function Directory() {
       setSelectedSubcategories(rawSub.split(',').map(s => s.trim()).filter(Boolean));
     } else {
       setSelectedSubcategories([]);
+    }
+
+    const rawParish = searchParams.get('parroquia');
+    if (rawParish) {
+      const allowed = new Set<string>(ANDORRA_PARISHES);
+      setSelectedParishes(
+        rawParish
+          .split(',')
+          .map(s => s.trim())
+          .filter(p => allowed.has(p)),
+      );
+    } else {
+      setSelectedParishes([]);
     }
   }, [searchParams, categoryGroupMap]);
 
@@ -196,9 +211,16 @@ export default function Directory() {
     );
   };
 
+  const toggleParish = (parish: string) => {
+    setSelectedParishes(prev =>
+      prev.includes(parish) ? prev.filter(p => p !== parish) : [...prev, parish]
+    );
+  };
+
   const clearFilters = () => {
     setSelectedCategories([]);
     setSelectedSubcategories([]);
+    setSelectedParishes([]);
     setPriceRange([1, 3]);
     setMinAge(0);
     setSearchParams(prev => {
@@ -206,6 +228,7 @@ export default function Directory() {
       next.delete('grupo');
       next.delete('categoria');
       next.delete('subcategoria');
+      next.delete('parroquia');
       return next;
     });
   };
@@ -213,6 +236,7 @@ export default function Directory() {
   const hasActiveFilters =
     selectedCategories.length > 0 ||
     selectedSubcategories.length > 0 ||
+    selectedParishes.length > 0 ||
     priceRange[0] > 1 ||
     priceRange[1] < 3 ||
     minAge > 0;
@@ -228,6 +252,13 @@ export default function Directory() {
       ) {
         return false;
       }
+      if (selectedParishes.length > 0) {
+        const matchesParish = getBusinessDisplayLocations(b).some(loc => {
+          const parish = getParishForLocation(loc.location);
+          return parish != null && selectedParishes.includes(parish);
+        });
+        if (!matchesParish) return false;
+      }
       if (b.price_range < priceRange[0] || b.price_range > priceRange[1]) {
         return false;
       }
@@ -236,7 +267,7 @@ export default function Directory() {
       }
       return true;
     });
-  }, [businesses, selectedCategories, selectedSubcategories, priceRange, minAge]);
+  }, [businesses, selectedCategories, selectedSubcategories, selectedParishes, priceRange, minAge]);
 
   const isDefaultView = selectedCategories.length === 0;
 
@@ -335,6 +366,11 @@ export default function Directory() {
                   {sub} <X className="h-3 w-3" />
                 </Badge>
               ))}
+              {selectedParishes.map(parish => (
+                <Badge key={parish} variant="secondary" className="gap-1 cursor-pointer" onClick={() => toggleParish(parish)}>
+                  {parish} <X className="h-3 w-3" />
+                </Badge>
+              ))}
               {(priceRange[0] > 1 || priceRange[1] < 3) && (
                 <Badge variant="secondary">
                   {PRICE_LABELS[priceRange[0]]} – {PRICE_LABELS[priceRange[1]]}
@@ -383,6 +419,22 @@ export default function Directory() {
                         onCheckedChange={() => toggleSubcategory(sub)}
                       />
                       {sub}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Parishes */}
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-foreground">Parroquias</h3>
+                <div className="flex flex-col gap-2">
+                  {ANDORRA_PARISHES.map(parish => (
+                    <label key={parish} className="flex items-center gap-2 text-sm text-card-foreground cursor-pointer">
+                      <Checkbox
+                        checked={selectedParishes.includes(parish)}
+                        onCheckedChange={() => toggleParish(parish)}
+                      />
+                      {parish}
                     </label>
                   ))}
                 </div>

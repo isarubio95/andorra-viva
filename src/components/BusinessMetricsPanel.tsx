@@ -7,8 +7,8 @@ import {
   Navigation,
   Globe,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
@@ -36,10 +36,10 @@ const CLICK_TYPE_ICONS: Record<BusinessClickType, typeof MessageCircle> = {
 
 function MetricKpi({ value, label }: { value: string | number; label: string }) {
   return (
-    <div className="rounded-lg border border-border p-3 text-center">
+    <Card className="p-3 text-center shadow-none">
       <p className="text-xl font-bold text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
-    </div>
+    </Card>
   );
 }
 
@@ -167,11 +167,6 @@ function BusinessMetricsCard({
 
   return (
     <div className="rounded-xl border p-4 sm:p-6">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold text-foreground">{row.business_name}</h3>
-        <Badge variant="secondary">{periodLabel}</Badge>
-      </div>
-
       <div className="space-y-8">
         <section>
           <SectionHeader
@@ -293,7 +288,7 @@ function BusinessMetricsCard({
                 const widthPct = item.count > 0 ? Math.max((item.count / maxCount) * 100, 8) : 0;
 
                 return (
-                  <div key={item.click_type} className="rounded-lg border border-border p-3">
+                  <Card key={item.click_type} className="p-3 shadow-none">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -314,7 +309,7 @@ function BusinessMetricsCard({
                         style={{ width: `${widthPct}%` }}
                       />
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
@@ -360,8 +355,7 @@ export default function BusinessMetricsPanel({
       <div className="space-y-6">
         <Skeleton className="h-10 w-full max-w-xl rounded-lg" />
         <div className="rounded-xl border p-4 sm:p-6">
-          <Skeleton className="h-6 w-48" />
-          <div className="mt-6 space-y-8">
+          <div className="space-y-8">
             {Array.from({ length: 3 }).map((_, section) => (
               <div key={section} className="space-y-3">
                 <Skeleton className="h-10 w-64" />

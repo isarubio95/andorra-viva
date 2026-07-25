@@ -31,7 +31,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import { getPlanTheme, sortPlansByPrice, DASHBOARD_HIDDEN_PLAN_IDS } from '@/lib/plan-display';
+import { getPlanTheme, sortPlansByPrice, DASHBOARD_HIDDEN_PLAN_IDS, getPlanRenewalDaysLabel } from '@/lib/plan-display';
 import {
   DEFAULT_METRICS_PERIOD_ID,
   getMetricsPeriodDays,
@@ -88,8 +88,10 @@ export default function UserDashboard() {
     signOut,
     hasProAccess,
     planId,
+    pendingPlanId,
     refreshProfile,
     subscriptionStatus,
+    currentPeriodEnd,
     loading: authLoading,
     roleLoading,
   } = useAuth();
@@ -170,7 +172,13 @@ export default function UserDashboard() {
   const [showPasswordFields, setShowPasswordFields] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordUpdatedAt, setPasswordUpdatedAt] = useState<Date | null>(null);
+  const [changeEmailOpen, setChangeEmailOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailChangePassword, setEmailChangePassword] = useState('');
+  const [showEmailChangePassword, setShowEmailChangePassword] = useState(false);
+  const [changingEmail, setChangingEmail] = useState(false);
   const checkoutFeedbackHandled = useRef(false);
+  const emailUpdatedFeedbackHandled = useRef(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -209,6 +217,23 @@ export default function UserDashboard() {
       cleanUrl();
     })();
   }, [searchParams, user?.id, refreshProfile, navigate, toast]);
+
+  useEffect(() => {
+    if (searchParams.get('email_updated') !== '1' || emailUpdatedFeedbackHandled.current) return;
+    emailUpdatedFeedbackHandled.current = true;
+
+    toast({
+      title: 'Correo actualizado',
+      description: 'Tu dirección de correo se ha confirmado correctamente.',
+    });
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('email_updated');
+    navigate(
+      { pathname: '/mi-cuenta', search: next.toString() ? `?${next.toString()}` : '' },
+      { replace: true },
+    );
+  }, [searchParams, navigate, toast]);
 
   useEffect(() => {
     setPlansLoading(true);
@@ -253,8 +278,24 @@ export default function UserDashboard() {
   const dashboardPlans = plans.filter(p => !DASHBOARD_HIDDEN_PLAN_IDS.has(p.id));
   const freePlanName = plans.find(p => p.id === 'free')?.name ?? 'Free';
   const currentPlanName = plans.find(p => p.id === planId)?.name ?? planId ?? '—';
+  const pendingPlanName =
+    plans.find(p => p.id === pendingPlanId)?.name ?? pendingPlanId ?? null;
+  const planRenewalLabel = getPlanRenewalDaysLabel(currentPeriodEnd, {
+    planId,
+    planName: currentPlanName,
+    pendingPlanId,
+    pendingPlanName,
+    subscriptionStatus,
+  });
   const downgradeTargetPlanName =
     plans.find(p => p.id === downgradeTargetPlanId)?.name ?? downgradeTargetPlanId ?? '—';
+  const periodEndLabel = currentPeriodEnd
+    ? new Date(currentPeriodEnd).toLocaleDateString('es-ES', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
   const canManageRecommendation =
     role === 'admin' || (planId === 'premium' && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing'));
   const accountLabel =
@@ -288,12 +329,97 @@ export default function UserDashboard() {
   };
 
   const hasPasswordAuth = user?.identities?.some(identity => identity.provider === 'email') ?? false;
+  const pendingNewEmail = user?.new_email ?? null;
 
   const resetPasswordForm = () => {
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
     setShowPasswordFields(false);
+  };
+
+  const resetEmailForm = () => {
+    setNewEmail('');
+    setEmailChangePassword('');
+    setShowEmailChangePassword(false);
+  };
+
+  const handleChangeEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.email) return;
+
+    const trimmedEmail = newEmail.trim().toLowerCase();
+    const currentEmail = user.email.toLowerCase();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      toast({
+        title: 'Correo no válido',
+        description: 'Introduce una dirección de correo electrónico correcta.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (trimmedEmail === currentEmail) {
+      toast({
+        title: 'Mismo correo',
+        description: 'El nuevo correo debe ser distinto al actual.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (pendingNewEmail && trimmedEmail === pendingNewEmail.toLowerCase()) {
+      toast({
+        title: 'Cambio ya solicitado',
+        description: `Revisa la bandeja de ${pendingNewEmail} para confirmar el cambio.`,
+      });
+      return;
+    }
+
+    setChangingEmail(true);
+
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: emailChangePassword,
+    });
+
+    if (verifyError) {
+      toast({
+        title: 'Contraseña incorrecta',
+        description: 'Comprueba la contraseña e inténtalo de nuevo.',
+        variant: 'destructive',
+      });
+      setChangingEmail(false);
+      return;
+    }
+
+    const emailRedirectTo = `${window.location.origin}/mi-cuenta?tab=seguridad&email_updated=1`;
+    const { error: updateError } = await supabase.auth.updateUser(
+      { email: trimmedEmail },
+      { emailRedirectTo },
+    );
+
+    if (updateError) {
+      const alreadyRegistered =
+        /already|registered|exists|en uso|already been/i.test(updateError.message);
+      toast({
+        title: 'No se pudo cambiar el correo',
+        description: alreadyRegistered
+          ? 'Ese correo ya está asociado a otra cuenta.'
+          : updateError.message,
+        variant: 'destructive',
+      });
+    } else {
+      resetEmailForm();
+      setChangeEmailOpen(false);
+      toast({
+        title: 'Confirma tu nuevo correo',
+        description: `Te hemos enviado un enlace a ${trimmedEmail}. El cambio no será efectivo hasta que lo confirmes.`,
+      });
+    }
+
+    setChangingEmail(false);
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -436,18 +562,23 @@ export default function UserDashboard() {
 
   const handleChangePlan = async (nextPlanId: string) => {
     if (!user?.id) return;
-    if (nextPlanId === planId) return;
+    if (nextPlanId === planId && !pendingPlanId) return;
+    if (nextPlanId === pendingPlanId) return;
     setChangingPlan(true);
 
+    const currentRank = PLAN_RANK[planId ?? 'free'] ?? 0;
+    const nextRank = PLAN_RANK[nextPlanId] ?? 0;
+    const isDowngrade = nextRank < currentRank;
     const isUpgradeToPaid =
-      STRIPE_CHECKOUT_PLAN_IDS.has(nextPlanId) &&
-      (PLAN_RANK[nextPlanId] ?? 0) > (PLAN_RANK[planId ?? 'free'] ?? 0);
+      STRIPE_CHECKOUT_PLAN_IDS.has(nextPlanId) && nextRank > currentRank;
+    const isPaidDowngrade =
+      isOnPaidPlan && (STRIPE_CHECKOUT_PLAN_IDS.has(nextPlanId) || FREE_PLAN_IDS.has(nextPlanId)) && isDowngrade;
 
-    if (isUpgradeToPaid) {
+    if (isUpgradeToPaid || isPaidDowngrade) {
       const checkout = await createStripeCheckoutSession(nextPlanId);
-      if (checkout.error) {
+      if (checkout.error && !checkout.localOnly) {
         toast({
-          title: 'No se pudo iniciar el pago',
+          title: isDowngrade ? 'No se pudo programar el cambio' : 'No se pudo iniciar el pago',
           description: checkout.error,
           variant: 'destructive',
         });
@@ -456,10 +587,26 @@ export default function UserDashboard() {
       }
       if (checkout.updated) {
         const planLabel = plans.find(p => p.id === nextPlanId)?.name ?? nextPlanId;
-        toast({
-          title: 'Plan actualizado',
-          description: `Nuevo plan: ${planLabel}`,
-        });
+        if (checkout.scheduled) {
+          const when = checkout.currentPeriodEnd
+            ? new Date(checkout.currentPeriodEnd).toLocaleDateString('es-ES', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })
+            : periodEndLabel;
+          toast({
+            title: 'Cambio programado',
+            description: when
+              ? `Mantienes ${currentPlanName} hasta el ${when}. Después pasarás a ${planLabel}.`
+              : `Mantienes tu plan actual hasta el final del periodo. Después pasarás a ${planLabel}.`,
+          });
+        } else {
+          toast({
+            title: 'Plan actualizado',
+            description: `Nuevo plan: ${planLabel}`,
+          });
+        }
         await refreshProfile();
         setChangingPlan(false);
         return;
@@ -469,6 +616,7 @@ export default function UserDashboard() {
         setChangingPlan(false);
         return;
       }
+      // localOnly u otro caso: caer al update local de BD
     }
 
     const result = await setMySubscriptionPlan(nextPlanId);
@@ -619,7 +767,17 @@ export default function UserDashboard() {
                     <div className="space-y-2">
                       <Label htmlFor="email-display">Correo electrónico</Label>
                       <Input id="email-display" value={user.email || ''} disabled />
-                      <p className="text-xs text-muted-foreground">El correo no se puede cambiar desde aquí</p>
+                      {pendingNewEmail ? (
+                        <p className="text-xs text-muted-foreground">
+                          Pendiente de confirmar:{' '}
+                          <span className="font-medium text-foreground">{pendingNewEmail}</span>. Revisa
+                          tu bandeja de entrada.
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Para cambiarlo, ve a la pestaña Seguridad.
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label>Tipo de cuenta</Label>
@@ -862,6 +1020,11 @@ export default function UserDashboard() {
                     <CardDescription>
                       Cambia tu plan profesional cuando lo necesites.
                     </CardDescription>
+                    {planRenewalLabel ? (
+                      <Badge variant="secondary" className="mt-1 w-fit font-normal">
+                        {planRenewalLabel}
+                      </Badge>
+                    ) : null}
                   </CardHeader>
                   <CardContent className="overflow-visible">
                     {plansLoading ? (
@@ -889,14 +1052,15 @@ export default function UserDashboard() {
                           const isFreePlan = FREE_PLAN_IDS.has(plan.id);
                           const isCurrentFree = !!planId && FREE_PLAN_IDS.has(planId);
                           const selected = isFreePlan ? isCurrentFree : planId === plan.id;
+                          const isPendingTarget = pendingPlanId === plan.id;
                           const isDowngradeTarget = isPlanDowngrade(planId, plan.id);
                           const theme = getPlanTheme(plan.id);
                           return {
                             plan,
                             selected,
-                            disabled: changingPlan,
+                            disabled: changingPlan || isPendingTarget,
                             onSelect: () => {
-                              if (selected) return;
+                              if (selected || isPendingTarget) return;
                               if (isDowngradeTarget) {
                                 openDowngradeConfirm(plan.id);
                                 return;
@@ -905,28 +1069,40 @@ export default function UserDashboard() {
                             },
                             topBadge: selected ? (
                               <Badge className="border-0">Actual</Badge>
+                            ) : isPendingTarget ? (
+                              <Badge variant="secondary" className="border-0 font-normal">
+                                Desde renovación
+                              </Badge>
                             ) : undefined,
-                            showPopularBadge: !selected,
+                            showPopularBadge: !selected && !isPendingTarget,
                             action: (
                               <div
                                 className={cn(
                                   buttonVariants({
-                                    variant: selected || isDowngradeTarget ? 'outline' : 'default',
+                                    variant:
+                                      selected || isDowngradeTarget || isPendingTarget
+                                        ? 'outline'
+                                        : 'default',
                                     className: cn(
                                       'w-full rounded-full pointer-events-none select-none',
-                                      !selected && !isDowngradeTarget && theme.buttonClass,
+                                      !selected &&
+                                        !isDowngradeTarget &&
+                                        !isPendingTarget &&
+                                        theme.buttonClass,
                                     ),
                                   }),
-                                  (changingPlan || selected) && 'opacity-50',
+                                  (changingPlan || selected || isPendingTarget) && 'opacity-50',
                                 )}
                               >
                                 {selected
                                   ? 'Plan actual'
-                                  : changingPlan
-                                    ? 'Cambiando…'
-                                    : isFreePlan
-                                      ? 'Cambiar a plan gratuito'
-                                      : `Elegir ${plan.name}`}
+                                  : isPendingTarget
+                                    ? 'Programado'
+                                    : changingPlan
+                                      ? 'Cambiando…'
+                                      : isFreePlan
+                                        ? 'Cambiar a plan gratuito'
+                                        : `Elegir ${plan.name}`}
                               </div>
                             ),
                           };
@@ -938,11 +1114,13 @@ export default function UserDashboard() {
                       <div className="mt-6 border-t border-border/50 pt-4 text-center">
                         <button
                           type="button"
-                          disabled={changingPlan}
+                          disabled={changingPlan || pendingPlanId === 'free'}
                           onClick={() => openDowngradeConfirm('free')}
-                          className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline disabled:pointer-events-none disabled:opacity-50"
+                          className="cursor-pointer text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline disabled:pointer-events-none disabled:opacity-50"
                         >
-                          Cambiar al plan {freePlanName} (gratuito)
+                          {pendingPlanId === 'free'
+                            ? `Plan gratuito programado${periodEndLabel ? ` para el ${periodEndLabel}` : ''}`
+                            : `Cambiar al plan ${freePlanName} (gratuito)`}
                         </button>
                       </div>
                     )}
@@ -960,7 +1138,18 @@ export default function UserDashboard() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>¿Cambiar al plan {downgradeTargetPlanName}?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        {downgradeTargetPlanId === 'pro' ? (
+                        {periodEndLabel ? (
+                          <>
+                            Seguirás con el plan {currentPlanName} hasta el {periodEndLabel} (fin del periodo
+                            ya pagado). A partir de entonces pasarás a {downgradeTargetPlanName}
+                            {downgradeTargetPlanId === 'pro'
+                              ? ' y dejarás las funciones exclusivas de Premium.'
+                              : downgradeTargetPlanId === 'basic'
+                                ? ' y dejarás las funciones de Pro o Premium.'
+                                : ' y dejarás las funciones de pago.'}{' '}
+                            Tu cuenta profesional y tus negocios registrados se mantienen.
+                          </>
+                        ) : downgradeTargetPlanId === 'pro' ? (
                           <>
                             Dejarás de tener las funciones exclusivas de Premium (insignia Premium, negocio
                             recomendado, etc.). Tu cuenta profesional y tus negocios registrados se mantienen.
@@ -1070,15 +1259,31 @@ export default function UserDashboard() {
                   <CardDescription>Gestiona la seguridad de tu cuenta</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
-                    <div className="flex items-center gap-3">
-                      <Mail className="h-5 w-5 text-muted-foreground" />
-                      <div>
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Mail className="h-5 w-5 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
                         <p className="font-medium text-foreground">Correo electrónico</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+                        {pendingNewEmail && (
+                          <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                            Pendiente de confirmar: {pendingNewEmail}
+                          </p>
+                        )}
                       </div>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      disabled={!hasPasswordAuth}
+                      onClick={() => {
+                        setNewEmail(pendingNewEmail || '');
+                        setChangeEmailOpen(true);
+                      }}
+                    >
+                      Cambiar
+                    </Button>
                   </div>
 
                   <div className="flex items-center justify-between rounded-lg border border-border p-4">
@@ -1117,13 +1322,89 @@ export default function UserDashboard() {
           </Tabs>
 
           <Dialog
+            open={changeEmailOpen}
+            onOpenChange={open => {
+              setChangeEmailOpen(open);
+              if (!open) resetEmailForm();
+            }}
+          >
+            <DialogContent animation="fade" className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Cambiar correo electrónico</DialogTitle>
+                <DialogDescription>
+                  Introduce el nuevo correo y confirma con tu contraseña. Te enviaremos un enlace de
+                  verificación; el cambio no será efectivo hasta que lo confirmes.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleChangeEmail} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="current-email-display">Correo actual</Label>
+                  <Input id="current-email-display" value={user.email || ''} disabled />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-email">Nuevo correo</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="new-email"
+                      type="email"
+                      value={newEmail}
+                      onChange={e => setNewEmail(e.target.value)}
+                      className="pl-10"
+                      autoComplete="email"
+                      placeholder="nuevo@correo.com"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email-change-password">Contraseña actual</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="email-change-password"
+                      type={showEmailChangePassword ? 'text' : 'password'}
+                      value={emailChangePassword}
+                      onChange={e => setEmailChangePassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      autoComplete="current-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowEmailChangePassword(!showEmailChangePassword)}
+                      aria-label={showEmailChangePassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    >
+                      {showEmailChangePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={changingEmail}
+                    onClick={() => setChangeEmailOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={changingEmail}>
+                    {changingEmail ? 'Enviando…' : 'Enviar confirmación'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
             open={changePasswordOpen}
             onOpenChange={open => {
               setChangePasswordOpen(open);
               if (!open) resetPasswordForm();
             }}
           >
-            <DialogContent className="sm:max-w-md">
+            <DialogContent animation="fade" className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Cambiar contraseña</DialogTitle>
                 <DialogDescription>
