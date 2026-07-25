@@ -73,7 +73,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     title: 'Páginas legales',
     href: '/admin/legal',
     icon: Scale,
-    description: 'Aviso legal, privacidad y condiciones',
+    description: 'Aviso legal, privacidad, cookies y condiciones',
   },
   {
     title: 'Categorías',

@@ -31,6 +31,7 @@ import AdminReviews from "./pages/admin/AdminReviews.tsx";
 import AdminNews from "./pages/admin/AdminNews.tsx";
 import AdminPlans from "./pages/admin/AdminPlans.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
+import CookiePolicy from "./pages/CookiePolicy.tsx";
 import LegalNotice from "./pages/LegalNotice.tsx";
 import TermsOfUse from "./pages/TermsOfUse.tsx";
 
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/registrar-negocio" element={<RegisterBusiness />} />
               <Route path="/mi-cuenta/negocios/:businessId" element={<EditBusinessProfile />} />
               <Route path="/politica-proteccion-datos" element={<PrivacyPolicy />} />
+              <Route path="/politica-de-cookies" element={<CookiePolicy />} />
               <Route path="/aviso-legal" element={<LegalNotice />} />
               <Route path="/condiciones-de-uso" element={<TermsOfUse />} />
               <Route path="/admin" element={<AdminRoute />}>

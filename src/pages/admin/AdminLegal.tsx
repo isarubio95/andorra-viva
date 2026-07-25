@@ -80,8 +80,8 @@ export default function AdminLegal() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Páginas legales</h2>
           <p className="text-muted-foreground">
-            Edita el aviso legal, la política de privacidad y las condiciones de uso. El contenido admite HTML
-            básico (párrafos, listas, enlaces, negritas).
+            Edita el aviso legal, la política de privacidad, la política de cookies y las condiciones de
+            uso. El contenido admite HTML básico (párrafos, listas, enlaces, negritas).
           </p>
         </div>
 

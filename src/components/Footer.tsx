@@ -17,6 +17,9 @@ export default function Footer() {
           <Link to="/politica-proteccion-datos" className="hover:text-foreground hover:underline">
             Política de protección de datos
           </Link>
+          <Link to="/politica-de-cookies" className="hover:text-foreground hover:underline">
+            Política de cookies
+          </Link>
           <Link to="/condiciones-de-uso" className="hover:text-foreground hover:underline">
             Condiciones de uso
           </Link>

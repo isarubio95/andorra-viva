@@ -1,4 +1,8 @@
-export type LegalPageKey = 'privacy_policy' | 'legal_notice' | 'terms_of_use';
+export type LegalPageKey =
+  | 'privacy_policy'
+  | 'cookie_policy'
+  | 'legal_notice'
+  | 'terms_of_use';
 
 export interface LegalPageDocument {
   title: string;
@@ -10,18 +14,21 @@ export interface LegalPageDocument {
 
 export const LEGAL_PAGE_KEYS: LegalPageKey[] = [
   'privacy_policy',
+  'cookie_policy',
   'legal_notice',
   'terms_of_use',
 ];
 
 export const LEGAL_PAGE_LABELS: Record<LegalPageKey, string> = {
   privacy_policy: 'Política de protección de datos',
+  cookie_policy: 'Política de cookies',
   legal_notice: 'Aviso legal',
   terms_of_use: 'Condiciones de uso',
 };
 
 export const LEGAL_PAGE_ROUTES: Record<LegalPageKey, string> = {
   privacy_policy: '/politica-proteccion-datos',
+  cookie_policy: '/politica-de-cookies',
   legal_notice: '/aviso-legal',
   terms_of_use: '/condiciones-de-uso',
 };
@@ -100,8 +107,11 @@ const PRIVACY_BODY = `
   <h3>3.3. Datos técnicos y de navegación</h3>
   <ul>
     <li>Dirección IP, tipo de navegador, dispositivo y datos de sesión necesarios para el funcionamiento y la seguridad del servicio.</li>
-    <li>Identificador anónimo en almacenamiento local del navegador para el registro de visitas a fichas de negocio.</li>
-    <li>Cookies y tecnologías similares, conforme a la sección 10 de esta política.</li>
+    <li>Identificador anónimo en almacenamiento local del navegador para el registro de visitas y clics en fichas de negocio.</li>
+    <li>
+      Cookies y tecnologías similares, conforme a la
+      <a href="/politica-de-cookies">Política de Cookies</a>.
+    </li>
   </ul>
 </section>
 
@@ -113,6 +123,7 @@ const PRIVACY_BODY = `
     <li><strong>Prestación del directorio, mapa, favoritos y sistema de valoraciones</strong>: ejecución del contrato (art. 6.1.b LQPD).</li>
     <li><strong>Gestión de suscripciones y pagos de planes profesionales</strong>: ejecución del contrato y obligaciones legales fiscales y contables (art. 6.1.b y 6.1.c LQPD).</li>
     <li><strong>Publicación de perfiles de negocios en el directorio</strong>: ejecución del contrato con el profesional titular (art. 6.1.b LQPD).</li>
+    <li><strong>Métricas de visitas y clics en fichas de negocio</strong> para los titulares: ejecución del contrato e interés legítimo (art. 6.1.b y 6.1.f LQPD).</li>
     <li><strong>Atención de consultas y ejercicio de derechos</strong>: obligaciones legales e interés legítimo (art. 6.1.c y 6.1.f LQPD).</li>
     <li><strong>Seguridad, prevención del fraude y mejora técnica</strong>: interés legítimo (art. 6.1.f LQPD).</li>
     <li><strong>Comunicaciones comerciales o newsletters</strong>, cuando proceda: consentimiento del interesado (art. 6.1.a LQPD).</li>
@@ -147,6 +158,7 @@ const PRIVACY_BODY = `
     <li><strong>Datos de facturación:</strong> plazos exigidos por la normativa fiscal y mercantil aplicable.</li>
     <li><strong>Reseñas y valoraciones:</strong> mientras permanezcan publicadas o hasta solicitud de supresión.</li>
     <li><strong>Logs de seguridad:</strong> normalmente no superior a doce meses.</li>
+    <li><strong>Métricas de visitas y clics a fichas:</strong> mientras resulten necesarias para la prestación del servicio a los titulares y la seguridad frente a abusos, o hasta que se solicite su supresión cuando proceda.</li>
   </ul>
 </section>
 
@@ -163,10 +175,9 @@ const PRIVACY_BODY = `
 <section>
   <h2>9. Cookies y tecnologías similares</h2>
   <p>
-    Utilizamos cookies y almacenamiento local estrictamente necesarios para la sesión, autenticación y
-    seguridad. También empleamos un identificador anónimo en el navegador para métricas de visitas a
-    fichas de negocio. Si incorporamos cookies analíticas o de publicidad, se le informará y se solicitará
-    consentimiento cuando sea legalmente exigible.
+    El detalle sobre las cookies y tecnologías similares empleadas por ${PLATFORM} (finalidad, duración y
+    gestión) se describe en la
+    <a href="/politica-de-cookies">Política de Cookies</a>.
   </p>
 </section>
 
@@ -476,13 +487,113 @@ const TERMS_BODY = `
 </section>
 `.trim();
 
+const COOKIE_BODY = `
+<section>
+  <h2>1. ¿Qué son las cookies y tecnologías similares?</h2>
+  <p>
+    Las cookies son pequeños archivos que se almacenan en su dispositivo al visitar un sitio web. También
+    empleamos tecnologías similares, como el almacenamiento local del navegador (<em>localStorage</em>),
+    que permiten recordar preferencias, mantener la sesión o registrar métricas de uso de forma anónima.
+  </p>
+</section>
+
+<section>
+  <h2>2. Responsable</h2>
+  <p>
+    El responsable del uso de estas tecnologías en <strong>${PLATFORM}</strong> es
+    <strong>${COMPANY}</strong> (CIF ${CIF}), con domicilio en ${ADDRESS}.
+  </p>
+  <p>
+    Para consultas: <a href="mailto:${PRIVACY_EMAIL}">${PRIVACY_EMAIL}</a>. Esta política complementa la
+    <a href="/politica-proteccion-datos">Política de Protección de Datos</a>.
+  </p>
+</section>
+
+<section>
+  <h2>3. Cookies y tecnologías que utilizamos</h2>
+  <p>
+    Utilizamos cookies y almacenamiento local con finalidades estrictamente necesarias o de preferencia
+    funcional. <strong>No empleamos cookies de analítica de terceros ni de publicidad.</strong> Si en el
+    futuro las incorporamos, se le informará y se solicitará consentimiento cuando sea legalmente exigible.
+  </p>
+  <ul>
+    <li>
+      <strong>Sesión de autenticación (almacenamiento local, proveedor Supabase):</strong> necesaria para
+      mantener su sesión iniciada, la seguridad de la cuenta y el funcionamiento del servicio. Se conserva
+      mientras la sesión permanezca activa o hasta que cierre sesión. Tipo: estrictamente necesaria.
+    </li>
+    <li>
+      <strong><code>andorra-viva-visitor-key</code> (almacenamiento local):</strong> identificador anónimo
+      de primera parte para registrar visitas y clics en fichas de negocio (por ejemplo, contacto o enlace
+      web) y mostrar métricas agregadas a los titulares. Se crea al interactuar con una ficha, se conserva
+      en el navegador hasta que se elimine de forma manual o, tras iniciar sesión, se vincula a la cuenta
+      y se elimina la clave anónima. Tipo: métrica propia / funcional del servicio.
+    </li>
+    <li>
+      <strong><code>andorra-viva:map-theme</code> (almacenamiento local):</strong> recuerda el tema visual
+      del mapa para cargarlo de forma coherente. Preferencia funcional; se conserva hasta que se cambie o
+      se borre el almacenamiento del navegador. Tipo: preferencia.
+    </li>
+    <li>
+      <strong><code>sidebar:state</code> (cookie, ámbito administración):</strong> recuerda si el menú
+      lateral del panel de administración está abierto o cerrado. Duración aproximada de siete (7) días.
+      Tipo: preferencia de interfaz.
+    </li>
+  </ul>
+</section>
+
+<section>
+  <h2>4. Terceros</h2>
+  <p>
+    Durante el proceso de pago, el prestador de servicios de pago (<strong>Stripe, Inc.</strong>) puede
+    utilizar cookies o tecnologías propias en su dominio. Dichas tecnologías se rigen por la política de
+    Stripe y son ajenas a las cookies propias de ${PLATFORM}.
+  </p>
+</section>
+
+<section>
+  <h2>5. Cómo gestionar o eliminar cookies y almacenamiento local</h2>
+  <p>
+    Puede configurar su navegador para bloquear o eliminar cookies y borrar el almacenamiento local. Tenga
+    en cuenta que, si desactiva las tecnologías estrictamente necesarias (por ejemplo, las de sesión),
+    algunas funciones de ${PLATFORM} pueden dejar de funcionar correctamente.
+  </p>
+  <p>
+    Las instrucciones suelen encontrarse en el menú de configuración o privacidad de su navegador (Chrome,
+    Firefox, Safari, Edge u otros).
+  </p>
+</section>
+
+<section>
+  <h2>6. Actualizaciones</h2>
+  <p>
+    ${COMPANY} podrá actualizar esta Política de Cookies para reflejar cambios técnicos o legales. La
+    versión vigente y la fecha de última actualización se indican en esta página.
+  </p>
+</section>
+
+<section>
+  <h2>7. Contacto</h2>
+  <p>
+    Para cualquier duda sobre esta política: <a href="mailto:${PRIVACY_EMAIL}">${PRIVACY_EMAIL}</a>.
+  </p>
+</section>
+`.trim();
+
 export const DEFAULT_LEGAL_PAGES: Record<LegalPageKey, LegalPageDocument> = {
   privacy_policy: {
     title: 'Política de Protección de Datos Personales',
-    lastUpdated: '8 de julio de 2026',
-    version: '2026-07-08',
+    lastUpdated: '25 de julio de 2026',
+    version: '2026-07-25',
     summary: `La presente política informa sobre el tratamiento de datos personales realizado por <strong>${COMPANY}</strong>, titular de la plataforma <strong>${PLATFORM}</strong>, en el marco de la <em>Llei qualificada 29/2021, del 28 d&apos;octubre, de protecció de dades personals</em> (LQPD) y su Reglamento de aplicación (Decret 391/2022, del 28 de setembre).`,
     bodyHtml: PRIVACY_BODY,
+  },
+  cookie_policy: {
+    title: 'Política de Cookies',
+    lastUpdated: '25 de julio de 2026',
+    version: '2026-07-25',
+    summary: `Información sobre las cookies y tecnologías similares utilizadas en <strong>${PLATFORM}</strong> (<strong>${WEBSITE}</strong>), operada por <strong>${COMPANY}</strong>.`,
+    bodyHtml: COOKIE_BODY,
   },
   legal_notice: {
     title: 'Aviso Legal',
