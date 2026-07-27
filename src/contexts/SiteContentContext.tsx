@@ -39,6 +39,13 @@ import {
   type MapThemeId,
 } from '@/constants/map-themes';
 import {
+  DEFAULT_PAGE_BACKGROUND,
+  getPageBackground as resolvePageBackground,
+  type PageBackground,
+  type PageBackgroundId,
+  type PageBackgroundsConfig,
+} from '@/constants/page-backgrounds';
+import {
   DEFAULT_SUBCATEGORY_LABELS,
   getSubcategoryDisplayLabel,
 } from '@/constants/subcategory-display';
@@ -55,6 +62,7 @@ interface SiteContentContextValue {
   getSubcategoriesForCategory: (category: string) => readonly string[];
   getAvailableSubcategories: (selectedCategories: string[]) => string[];
   getLegalPage: (key: LegalPageKey) => LegalPageDocument;
+  getPageBackground: (id: PageBackgroundId) => PageBackground;
   texts: Record<SiteTextKey, string>;
   categories: string[];
   categoryLabels: Record<string, string>;
@@ -64,6 +72,7 @@ interface SiteContentContextValue {
   subcategoryIcons: Record<string, string>;
   legalPages: Record<LegalPageKey, LegalPageDocument>;
   mapTheme: MapThemeId;
+  pageBackgrounds: PageBackgroundsConfig;
   refresh: () => Promise<void>;
 }
 
@@ -77,6 +86,7 @@ const SiteContentContext = createContext<SiteContentContextValue>({
   getSubcategoriesForCategory: category => getSubsForCategory(category),
   getAvailableSubcategories: selected => getAvailableSubs(selected),
   getLegalPage: key => DEFAULT_LEGAL_PAGES[key],
+  getPageBackground: () => DEFAULT_PAGE_BACKGROUND,
   texts: DEFAULT_SITE_TEXTS,
   categories: mergeCategories(),
   categoryLabels: DEFAULT_CATEGORY_LABELS,
@@ -86,6 +96,7 @@ const SiteContentContext = createContext<SiteContentContextValue>({
   subcategoryIcons: {},
   legalPages: DEFAULT_LEGAL_PAGES,
   mapTheme: DEFAULT_MAP_THEME,
+  pageBackgrounds: {},
   refresh: async () => {},
 });
 
@@ -109,6 +120,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
     useState<Record<LegalPageKey, LegalPageDocument>>(DEFAULT_LEGAL_PAGES);
   const [mapTheme, setMapTheme] = useState<MapThemeId>(getInitialMapTheme);
   const [mapThemeReady, setMapThemeReady] = useState(() => readCachedMapTheme() !== null);
+  const [pageBackgrounds, setPageBackgrounds] = useState<PageBackgroundsConfig>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -122,6 +134,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       subcategoryIcons: remoteSubcategoryIcons,
       legalPages: remoteLegal,
       mapTheme: remoteMapTheme,
+      pageBackgrounds: remotePageBackgrounds,
     } = await fetchSiteSettings();
     const nextCategories = mergeCategories(remoteCategories);
     setTexts({ ...DEFAULT_SITE_TEXTS, ...remoteTexts });
@@ -142,6 +155,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
     writeCachedMapTheme(remoteMapTheme);
     setMapTheme(remoteMapTheme);
     setMapThemeReady(true);
+    setPageBackgrounds(remotePageBackgrounds ?? {});
     setLoading(false);
   }, []);
 
@@ -186,6 +200,11 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
     [legalPages],
   );
 
+  const getPageBackground = useCallback(
+    (id: PageBackgroundId) => resolvePageBackground(id, pageBackgrounds),
+    [pageBackgrounds],
+  );
+
   const value = useMemo(
     () => ({
       loading,
@@ -197,6 +216,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       getSubcategoriesForCategory,
       getAvailableSubcategories,
       getLegalPage,
+      getPageBackground,
       texts,
       categories,
       categoryLabels,
@@ -206,6 +226,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       subcategoryIcons,
       legalPages,
       mapTheme,
+      pageBackgrounds,
       refresh: load,
     }),
     [
@@ -218,6 +239,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       getSubcategoriesForCategory,
       getAvailableSubcategories,
       getLegalPage,
+      getPageBackground,
       texts,
       categories,
       categoryLabels,
@@ -227,6 +249,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       subcategoryIcons,
       legalPages,
       mapTheme,
+      pageBackgrounds,
       load,
     ],
   );

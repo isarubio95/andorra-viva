@@ -10,6 +10,7 @@ import {
   Package,
   Scale,
   Map,
+  Image,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -62,6 +63,12 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     href: '/admin/textos',
     icon: FileText,
     description: 'Contenido de la página',
+  },
+  {
+    title: 'Fondos',
+    href: '/admin/fondos',
+    icon: Image,
+    description: 'Fondos de página (color o imagen)',
   },
   {
     title: 'Mapa',

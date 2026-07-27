@@ -7,6 +7,10 @@ import { DEFAULT_SUBCATEGORY_LABELS } from '@/constants/subcategory-display';
 import type { SiteTextKey } from '@/constants/site-content-defaults';
 import type { LegalPageDocument, LegalPageKey } from '@/constants/legal-pages-defaults';
 import { DEFAULT_MAP_THEME, resolveMapTheme, writeCachedMapTheme, type MapThemeId } from '@/constants/map-themes';
+import {
+  parsePageBackgrounds,
+  type PageBackgroundsConfig,
+} from '@/constants/page-backgrounds';
 import type { Business } from '@/types/domain';
 import type { NewsPost, Plan, Review } from '@/types/domain';
 import { normalizeBusinessRow, normalizePlanRow } from '@/services/api';
@@ -98,6 +102,7 @@ export async function fetchSiteSettings(): Promise<{
   subcategoryIcons: Partial<Record<string, string>>;
   legalPages: Partial<Record<LegalPageKey, Partial<LegalPageDocument>>>;
   mapTheme: MapThemeId;
+  pageBackgrounds: PageBackgroundsConfig;
 }> {
   const { data, error } = await supabase.from('site_settings').select('key, value');
   if (error) {
@@ -112,6 +117,7 @@ export async function fetchSiteSettings(): Promise<{
       subcategoryIcons: {},
       legalPages: {},
       mapTheme: DEFAULT_MAP_THEME,
+      pageBackgrounds: {},
     };
   }
 
@@ -124,6 +130,7 @@ export async function fetchSiteSettings(): Promise<{
   const subcategoryIcons: Partial<Record<string, string>> = {};
   const legalPages: Partial<Record<LegalPageKey, Partial<LegalPageDocument>>> = {};
   let mapTheme: MapThemeId = DEFAULT_MAP_THEME;
+  let pageBackgrounds: PageBackgroundsConfig = {};
 
   for (const row of data ?? []) {
     if (row.key === 'texts' && row.value && typeof row.value === 'object') {
@@ -153,6 +160,9 @@ export async function fetchSiteSettings(): Promise<{
     if (row.key === 'map_theme') {
       mapTheme = resolveMapTheme(row.value);
     }
+    if (row.key === 'page_backgrounds') {
+      pageBackgrounds = parsePageBackgrounds(row.value);
+    }
   }
 
   return {
@@ -165,6 +175,7 @@ export async function fetchSiteSettings(): Promise<{
     subcategoryIcons,
     legalPages,
     mapTheme,
+    pageBackgrounds,
   };
 }
 
@@ -289,6 +300,18 @@ export async function saveMapTheme(
   });
   if (error) return { ok: false, error: error.message };
   writeCachedMapTheme(themeId);
+  return { ok: true };
+}
+
+export async function savePageBackgrounds(
+  backgrounds: PageBackgroundsConfig,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from('site_settings').upsert({
+    key: 'page_backgrounds',
+    value: backgrounds,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
 

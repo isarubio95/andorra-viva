@@ -24,6 +24,7 @@ import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import AdminPayments from "./pages/admin/AdminPayments.tsx";
 import AdminContent from "./pages/admin/AdminContent.tsx";
 import AdminMap from "./pages/admin/AdminMap.tsx";
+import AdminBackgrounds from "./pages/admin/AdminBackgrounds.tsx";
 import AdminLegal from "./pages/admin/AdminLegal.tsx";
 import AdminCategories from "./pages/admin/AdminCategories.tsx";
 import AdminBusinesses from "./pages/admin/AdminBusinesses.tsx";
@@ -34,6 +35,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import CookiePolicy from "./pages/CookiePolicy.tsx";
 import LegalNotice from "./pages/LegalNotice.tsx";
 import TermsOfUse from "./pages/TermsOfUse.tsx";
+import PageBackgroundApplier from "./components/PageBackgroundApplier.tsx";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +59,7 @@ const App = () => (
         <AuthProvider>
           <SiteContentProvider>
           <FavoritesProvider>
+            <PageBackgroundApplier />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/directorio" element={<Directory />} />
@@ -80,6 +83,7 @@ const App = () => (
                 <Route path="resenas" element={<AdminReviews />} />
                 <Route path="noticias" element={<AdminNews />} />
                 <Route path="textos" element={<AdminContent />} />
+                <Route path="fondos" element={<AdminBackgrounds />} />
                 <Route path="mapa" element={<AdminMap />} />
                 <Route path="legal" element={<AdminLegal />} />
                 <Route path="categorias" element={<AdminCategories />} />
