@@ -60,7 +60,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { getLegalPage } = useSiteContent();
+  const { getLegalPage, getText } = useSiteContent();
   const privacyPolicyVersion = getLegalPage('privacy_policy').version;
   const termsOfUseVersion = getLegalPage('terms_of_use').version;
 
@@ -236,18 +236,26 @@ export default function Signup() {
     {
       role: 'basic' as UserRole,
       icon: UserCircle,
-      title: 'Usuario',
-      description: 'Explora negocios, deja reseñas y guarda tus favoritos',
-      features: ['Explorar directorio', 'Dejar reseñas', 'Guardar favoritos'],
-      badge: 'Gratis',
+      title: getText('signup_user_title'),
+      description: getText('signup_user_description'),
+      features: [
+        getText('signup_user_feature_1'),
+        getText('signup_user_feature_2'),
+        getText('signup_user_feature_3'),
+      ],
+      badge: getText('signup_user_badge'),
     },
     {
       role: 'professional' as UserRole,
       icon: Store,
-      title: 'Profesional',
-      description: 'Registra tu negocio y llega a más clientes en Andorra',
-      features: ['Registrar negocios', 'Ver métricas', 'Planes de suscripción'],
-      badge: 'Desde 0€',
+      title: getText('signup_pro_title'),
+      description: getText('signup_pro_description'),
+      features: [
+        getText('signup_pro_feature_1'),
+        getText('signup_pro_feature_2'),
+        getText('signup_pro_feature_3'),
+      ],
+      badge: getText('signup_pro_badge'),
     },
   ];
 
@@ -379,7 +387,10 @@ export default function Signup() {
               })}
             </div>
             <Button className="w-full" onClick={handleContinueFromRole}>
-              Continuar como {selectedRole === 'professional' ? 'Profesional' : 'Usuario'}
+              Continuar como{' '}
+              {selectedRole === 'professional'
+                ? getText('signup_pro_title')
+                : getText('signup_user_title')}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               ¿Ya tienes cuenta?{' '}

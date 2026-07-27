@@ -5,6 +5,7 @@ import { useSiteContent } from '@/contexts/SiteContentContext';
 import {
   DEFAULT_SITE_TEXTS,
   SITE_TEXT_LABELS,
+  SITE_TEXT_SECTIONS,
   type SiteTextKey,
 } from '@/constants/site-content-defaults';
 import { Button } from '@/components/ui/button';
@@ -47,33 +48,34 @@ export default function AdminContent() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Textos de la web</h2>
           <p className="text-muted-foreground">
-            Modifica los textos visibles en la página de inicio y el pie de página.
+            Modifica los textos visibles en la web. Los cambios se aplican tras guardar.
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Contenido editable</CardTitle>
-            <CardDescription>
-              Los cambios se aplican en toda la web tras guardar.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {(Object.keys(SITE_TEXT_LABELS) as SiteTextKey[]).map(key => (
-              <div key={key} className="space-y-2">
-                <Label htmlFor={key}>{SITE_TEXT_LABELS[key]}</Label>
-                <Input
-                  id={key}
-                  value={form[key]}
-                  onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}
-                />
-              </div>
-            ))}
-            <Button onClick={() => void handleSave()} disabled={saving || !hasChanges}>
-              {saving ? 'Guardando…' : 'Guardar cambios'}
-            </Button>
-          </CardContent>
-        </Card>
+        {SITE_TEXT_SECTIONS.map(section => (
+          <Card key={section.id}>
+            <CardHeader>
+              <CardTitle>{section.title}</CardTitle>
+              <CardDescription>{section.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {section.keys.map(key => (
+                <div key={key} className="space-y-2">
+                  <Label htmlFor={key}>{SITE_TEXT_LABELS[key]}</Label>
+                  <Input
+                    id={key}
+                    value={form[key]}
+                    onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+
+        <Button onClick={() => void handleSave()} disabled={saving || !hasChanges}>
+          {saving ? 'Guardando…' : 'Guardar cambios'}
+        </Button>
       </div>
     </AdminShell>
   );
