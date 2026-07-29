@@ -55,10 +55,12 @@ No se pudo aplicar automáticamente. Pasos manuales:
    npx supabase functions deploy create-checkout-session
    npx supabase functions deploy stripe-webhook --no-verify-jwt
 
-4. Configura secrets en Supabase Dashboard → Edge Functions:
-   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+4. Configura secrets Stripe (LIVE en producción) en Supabase Dashboard → Edge Functions
+   o con: powershell -ExecutionPolicy Bypass -File scripts/set-stripe-edge-secrets.ps1
+   STRIPE_SECRET_KEY (sk_live_...), STRIPE_WEBHOOK_SECRET (whsec del endpoint live)
    STRIPE_PRICE_BASIC, STRIPE_PRICE_PRO, STRIPE_PRICE_PREMIUM
    PUBLIC_SITE_URL
+   Verificar: node scripts/verify-stripe-live-cut.mjs
 `);
   process.exit(result.status ?? 1);
 }
