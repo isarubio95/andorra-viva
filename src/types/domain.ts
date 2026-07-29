@@ -33,6 +33,8 @@ export interface Business {
   price_range: number;
   min_age: number | null;
   owner_id?: string | null;
+  /** Plan del owner (caché) para acotar galería/servicios en público. */
+  owner_plan_id?: string | null;
   gallery?: string[];
   phone?: string | null;
   website?: string | null;

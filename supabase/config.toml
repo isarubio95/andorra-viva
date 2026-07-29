@@ -12,3 +12,9 @@ verify_jwt = true
 
 [functions.r2-upload-url]
 verify_jwt = true
+
+[functions.r2-delete-objects]
+verify_jwt = true
+
+[functions.enforce-plan-content-limits]
+verify_jwt = false

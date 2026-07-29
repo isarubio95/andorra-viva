@@ -25,7 +25,7 @@ import { BUSINESS_IMAGE_FALLBACK, resolveBusinessImageUrl } from '@/lib/business
 import { buildWhatsAppUrl } from '@/lib/whatsapp';
 import { getOrCreateVisitorKey } from '@/lib/visitor-key';
 import { getBusinessDisplayLocations, trackBusinessClick, type BusinessClickType } from '@/services/api';
-import { getMaxPhotosForTier, isProfileGroupAvailable, type ProfilePlanTier } from '@/lib/business-profile-plan';
+import { getMaxPhotosForTier, getMaxServicesForTier, isProfileGroupAvailable, type ProfilePlanTier } from '@/lib/business-profile-plan';
 import { cn } from '@/lib/utils';
 import BusinessHoursDisplay from '@/components/BusinessHoursDisplay';
 import BusinessSocialLinks from '@/components/BusinessSocialLinks';
@@ -37,8 +37,15 @@ interface BusinessProfileViewProps {
   reviews?: Review[];
   showReviews?: boolean;
   className?: string;
-  /** Si se indica, limita secciones visibles según el plan (vista previa del editor). */
+  /** Si se indica, limita fotos/servicios (y opcionalmente secciones) según el plan. */
   planTier?: ProfilePlanTier;
+  /**
+   * Si es false, planTier solo recorta fotos/servicios (ficha pública).
+   * Por defecto true cuando hay planTier (vista previa del editor).
+   */
+  lockFeatureGroups?: boolean;
+  /** Tracking de clics; por defecto activo si no hay planTier (público sin preview). */
+  enableClickTracking?: boolean;
   /** Muestra insignia premium según plan del propietario (vista previa del editor). */
   previewPremium?: boolean;
   /** Galería y contenido en columnas en escritorio (p. ej. drawer a pantalla completa). */
@@ -105,6 +112,8 @@ export default function BusinessProfileView({
   showReviews = true,
   className,
   planTier,
+  lockFeatureGroups,
+  enableClickTracking,
   previewPremium,
   desktopFullScreen = false,
   carouselAutoplay = true,
@@ -115,17 +124,22 @@ export default function BusinessProfileView({
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const autoplay = useCarouselAutoplay();
 
+  const applyGroupLocks = lockFeatureGroups ?? !!planTier;
   const showPremiumBadge = previewPremium ?? business.is_premium;
-  const showContact = groupVisible(planTier, 'contact');
-  const showSocial = groupVisible(planTier, 'social') || !planTier;
-  const showServices = groupVisible(planTier, 'services');
-  const showActions = groupVisible(planTier, 'actions') || !planTier;
+  const showContact = !applyGroupLocks || groupVisible(planTier, 'contact');
+  const showSocial = !applyGroupLocks || groupVisible(planTier, 'social');
+  const showServices = !applyGroupLocks || groupVisible(planTier, 'services');
+  const showActions = !applyGroupLocks || groupVisible(planTier, 'actions');
   const photos = useMemo(() => {
     const list = buildPhotoList(business);
     const limit = planTier ? getMaxPhotosForTier(planTier) : list.length;
     const visible = list.slice(0, limit);
     return visible.length > 0 ? visible : [business.image_url || ''];
   }, [business.image_url, business.gallery, planTier]);
+  const visibleServices = useMemo(() => {
+    if (!planTier) return business.services;
+    return business.services.slice(0, getMaxServicesForTier(planTier));
+  }, [business.services, planTier]);
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -158,7 +172,7 @@ export default function BusinessProfileView({
   const displayLocations = getBusinessDisplayLocations(business);
   const websiteUrl =
     showContact && business.website ? normalizeWebsiteUrl(business.website) : null;
-  const trackClicks = !planTier;
+  const trackClicks = enableClickTracking ?? !planTier;
 
   return (
     <div
@@ -406,11 +420,11 @@ export default function BusinessProfileView({
           </p>
         </div>
 
-        {showServices && business.services.length > 0 && (
+        {showServices && visibleServices.length > 0 && (
           <div>
             <h3 className="mb-2 font-semibold">Servicios</h3>
             <div className="flex flex-wrap gap-2">
-              {business.services.map(s => (
+              {visibleServices.map(s => (
                 <Badge key={s} variant="secondary" className="gap-1">
                   <CheckCircle className="h-3 w-3" /> {s}
                 </Badge>

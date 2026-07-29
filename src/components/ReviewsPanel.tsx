@@ -17,6 +17,7 @@ import { useIsPhone } from '@/hooks/use-mobile';
 import { getReviewsByBusiness, trackBusinessVisit } from '@/services/api';
 import type { Business, Review } from '@/types/domain';
 import { getOrCreateVisitorKey } from '@/lib/visitor-key';
+import { resolveProfilePlanTier } from '@/lib/business-profile-plan';
 
 interface ReviewsPanelProps {
   business: Business | null;
@@ -62,6 +63,8 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
 
   if (!displayedBusiness) return null;
 
+  const publicPlanTier = resolveProfilePlanTier(displayedBusiness.owner_plan_id, null);
+
   const profileContent = (
     <div className="relative flex h-full min-h-0 flex-col">
       <button
@@ -72,7 +75,13 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
       >
         <X className="h-5 w-5" />
       </button>
-      <BusinessProfileView business={displayedBusiness} reviews={reviews} />
+      <BusinessProfileView
+        business={displayedBusiness}
+        reviews={reviews}
+        planTier={publicPlanTier}
+        lockFeatureGroups={false}
+        enableClickTracking
+      />
     </div>
   );
 

@@ -20,6 +20,7 @@ import {
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BusinessProfileView from '@/components/BusinessProfileView';
+import ContentTrimWizard from '@/components/ContentTrimWizard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -175,7 +176,16 @@ function LockedSection({
 export default function EditBusinessProfile() {
   const { businessId } = useParams<{ businessId: string }>();
   const navigate = useNavigate();
-  const { user, hasProAccess, planId, role, subscriptionStatus, loading: authLoading } = useAuth();
+  const {
+    user,
+    hasProAccess,
+    planId,
+    role,
+    subscriptionStatus,
+    contentTrimDueAt,
+    refreshProfile,
+    loading: authLoading,
+  } = useAuth();
   const { categories, getSubcategoriesForCategory } = useSiteContent();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -208,6 +218,7 @@ export default function EditBusinessProfile() {
   const [photos, setPhotos] = useState<EditablePhoto[]>([]);
   const [openingHours, setOpeningHours] = useState<BusinessOpeningHours>(createDefaultOpeningHours);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [trimWizardOpen, setTrimWizardOpen] = useState(false);
 
   const planTier = resolveProfilePlanTier(planId, role);
   const maxServices = getMaxServicesForTier(planTier);
@@ -221,6 +232,21 @@ export default function EditBusinessProfile() {
   const showPremiumPreview =
     planTier === 'premium' &&
     (subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || role === 'admin');
+
+  const existingPhotoUrls = useMemo(
+    () =>
+      photos
+        .filter((p): p is Extract<EditablePhoto, { kind: 'existing' }> => p.kind === 'existing')
+        .map(p => p.url),
+    [photos],
+  );
+  const needsContentTrim =
+    !!contentTrimDueAt &&
+    (existingPhotoUrls.length > maxPhotos || selectedServices.length > maxServices);
+
+  useEffect(() => {
+    if (needsContentTrim) setTrimWizardOpen(true);
+  }, [needsContentTrim]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -752,6 +778,16 @@ export default function EditBusinessProfile() {
       return false;
     }
 
+    if (needsContentTrim) {
+      setTrimWizardOpen(true);
+      toast({
+        title: 'Ajusta tu contenido',
+        description: 'Elige qué fotos y servicios conservar antes de seguir editando.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
     setSaving(true);
     try {
       const allImages: string[] = [];
@@ -944,6 +980,7 @@ export default function EditBusinessProfile() {
               disabled={
                 !hasChanges ||
                 saving ||
+                needsContentTrim ||
                 selectedServices.length > maxServices ||
                 totalPhotos > maxPhotos
               }
@@ -952,6 +989,24 @@ export default function EditBusinessProfile() {
               {saving ? 'Guardando…' : 'Guardar cambios'}
             </Button>
           </div>
+
+          {needsContentTrim && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+              <p className="font-medium text-foreground">Tu plan bajó y tienes contenido de más.</p>
+              <p className="mt-1 text-muted-foreground">
+                Elige qué fotos y servicios conservar. Si no lo haces a tiempo, se recortarán
+                automáticamente.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                className="mt-3"
+                onClick={() => setTrimWizardOpen(true)}
+              >
+                Elegir ahora
+              </Button>
+            </div>
+          )}
 
           <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
             {/* Editor */}
@@ -1460,6 +1515,33 @@ export default function EditBusinessProfile() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ContentTrimWizard
+        open={trimWizardOpen && needsContentTrim}
+        onOpenChange={setTrimWizardOpen}
+        mandatory
+        planTier={planTier}
+        maxPhotos={maxPhotos}
+        maxServices={maxServices}
+        photoUrls={existingPhotoUrls}
+        services={selectedServices}
+        dueAt={contentTrimDueAt}
+        onResolved={() => {
+          void refreshProfile();
+          if (!businessId) return;
+          void getBusinessById(businessId).then(row => {
+            if (!row) return;
+            setBusiness(row);
+            setSelectedServices(row.services ?? []);
+            const gallery = row.gallery?.length ? row.gallery : row.image_url ? [row.image_url] : [];
+            setPhotos(gallery.map(url => ({ id: createPhotoId(), kind: 'existing' as const, url })));
+          });
+          toast({
+            title: 'Contenido actualizado',
+            description: 'Se han eliminado las fotos y servicios que no conservaste.',
+          });
+        }}
+      />
     </div>
   );
 }

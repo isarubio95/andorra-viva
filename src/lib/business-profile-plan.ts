@@ -35,6 +35,9 @@ export const PROFILE_PHOTO_LIMITS: Record<ProfilePlanTier, number> = {
   premium: 10,
 };
 
+/** Días de gracia para elegir fotos/servicios tras un downgrade (SQL: interval '7 days'). */
+export const CONTENT_TRIM_GRACE_DAYS = 7;
+
 /** Máximo de ubicaciones (principal + sucursales). Solo Premium permite 2. */
 export const PROFILE_LOCATION_LIMITS: Record<ProfilePlanTier, number> = {
   free: 1,

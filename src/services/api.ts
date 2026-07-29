@@ -133,6 +133,10 @@ export function normalizeBusinessRow(row: unknown): Business {
     price_range: Number(r.price_range ?? 2),
     services,
     is_premium: !!r.is_premium,
+    owner_plan_id:
+      (r as { owner_plan_id?: unknown }).owner_plan_id != null
+        ? String((r as { owner_plan_id: unknown }).owner_plan_id)
+        : null,
     image_url: imageUrl,
     gallery,
     locations,
@@ -415,6 +419,67 @@ export async function downgradeToPersonal(): Promise<{ ok: boolean; error?: stri
     return { ok: false, error: error.message };
   }
   return { ok: true };
+}
+
+/** Elige fotos/servicios a conservar tras un downgrade (RPC `resolve_plan_content_trim`). */
+export async function resolvePlanContentTrim(
+  keepGallery: string[],
+  keepServices: string[],
+): Promise<{ ok: boolean; discardedUrls?: string[]; error?: string }> {
+  const { data, error } = await supabase.rpc('resolve_plan_content_trim', {
+    p_keep_gallery: keepGallery,
+    p_keep_services: keepServices,
+  });
+
+  if (error) {
+    console.error('[plans] resolve_plan_content_trim:', error.message);
+    return { ok: false, error: error.message };
+  }
+
+  const discardedUrls = Array.isArray((data as { discarded_urls?: unknown } | null)?.discarded_urls)
+    ? ((data as { discarded_urls: unknown[] }).discarded_urls.filter(
+        (u): u is string => typeof u === 'string' && u.length > 0,
+      ))
+    : [];
+
+  if (discardedUrls.length > 0) {
+    void deleteR2Objects(discardedUrls);
+  }
+
+  return { ok: true, discardedUrls };
+}
+
+/** Borra objetos R2 (y variantes) asociados a URLs públicas del usuario. */
+export async function deleteR2Objects(urls: string[]): Promise<{ ok: boolean; error?: string }> {
+  const unique = [...new Set(urls.map(u => u.trim()).filter(Boolean))];
+  if (unique.length === 0) return { ok: true };
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) return { ok: false, error: 'No autenticado' };
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, '');
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/r2-delete-objects`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ urls: unique }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      console.error('[storage] r2-delete-objects:', body?.error ?? res.status);
+      return { ok: false, error: body?.error ?? `Error al borrar (${res.status})` };
+    }
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error de red';
+    console.error('[storage] r2-delete-objects:', message);
+    return { ok: false, error: message };
+  }
 }
 
 /** Actualiza el plan de la suscripción del usuario autenticado (RPC `set_my_subscription_plan`). */

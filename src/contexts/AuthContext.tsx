@@ -35,6 +35,8 @@ interface AuthContextType {
   currentPeriodEnd: string | null;
   /** True si Stripe cancelará al final del periodo (p. ej. pasar a free). */
   cancelAtPeriodEnd: boolean;
+  /** Fecha límite para elegir fotos/servicios tras un downgrade. */
+  contentTrimDueAt: string | null;
   /** Calculado en BD (`get_my_access`) o fallback en cliente si el RPC no existe. */
   hasProAccess: boolean;
   /** Plan premium activo o rol admin. */
@@ -56,6 +58,7 @@ const AuthContext = createContext<AuthContextType>({
   subscriptionStatus: null,
   currentPeriodEnd: null,
   cancelAtPeriodEnd: false,
+  contentTrimDueAt: null,
   hasProAccess: false,
   hasPremiumAccess: false,
   refreshProfile: async () => {},
@@ -98,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(null);
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
+  const [contentTrimDueAt, setContentTrimDueAt] = useState<string | null>(null);
   const [hasProAccess, setHasProAccess] = useState(false);
   const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
 
@@ -108,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSubscriptionStatus(null);
     setCurrentPeriodEnd(null);
     setCancelAtPeriodEnd(false);
+    setContentTrimDueAt(null);
     setHasProAccess(false);
     setHasPremiumAccess(false);
   }, []);
@@ -117,10 +122,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       current_period_end?: string | null;
       pending_plan_id?: string | null;
       cancel_at_period_end?: boolean | null;
+      content_trim_due_at?: string | null;
     } | null) => {
       setCurrentPeriodEnd(row?.current_period_end ?? null);
       setPendingPlanId(row?.pending_plan_id ?? null);
       setCancelAtPeriodEnd(!!row?.cancel_at_period_end);
+      setContentTrimDueAt(row?.content_trim_due_at ?? null);
     },
     [],
   );
@@ -130,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle(),
       supabase
         .from('subscriptions')
-        .select('plan_id, status, current_period_end, pending_plan_id, cancel_at_period_end')
+        .select('plan_id, status, current_period_end, pending_plan_id, cancel_at_period_end, content_trim_due_at')
         .eq('user_id', userId)
         .maybeSingle(),
     ]);
@@ -181,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const { data: subRow, error: subError } = await supabase
           .from('subscriptions')
-          .select('current_period_end, pending_plan_id, cancel_at_period_end')
+          .select('current_period_end, pending_plan_id, cancel_at_period_end, content_trim_due_at')
           .eq('user_id', userId)
           .maybeSingle();
         if (subError) {
@@ -274,6 +281,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subscriptionStatus,
         currentPeriodEnd,
         cancelAtPeriodEnd,
+        contentTrimDueAt,
         hasProAccess,
         hasPremiumAccess,
         refreshProfile,

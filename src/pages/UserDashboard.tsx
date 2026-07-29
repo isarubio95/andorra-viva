@@ -44,6 +44,12 @@ import {
   navigateAccountDashboardTab,
   parseAccountDashboardTab,
 } from '@/lib/account-dashboard';
+import ContentTrimWizard, { contentTrimDaysRemaining } from '@/components/ContentTrimWizard';
+import {
+  getMaxPhotosForTier,
+  getMaxServicesForTier,
+  resolveProfilePlanTier,
+} from '@/lib/business-profile-plan';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -92,6 +98,7 @@ export default function UserDashboard() {
     refreshProfile,
     subscriptionStatus,
     currentPeriodEnd,
+    contentTrimDueAt,
     loading: authLoading,
     roleLoading,
   } = useAuth();
@@ -110,6 +117,7 @@ export default function UserDashboard() {
   const [downgradeTargetPlanId, setDowngradeTargetPlanId] = useState<string | null>(null);
   const [downgradeAccountOpen, setDowngradeAccountOpen] = useState(false);
   const [downgradingAccount, setDowngradingAccount] = useState(false);
+  const [trimWizardOpen, setTrimWizardOpen] = useState(false);
   const [changingRecommendedId, setChangingRecommendedId] = useState<string | null>(null);
   const [deleteBusinessId, setDeleteBusinessId] = useState<string | null>(null);
   const [deletingBusiness, setDeletingBusiness] = useState(false);
@@ -306,6 +314,19 @@ export default function UserDashboard() {
   );
   const currentRecommendedId = myBusinesses.find(b => b.is_recommended)?.id ?? null;
   const myBusiness = myBusinesses[0] ?? null;
+  const planTier = resolveProfilePlanTier(planId, role);
+  const maxPhotos = getMaxPhotosForTier(planTier);
+  const maxServices = getMaxServicesForTier(planTier);
+  const trimPhotoUrls = useMemo(() => {
+    if (!myBusiness) return [];
+    if (myBusiness.gallery?.length) return myBusiness.gallery;
+    return myBusiness.image_url ? [myBusiness.image_url] : [];
+  }, [myBusiness]);
+  const needsContentTrim =
+    !!contentTrimDueAt &&
+    !!myBusiness &&
+    (trimPhotoUrls.length > maxPhotos || (myBusiness.services?.length ?? 0) > maxServices);
+  const trimDaysLeft = contentTrimDaysRemaining(contentTrimDueAt);
   const businessToDelete = deleteBusinessId
     ? myBusinesses.find(b => b.id === deleteBusinessId) ?? null
     : null;
@@ -733,6 +754,36 @@ export default function UserDashboard() {
             <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
+
+          {needsContentTrim && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+              <p className="font-medium text-foreground">
+                Ajusta las fotos y servicios de tu negocio al plan {currentPlanName}
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                {trimDaysLeft == null
+                  ? 'Elige qué conservar; el resto se eliminará.'
+                  : trimDaysLeft <= 0
+                    ? 'Hoy se aplicará el recorte automático si no eliges.'
+                    : `Te quedan ${trimDaysLeft} día${trimDaysLeft === 1 ? '' : 's'} para elegir qué conservar.`}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="button" size="sm" onClick={() => setTrimWizardOpen(true)}>
+                  Elegir ahora
+                </Button>
+                {myBusiness && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/mi-cuenta/negocios/${myBusiness.id}`)}
+                  >
+                    Ir al editor
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
           <Tabs value={mainTab} onValueChange={handleMainTabChange} className="space-y-6">
             <TabsList className="flex h-auto w-full flex-wrap items-center justify-start gap-2 bg-transparent p-0">
@@ -1486,6 +1537,29 @@ export default function UserDashboard() {
         </div>
       </main>
       <Footer />
+
+      {myBusiness && (
+        <ContentTrimWizard
+          open={trimWizardOpen && needsContentTrim}
+          onOpenChange={setTrimWizardOpen}
+          mandatory={false}
+          planTier={planTier}
+          maxPhotos={maxPhotos}
+          maxServices={maxServices}
+          photoUrls={trimPhotoUrls}
+          services={myBusiness.services ?? []}
+          dueAt={contentTrimDueAt}
+          onResolved={() => {
+            void refreshProfile();
+            if (!user?.id) return;
+            void getMyBusinesses(user.id).then(setMyBusinesses);
+            toast({
+              title: 'Contenido actualizado',
+              description: 'Se han eliminado las fotos y servicios que no conservaste.',
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
