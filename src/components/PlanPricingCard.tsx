@@ -140,7 +140,7 @@ export default function PlanPricingCard({
   const floatingBadge =
     topBadge ??
     (theme.defaultTopBadge && showPopularBadge ? (
-      <Badge className={cn('border-0 uppercase tracking-wide', theme.badgeClass)}>
+      <Badge className={cn('px-3 py-1 uppercase', theme.badgeClass)}>
         {theme.defaultTopBadge}
       </Badge>
     ) : null);
@@ -171,10 +171,26 @@ export default function PlanPricingCard({
       )}
     >
       {floatingBadge && (
-        <div className="pointer-events-none absolute -top-3.5 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap drop-shadow-md">
+        <div
+          className={cn(
+            'pointer-events-none absolute -top-12 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap drop-shadow-md transition-transform duration-300',
+            interactive && !selected && 'group-hover:-translate-y-1',
+          )}
+        >
           {floatingBadge}
         </div>
       )}
+
+      <div
+        className={cn(
+          'pointer-events-none absolute -top-5 left-1/2 z-20 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full transition-transform duration-300',
+          theme.medallionClass,
+          interactive && !selected && 'group-hover:-translate-y-1',
+        )}
+        aria-hidden
+      >
+        <Icon className="h-7 w-7 text-white drop-shadow-md" strokeWidth={2.25} />
+      </div>
 
       <div
         className={cn(
@@ -188,52 +204,49 @@ export default function PlanPricingCard({
       >
         <div
           className={cn(
-            'relative shrink-0 overflow-hidden px-4 pb-6 pt-9 text-center text-white sm:px-5',
+            'relative shrink-0 overflow-hidden px-4 pb-5 pt-13 text-center text-white sm:px-5',
             theme.headerClass,
           )}
         >
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-white/25 to-transparent"
-            aria-hidden
-          />
-
           <div className="relative flex flex-col items-center">
-            <div
+            <h3
               className={cn(
-                'mb-3 flex h-16 w-16 items-center justify-center rounded-full shadow-lg',
-                theme.iconWrapClass,
+                'plan-metal text-3xl font-black uppercase leading-none tracking-wide sm:text-4xl',
+                theme.metalTextClass,
               )}
             >
-              <Icon className="h-7 w-7 drop-shadow-sm" strokeWidth={2.25} />
-            </div>
-
-            <h3 className="text-2xl font-black uppercase tracking-wide drop-shadow-sm sm:text-3xl">
               {plan.name}
             </h3>
 
-            <div className="mt-1 flex flex-col items-center gap-1">
-              <span className="text-3xl font-black drop-shadow-sm sm:text-4xl">
-                {formatPlanPrice(plan)}
-                {plan.price > 0 && (
-                  <span className="text-lg font-bold sm:text-xl">/{plan.interval}</span>
+            <div className="plan-header-rule mt-3 w-full max-w-44" aria-hidden />
+
+            <div className="mt-3 flex items-baseline justify-center gap-1">
+              <span
+                className={cn(
+                  'plan-metal text-3xl font-black leading-none sm:text-4xl',
+                  theme.metalTextClass,
                 )}
+              >
+                {formatPlanPrice(plan)}
               </span>
+              {plan.price > 0 && (
+                <span className="text-sm font-bold text-white/85 drop-shadow-sm sm:text-base">
+                  /{plan.interval}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-2 flex min-h-7 w-full flex-col items-center justify-center gap-1.5">
               {theme.priceSubtitle && (
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/85">
+                <span className="text-xs font-bold uppercase tracking-widest text-white/85">
                   {theme.priceSubtitle}
                 </span>
               )}
-              <div className="flex min-h-[26px] items-center justify-center">
-                {promoBadge && showPopularBadge ? (
-                  <Badge
-                    className={cn(
-                      'border-0 bg-white/95 font-bold uppercase tracking-wide text-foreground shadow-sm',
-                    )}
-                  >
-                    {promoBadge}
-                  </Badge>
-                ) : null}
-              </div>
+              {promoBadge && showPopularBadge ? (
+                <span className="plan-promo-pill w-full max-w-52 rounded-md px-3 py-1 text-xs font-extrabold uppercase tracking-wide">
+                  {promoBadge}
+                </span>
+              ) : null}
             </div>
           </div>
         </div>

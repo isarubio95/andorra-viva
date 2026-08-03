@@ -446,6 +446,150 @@
   filter: drop-shadow(0 1px 0 rgb(255 248 220 / 0.25));
 }
 
+/* Cabeceras de planes: placa biselada, medallón y tipografía metálica. */
+.plan-header {
+  background-image:
+    radial-gradient(125% 85% at 50% 0%, rgb(255 255 255 / 0.18), transparent 60%),
+    var(--plan-header-base);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    inset 1px 0 0 rgb(255 255 255 / 0.12),
+    inset -1px 0 0 rgb(0 0 0 / 0.12),
+    inset 0 -2px 0 rgb(0 0 0 / 0.2);
+}
+
+.plan-header--default {
+  --plan-header-base: linear-gradient(180deg, #2f6f60 0%, #205449 50%, #143a32 100%);
+}
+
+.plan-header--free {
+  --plan-header-base: linear-gradient(180deg, #2c8054 0%, #1c6440 48%, #114a2e 100%);
+}
+
+.plan-header--basic {
+  --plan-header-base: linear-gradient(180deg, #1d5694 0%, #143f74 48%, #0c2b51 100%);
+}
+
+.plan-header--pro {
+  --plan-header-base: linear-gradient(180deg, #f2806c 0%, #e0564a 50%, #c73c33 100%);
+}
+
+.plan-header--premium {
+  --plan-header-base: linear-gradient(180deg, #d2a941 0%, #b78e2c 50%, #916d1e 100%);
+}
+
+.plan-medallion {
+  overflow: hidden;
+  border: 0;
+  background-color: transparent;
+  background-image:
+    radial-gradient(120% 90% at 50% 12%, rgb(255 255 255 / 0.28), transparent 52%),
+    var(--plan-medallion-base);
+  box-shadow:
+    0 6px 14px rgb(0 0 0 / 0.32),
+    0 0 0 2px rgb(255 255 255 / 0.22);
+}
+
+.plan-medallion--default {
+  --plan-medallion-base: linear-gradient(180deg, #3d8d7c 0%, #1c4f44 100%);
+}
+
+.plan-medallion--free {
+  --plan-medallion-base: linear-gradient(180deg, #46b475 0%, #16613b 100%);
+}
+
+.plan-medallion--basic {
+  --plan-medallion-base: linear-gradient(180deg, #3d84d4 0%, #123c72 100%);
+}
+
+.plan-medallion--pro {
+  --plan-medallion-base: linear-gradient(180deg, #f89a7f 0%, #c93d33 100%);
+}
+
+.plan-medallion--premium {
+  --plan-medallion-base: linear-gradient(180deg, #f0cf7a 0%, #9b7420 100%);
+}
+
+.plan-header-rule {
+  height: 1px;
+  background-image: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.42), transparent);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.18);
+}
+
+.plan-metal {
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.plan-metal--silver {
+  background-image: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #f3f8fc 16%,
+    #ccd9e5 40%,
+    #ffffff 50%,
+    #b6c4d2 62%,
+    #8c9caa 84%,
+    #e2eaf1 100%
+  );
+  filter: drop-shadow(0 1px 0 rgb(4 10 18 / 0.55)) drop-shadow(0 3px 4px rgb(4 10 18 / 0.35));
+}
+
+.plan-metal--gold {
+  background-image: linear-gradient(
+    180deg,
+    #fffdf2 0%,
+    #fcf0c2 16%,
+    #eccd74 40%,
+    #fffbe6 50%,
+    #dcb04b 62%,
+    #a97e21 84%,
+    #f7e7b0 100%
+  );
+  filter: drop-shadow(0 1px 0 rgb(42 28 4 / 0.55)) drop-shadow(0 3px 4px rgb(42 28 4 / 0.35));
+}
+
+/* Píldora de promoción bajo el precio (p. ej. "3 meses gratis"). */
+.plan-promo-pill {
+  background-image: linear-gradient(180deg, #23864e 0%, #146137 100%);
+  border: 1px solid rgb(6 38 20 / 0.55);
+  box-shadow:
+    0 2px 5px rgb(0 0 0 / 0.25),
+    inset 0 1px 0 rgb(255 255 255 / 0.28);
+  color: #ffffff;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.35);
+}
+
+.plan-top-badge {
+  background-image: var(--plan-badge-base);
+  border: 1px solid var(--plan-badge-border);
+  box-shadow:
+    0 3px 8px rgb(0 0 0 / 0.28),
+    inset 0 1px 0 rgb(255 255 255 / 0.4),
+    inset 0 -1px 0 rgb(0 0 0 / 0.22);
+  color: #ffffff;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.35);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.plan-top-badge--free {
+  --plan-badge-base: linear-gradient(180deg, #3fb877 0%, #1d7f48 100%);
+  --plan-badge-border: rgb(8 54 30 / 0.6);
+}
+
+.plan-top-badge--basic {
+  --plan-badge-base: linear-gradient(180deg, #4a90de 0%, #16437c 100%);
+  --plan-badge-border: rgb(8 32 62 / 0.6);
+}
+
+.plan-top-badge--pro {
+  --plan-badge-base: linear-gradient(180deg, #f57c5c 0%, #d6402c 100%);
+  --plan-badge-border: rgb(86 18 10 / 0.55);
+}
+
 @utility container {
   margin-inline: auto;
   width: 100%;

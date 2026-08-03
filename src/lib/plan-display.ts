@@ -197,6 +197,10 @@ export interface PlanTheme {
   headerClass: string;
   glowClass: string;
   iconWrapClass: string;
+  /** Medallón del icono en la cabecera de la card de precios. */
+  medallionClass: string;
+  /** Acabado metálico del nombre y el precio en la cabecera. */
+  metalTextClass: string;
   defaultTopBadge?: string;
   subBadge?: string;
   priceSubtitle?: string;
@@ -214,9 +218,11 @@ const DEFAULT_THEME: PlanTheme = {
   buttonClass: 'bg-primary text-primary-foreground hover:brightness-110',
   borderClass: 'border-border',
   cardClass: 'bg-card',
-  headerClass: 'bg-linear-to-b from-primary to-primary',
+  headerClass: 'plan-header plan-header--default',
   glowClass: 'shadow-black/10',
   iconWrapClass: 'bg-muted text-primary',
+  medallionClass: 'plan-medallion plan-medallion--default',
+  metalTextClass: 'plan-metal--silver',
   preview: 'photo',
 };
 
@@ -227,16 +233,18 @@ const PLAN_THEMES: Record<string, PlanTheme> = {
     priceClass: 'text-emerald-600',
     checkClass: 'text-white',
     checkWrapClass: 'bg-emerald-500 shadow-emerald-500/40',
-    badgeClass: 'bg-emerald-500 text-white',
+    badgeClass: 'plan-top-badge plan-top-badge--free',
     buttonClass:
       'bg-linear-to-b from-emerald-500 to-emerald-700 text-white shadow-emerald-600/30 hover:brightness-110',
     borderClass: 'border-emerald-300/70',
     cardClass: 'bg-white',
-    headerClass: 'bg-linear-to-b from-emerald-500 via-emerald-600 to-emerald-800',
+    headerClass: 'plan-header plan-header--free',
     glowClass: 'shadow-emerald-500/25',
     iconWrapClass:
       'bg-linear-to-b from-emerald-300 via-emerald-500 to-emerald-700 text-white ring-4 ring-white/30',
-    defaultTopBadge: 'Para siempre gratis',
+    medallionClass: 'plan-medallion plan-medallion--free',
+    metalTextClass: 'plan-metal--silver',
+    priceSubtitle: 'Para siempre gratis',
     preview: 'mountains',
   },
   basic: {
@@ -245,15 +253,17 @@ const PLAN_THEMES: Record<string, PlanTheme> = {
     priceClass: 'text-blue-600',
     checkClass: 'text-white',
     checkWrapClass: 'bg-blue-600 shadow-blue-600/40',
-    badgeClass: 'bg-blue-600 text-white',
+    badgeClass: 'plan-top-badge plan-top-badge--basic',
     buttonClass:
       'bg-linear-to-b from-blue-600 to-blue-800 text-white shadow-blue-700/30 hover:brightness-110',
     borderClass: 'border-blue-300/70',
     cardClass: 'bg-white',
-    headerClass: 'bg-linear-to-b from-blue-500 via-blue-700 to-blue-900',
+    headerClass: 'plan-header plan-header--basic',
     glowClass: 'shadow-blue-600/25',
     iconWrapClass:
       'bg-linear-to-b from-sky-300 via-blue-500 to-blue-800 text-white ring-4 ring-white/30',
+    medallionClass: 'plan-medallion plan-medallion--basic',
+    metalTextClass: 'plan-metal--silver',
     preview: 'photo',
   },
   pro: {
@@ -262,15 +272,17 @@ const PLAN_THEMES: Record<string, PlanTheme> = {
     priceClass: 'text-orange-600',
     checkClass: 'text-white',
     checkWrapClass: 'bg-orange-500 shadow-orange-500/40',
-    badgeClass: 'bg-red-600 text-white',
+    badgeClass: 'plan-top-badge plan-top-badge--pro',
     buttonClass:
       'bg-linear-to-b from-orange-500 to-red-600 text-white shadow-red-600/30 hover:brightness-110',
     borderClass: 'border-orange-300/70',
     cardClass: 'bg-white',
-    headerClass: 'bg-linear-to-b from-orange-500 via-orange-600 to-red-700',
+    headerClass: 'plan-header plan-header--pro',
     glowClass: 'shadow-orange-500/30',
     iconWrapClass:
       'bg-linear-to-b from-amber-300 via-orange-500 to-red-600 text-white ring-4 ring-white/30',
+    medallionClass: 'plan-medallion plan-medallion--pro',
+    metalTextClass: 'plan-metal--silver',
     subBadge: undefined,
     preview: 'stats',
   },
@@ -280,15 +292,17 @@ const PLAN_THEMES: Record<string, PlanTheme> = {
     priceClass: 'text-amber-600',
     checkClass: 'text-white',
     checkWrapClass: 'bg-amber-500 shadow-amber-500/40',
-    badgeClass: 'recommended-badge border-0',
+    badgeClass: 'recommended-badge',
     buttonClass:
       'bg-linear-to-b from-amber-400 via-amber-500 to-yellow-600 text-white shadow-amber-600/30 hover:brightness-110',
     borderClass: 'border-amber-300/70',
     cardClass: 'bg-white',
-    headerClass: 'bg-linear-to-b from-amber-400 via-yellow-600 to-amber-700',
+    headerClass: 'plan-header plan-header--premium',
     glowClass: 'shadow-amber-500/30',
     iconWrapClass:
       'bg-linear-to-b from-amber-200 via-amber-400 to-yellow-600 text-white ring-4 ring-white/40',
+    medallionClass: 'plan-medallion plan-medallion--premium',
+    metalTextClass: 'plan-metal--gold',
     preview: 'premium-photo',
   },
 };

@@ -50,8 +50,9 @@ export default function PlanComparisonGrid({
   return (
     <div
       className={cn(
-        'grid auto-rows-auto items-start gap-4 sm:auto-rows-fr sm:items-stretch sm:gap-5',
-        hasFloatingBadge && 'pt-5',
+        'grid auto-rows-auto items-start gap-x-4 sm:auto-rows-fr sm:items-stretch sm:gap-x-5',
+        // Deja hueco al medallón que sobresale de la cabecera y al distintivo flotante.
+        hasFloatingBadge ? 'gap-y-12 pt-12' : 'gap-y-7 pt-7',
         getGridClasses(colCount),
         className,
       )}
