@@ -204,7 +204,7 @@ export default function BusinessProfileView({
           plugins={hasMultiplePhotos && carouselAutoplay ? [autoplay] : undefined}
           className="h-full w-full"
         >
-          <CarouselContent className="-ml-0 h-full">
+          <CarouselContent className="ml-0 h-full">
             {photos.map((url, index) => (
               <CarouselItem key={`${url}-${index}`} className="h-full basis-full pl-0">
                 <LightboxTrigger
