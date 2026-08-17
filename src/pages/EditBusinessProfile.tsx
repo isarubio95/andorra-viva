@@ -47,6 +47,8 @@ import {
 } from '@/lib/business-image-upload';
 import { uploadBusinessImage } from '@/lib/object-storage';
 import {
+  clampDescriptionForTier,
+  getMaxDescriptionForTier,
   getMaxPhotosForTier,
   getMaxServicesForTier,
   getMaxLocationsForTier,
@@ -223,6 +225,7 @@ export default function EditBusinessProfile() {
   const planTier = resolveProfilePlanTier(planId, role);
   const maxServices = getMaxServicesForTier(planTier);
   const maxPhotos = getMaxPhotosForTier(planTier);
+  const maxDescription = getMaxDescriptionForTier(planTier);
   const maxLocations = getMaxLocationsForTier(planTier);
   const canEditSecondaryLocation = isProfileGroupAvailable(planTier, 'locations');
   const upgradePlanTier = getNextPlanTier(planTier);
@@ -377,7 +380,7 @@ export default function EditBusinessProfile() {
       subcategory: subcategory || null,
       location,
       address: formatStoredAddress(addressValue) || null,
-      description,
+      description: clampDescriptionForTier(description, planTier),
       phone: isProfileGroupAvailable(planTier, 'contact') ? phone.trim() || null : null,
       website: isProfileGroupAvailable(planTier, 'contact') ? website.trim() || null : null,
       instagram_url: isProfileGroupAvailable(planTier, 'social')
@@ -403,7 +406,7 @@ export default function EditBusinessProfile() {
       review_count: business?.review_count ?? 0,
       is_recommended: business?.is_recommended ?? false,
       is_premium: showPremiumPreview,
-      opening_hours: openingHours,
+      opening_hours: isProfileGroupAvailable(planTier, 'details') ? openingHours : null,
       locations,
     };
   }, [
@@ -678,7 +681,8 @@ export default function EditBusinessProfile() {
       longitude: lon,
       image_url: allImages[0] || business.image_url,
       gallery: allImages.length > 0 ? allImages : business.gallery,
-      opening_hours: openingHours,
+      description: clampDescriptionForTier(description, planTier),
+      opening_hours: isProfileGroupAvailable(planTier, 'details') ? openingHours : null,
       locations,
     });
     photos.filter(photo => photo.kind === 'new').forEach(photo => URL.revokeObjectURL(photo.preview));
@@ -690,6 +694,14 @@ export default function EditBusinessProfile() {
     if (!businessId || !business) return false;
     if (!name.trim() || !category || !location || !description.trim()) {
       toast({ title: 'Completa los campos obligatorios', variant: 'destructive' });
+      return false;
+    }
+    if (description.trim().length > maxDescription) {
+      toast({
+        title: `Máximo ${maxDescription} caracteres`,
+        description: `Tu plan ${planLabelForTier(planTier)} permite una descripción de hasta ${maxDescription} caracteres.`,
+        variant: 'destructive',
+      });
       return false;
     }
 
@@ -808,7 +820,7 @@ export default function EditBusinessProfile() {
         subcategory: subcategory || null,
         location,
         address: storedAddress,
-        description: description.trim(),
+        description: clampDescriptionForTier(description, planTier),
         latitude: lat,
         longitude: lon,
         image_url: allImages[0] || business.image_url,
@@ -821,6 +833,9 @@ export default function EditBusinessProfile() {
       if (isProfileGroupAvailable(planTier, 'contact')) {
         payload.phone = phone.trim() || null;
         payload.website = website.trim() || null;
+      } else {
+        payload.phone = null;
+        payload.website = null;
       }
 
       if (isProfileGroupAvailable(planTier, 'social')) {
@@ -839,9 +854,11 @@ export default function EditBusinessProfile() {
       if (isProfileGroupAvailable(planTier, 'details')) {
         payload.price_range = parseInt(priceRange, 10);
         payload.min_age = minAge !== '' ? parseInt(minAge, 10) : null;
+        payload.opening_hours = openingHours;
+      } else {
+        payload.min_age = null;
+        payload.opening_hours = null;
       }
-
-      payload.opening_hours = openingHours;
 
       const result = await updateMyBusiness(businessId, payload);
       if (!result.ok) {
@@ -1166,11 +1183,14 @@ export default function EditBusinessProfile() {
                     <Textarea
                       id="edit-desc"
                       value={description}
-                      onChange={e => setDescription(e.target.value)}
-                      rows={4}
-                      maxLength={500}
+                      onChange={e => setDescription(e.target.value.slice(0, maxDescription))}
+                      rows={planTier === 'free' ? 3 : 4}
+                      maxLength={maxDescription}
                     />
-                    <p className="text-right text-xs text-muted-foreground">{description.length}/500</p>
+                    <p className="text-right text-xs text-muted-foreground">
+                      {description.length}/{maxDescription}
+                      {planTier === 'free' ? ' · Plan Free: descripción corta' : ''}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -1251,11 +1271,13 @@ export default function EditBusinessProfile() {
                     Horario
                   </CardTitle>
                   <CardDescription>
-                    Define el horario de apertura por días, como en Google Maps.
+                    Define el horario de apertura por días. Disponible con plan Basic o superior.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <BusinessHoursEditor value={openingHours} onChange={setOpeningHours} />
+                  <LockedSection group="details" tier={planTier}>
+                    <BusinessHoursEditor value={openingHours} onChange={setOpeningHours} />
+                  </LockedSection>
                 </CardContent>
               </Card>
 
@@ -1265,7 +1287,9 @@ export default function EditBusinessProfile() {
                     <Phone className="h-5 w-5 text-primary" />
                     Contacto
                   </CardTitle>
-                  <CardDescription>Teléfono y sitio web de contacto</CardDescription>
+                  <CardDescription>
+                    Teléfono y sitio web. Disponible con plan Basic o superior.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <LockedSection group="contact" tier={planTier}>
@@ -1364,31 +1388,33 @@ export default function EditBusinessProfile() {
                     showOverLimitWarning={selectedServices.length > maxServices}
                   />
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Rango de precio</Label>
-                      <Select value={priceRange} onValueChange={setPriceRange}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">€ — Económico</SelectItem>
-                          <SelectItem value="2">€€ — Moderado</SelectItem>
-                          <SelectItem value="3">€€€ — Premium</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  <LockedSection group="details" tier={planTier}>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Rango de precio</Label>
+                        <Select value={priceRange} onValueChange={setPriceRange}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">€ — Económico</SelectItem>
+                            <SelectItem value="2">€€ — Moderado</SelectItem>
+                            <SelectItem value="3">€€€ — Premium</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-age">Edad mínima</Label>
+                        <Input
+                          id="edit-age"
+                          type="number"
+                          min={0}
+                          max={99}
+                          value={minAge}
+                          onChange={e => setMinAge(e.target.value)}
+                          placeholder="Vacío = todas"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-age">Edad mínima</Label>
-                      <Input
-                        id="edit-age"
-                        type="number"
-                        min={0}
-                        max={99}
-                        value={minAge}
-                        onChange={e => setMinAge(e.target.value)}
-                        placeholder="Vacío = todas"
-                      />
-                    </div>
-                  </div>
+                  </LockedSection>
                 </CardContent>
               </Card>
 

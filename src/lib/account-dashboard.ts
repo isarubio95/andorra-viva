@@ -3,6 +3,7 @@ export const ACCOUNT_DASHBOARD_TABS = ['perfil', 'negocios', 'plan', 'metricas',
 export type AccountDashboardTab = (typeof ACCOUNT_DASHBOARD_TABS)[number];
 
 const PRO_ONLY_TABS = new Set<AccountDashboardTab>(['negocios', 'plan', 'metricas']);
+const PLAN_PRO_TABS = new Set<AccountDashboardTab>(['metricas']);
 const PREMIUM_ONLY_TABS = new Set<AccountDashboardTab>(['noticias']);
 
 export function isAccountDashboardTab(value: string | null | undefined): value is AccountDashboardTab {
@@ -15,6 +16,10 @@ export function parseAccountDashboardTab(value: string | null | undefined): Acco
 
 export function isProOnlyAccountDashboardTab(tab: AccountDashboardTab): boolean {
   return PRO_ONLY_TABS.has(tab);
+}
+
+export function isPlanProAccountDashboardTab(tab: AccountDashboardTab): boolean {
+  return PLAN_PRO_TABS.has(tab);
 }
 
 export function isPremiumOnlyAccountDashboardTab(tab: AccountDashboardTab): boolean {

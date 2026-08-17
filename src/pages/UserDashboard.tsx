@@ -41,11 +41,13 @@ import { buildPublicUrl } from '@/lib/site-url';
 import {
   isCurrentAccountDashboardTab,
   isProOnlyAccountDashboardTab,
+  isPlanProAccountDashboardTab,
   navigateAccountDashboardTab,
   parseAccountDashboardTab,
 } from '@/lib/account-dashboard';
 import ContentTrimWizard, { contentTrimDaysRemaining } from '@/components/ContentTrimWizard';
 import {
+  canAccessAdvancedMetrics,
   getMaxPhotosForTier,
   getMaxServicesForTier,
   resolveProfilePlanTier,
@@ -106,6 +108,8 @@ export default function UserDashboard() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const planTier = resolveProfilePlanTier(planId, role);
+  const canViewMetrics = canAccessAdvancedMetrics(planTier);
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
   const [saving, setSaving] = useState(false);
   const [myBusinesses, setMyBusinesses] = useState<Business[]>([]);
@@ -172,6 +176,12 @@ export default function UserDashboard() {
     if (hasProAccess || !isProOnlyAccountDashboardTab(mainTab)) return;
     navigateAccountDashboardTab(navigate, 'perfil', { replace: true });
   }, [authLoading, roleLoading, hasProAccess, mainTab, navigate]);
+
+  useEffect(() => {
+    if (authLoading || roleLoading) return;
+    if (!isPlanProAccountDashboardTab(mainTab) || canViewMetrics) return;
+    navigateAccountDashboardTab(navigate, hasProAccess ? 'negocios' : 'perfil', { replace: true });
+  }, [authLoading, roleLoading, mainTab, canViewMetrics, hasProAccess, navigate]);
 
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -262,7 +272,7 @@ export default function UserDashboard() {
   }, [user?.id, hasProAccess]);
 
   useEffect(() => {
-    if (!user?.id || !hasProAccess) {
+    if (!user?.id || !hasProAccess || !canViewMetrics) {
       setMetrics([]);
       return;
     }
@@ -278,7 +288,7 @@ export default function UserDashboard() {
         });
       })
       .finally(() => setMetricsLoading(false));
-  }, [user?.id, hasProAccess, metricsPeriodId, toast]);
+  }, [user?.id, hasProAccess, canViewMetrics, metricsPeriodId, toast]);
 
   const isPro = hasProAccess;
   const isProfessionalRole = role === 'professional';
@@ -314,7 +324,6 @@ export default function UserDashboard() {
   );
   const currentRecommendedId = myBusinesses.find(b => b.is_recommended)?.id ?? null;
   const myBusiness = myBusinesses[0] ?? null;
-  const planTier = resolveProfilePlanTier(planId, role);
   const maxPhotos = getMaxPhotosForTier(planTier);
   const maxServices = getMaxServicesForTier(planTier);
   const trimPhotoUrls = useMemo(() => {
@@ -532,7 +541,7 @@ export default function UserDashboard() {
       });
       setDeleteBusinessId(null);
       await refreshMyBusinesses();
-      if (user?.id && hasProAccess) {
+      if (user?.id && hasProAccess && canViewMetrics) {
         setMetricsLoading(true);
         getMyBusinessMetrics(getMetricsPeriodDays(metricsPeriodId))
           .then(setMetrics)
@@ -791,7 +800,9 @@ export default function UserDashboard() {
               {isPro && (
                 <>
                   <TabsTrigger value="negocios" className={tabTriggerClass}>Mi Negocio</TabsTrigger>
-                  <TabsTrigger value="metricas" className={tabTriggerClass}>Métricas</TabsTrigger>
+                  {canViewMetrics && (
+                    <TabsTrigger value="metricas" className={tabTriggerClass}>Métricas</TabsTrigger>
+                  )}
                   <TabsTrigger value="plan" className={tabTriggerClass}>Planes</TabsTrigger>
                 </>
               )}
@@ -1035,7 +1046,7 @@ export default function UserDashboard() {
             )}
 
             {/* Professional: Métricas Tab */}
-            {isPro && (
+            {isPro && canViewMetrics && (
               <TabsContent value="metricas">
                 <Card>
                   <CardHeader>

@@ -12,27 +12,34 @@ export type ProfileFieldGroup =
 
 const GROUP_MIN_TIER: Record<ProfileFieldGroup, ProfilePlanTier> = {
   essential: 'free',
-  contact: 'free',
-  services: 'free',
-  details: 'free',
   gallery: 'free',
+  services: 'free',
+  contact: 'basic',
+  details: 'basic',
   actions: 'basic',
   social: 'pro',
   locations: 'premium',
 };
 
 export const PROFILE_SERVICE_LIMITS: Record<ProfilePlanTier, number> = {
-  free: 4,
+  free: 2,
   basic: 5,
   pro: 7,
   premium: 12,
 };
 
 export const PROFILE_PHOTO_LIMITS: Record<ProfilePlanTier, number> = {
-  free: 3,
+  free: 1,
   basic: 3,
   pro: 6,
   premium: 10,
+};
+
+export const PROFILE_DESCRIPTION_LIMITS: Record<ProfilePlanTier, number> = {
+  free: 160,
+  basic: 500,
+  pro: 500,
+  premium: 500,
 };
 
 /** Días de gracia para elegir fotos/servicios tras un downgrade (SQL: interval '7 days'). */
@@ -64,8 +71,12 @@ export function resolveProfilePlanTier(
   return 'free';
 }
 
+export function isPlanAtLeast(tier: ProfilePlanTier, minimum: ProfilePlanTier): boolean {
+  return TIER_RANK[tier] >= TIER_RANK[minimum];
+}
+
 export function isProfileGroupAvailable(tier: ProfilePlanTier, group: ProfileFieldGroup): boolean {
-  return TIER_RANK[tier] >= TIER_RANK[GROUP_MIN_TIER[group]];
+  return isPlanAtLeast(tier, GROUP_MIN_TIER[group]);
 }
 
 export function requiredPlanForGroup(group: ProfileFieldGroup): ProfilePlanTier {
@@ -82,6 +93,14 @@ export function getMaxPhotosForTier(tier: ProfilePlanTier): number {
 
 export function getMaxLocationsForTier(tier: ProfilePlanTier): number {
   return PROFILE_LOCATION_LIMITS[tier];
+}
+
+export function getMaxDescriptionForTier(tier: ProfilePlanTier): number {
+  return PROFILE_DESCRIPTION_LIMITS[tier];
+}
+
+export function canAccessAdvancedMetrics(tier: ProfilePlanTier): boolean {
+  return isPlanAtLeast(tier, 'pro');
 }
 
 export function planLabelForTier(tier: ProfilePlanTier): string {
@@ -102,4 +121,8 @@ export function getNextPlanTier(tier: ProfilePlanTier): ProfilePlanTier | null {
   if (tier === 'basic') return 'pro';
   if (tier === 'pro') return 'premium';
   return null;
+}
+
+export function clampDescriptionForTier(text: string, tier: ProfilePlanTier): string {
+  return text.trim().slice(0, getMaxDescriptionForTier(tier));
 }

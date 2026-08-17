@@ -4,6 +4,7 @@ import type { Plan } from '@/types/domain';
 
 const META_PREFIX = /^Todo lo incluido en/i;
 const BASIC_PHOTO_FEATURE = 'Hasta 3 fotos';
+const FREE_PHOTO_FEATURE = 'Hasta 1 foto';
 
 function moveFeatureLast(features: string[], label: string): string[] {
   if (!features.includes(label)) return features;
@@ -166,7 +167,11 @@ export function getPlanFeatureDisplay(plans: Plan[], planId: string): PlanFeatur
   const orderedIncremental =
     planId === 'basic' ? moveFeatureLast(incremental, BASIC_PHOTO_FEATURE) : incremental;
   const orderedIncluded =
-    planId === 'basic' ? moveFeatureLast(included, BASIC_PHOTO_FEATURE) : included;
+    planId === 'free'
+      ? moveFeatureLast(included, FREE_PHOTO_FEATURE)
+      : planId === 'basic'
+        ? moveFeatureLast(included, BASIC_PHOTO_FEATURE)
+        : included;
 
   const higherFeatures = new Set<string>();
   for (let i = planIndex + 1; i < sorted.length; i++) {

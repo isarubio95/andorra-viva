@@ -79,7 +79,7 @@ export default function ReviewsPanel({ business, onClose }: ReviewsPanelProps) {
         business={displayedBusiness}
         reviews={reviews}
         planTier={publicPlanTier}
-        lockFeatureGroups={false}
+        lockFeatureGroups
         enableClickTracking
       />
     </div>

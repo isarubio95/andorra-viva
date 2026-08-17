@@ -25,7 +25,7 @@ import { BUSINESS_IMAGE_FALLBACK, resolveBusinessImageUrl } from '@/lib/business
 import { buildWhatsAppUrl } from '@/lib/whatsapp';
 import { getOrCreateVisitorKey } from '@/lib/visitor-key';
 import { getBusinessDisplayLocations, trackBusinessClick, type BusinessClickType } from '@/services/api';
-import { getMaxPhotosForTier, getMaxServicesForTier, isProfileGroupAvailable, type ProfilePlanTier } from '@/lib/business-profile-plan';
+import { getMaxPhotosForTier, getMaxServicesForTier, getMaxDescriptionForTier, isProfileGroupAvailable, type ProfilePlanTier } from '@/lib/business-profile-plan';
 import { cn } from '@/lib/utils';
 import BusinessHoursDisplay from '@/components/BusinessHoursDisplay';
 import BusinessSocialLinks from '@/components/BusinessSocialLinks';
@@ -130,6 +130,7 @@ export default function BusinessProfileView({
   const showSocial = !applyGroupLocks || groupVisible(planTier, 'social');
   const showServices = !applyGroupLocks || groupVisible(planTier, 'services');
   const showActions = !applyGroupLocks || groupVisible(planTier, 'actions');
+  const showDetails = !applyGroupLocks || groupVisible(planTier, 'details');
   const photos = useMemo(() => {
     const list = buildPhotoList(business);
     const limit = planTier ? getMaxPhotosForTier(planTier) : list.length;
@@ -140,6 +141,11 @@ export default function BusinessProfileView({
     if (!planTier) return business.services;
     return business.services.slice(0, getMaxServicesForTier(planTier));
   }, [business.services, planTier]);
+  const visibleDescription = useMemo(() => {
+    const text = business.description || '';
+    if (!planTier) return text;
+    return text.slice(0, getMaxDescriptionForTier(planTier));
+  }, [business.description, planTier]);
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -287,70 +293,68 @@ export default function BusinessProfileView({
           </div>
         </div>
 
-        {showActions && (
-          <div className="flex gap-3">
-            {whatsAppUrl ? (
-              <>
-                <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                  <a
-                    href={whatsAppUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackProfileClick(business.id, 'whatsapp', trackClicks)}
-                  >
-                    <MessageCircle className="mr-2 h-4 w-4" /> Reservar por WhatsApp
-                  </a>
-                </Button>
-                {showContact && business.phone && (
-                  <Button variant="outline" size="icon" asChild>
-                    <a
-                      href={`tel:${business.phone}`}
-                      aria-label="Llamar"
-                      onClick={() => trackProfileClick(business.id, 'phone', trackClicks)}
-                    >
-                      <Phone className="h-4 w-4" />
-                    </a>
-                  </Button>
-                )}
+        <div className="flex gap-3">
+          {showActions && whatsAppUrl ? (
+            <>
+              <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                <a
+                  href={whatsAppUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackProfileClick(business.id, 'whatsapp', trackClicks)}
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" /> Reservar por WhatsApp
+                </a>
+              </Button>
+              {showContact && business.phone && (
                 <Button variant="outline" size="icon" asChild>
                   <a
-                    href={directionsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Cómo llegar"
-                    onClick={() => trackProfileClick(business.id, 'directions', trackClicks)}
+                    href={`tel:${business.phone}`}
+                    aria-label="Llamar"
+                    onClick={() => trackProfileClick(business.id, 'phone', trackClicks)}
                   >
-                    <Navigation className="h-4 w-4" />
+                    <Phone className="h-4 w-4" />
                   </a>
                 </Button>
-              </>
-            ) : (
-              <>
-                <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+              )}
+              <Button variant="outline" size="icon" asChild>
+                <a
+                  href={directionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Cómo llegar"
+                  onClick={() => trackProfileClick(business.id, 'directions', trackClicks)}
+                >
+                  <Navigation className="h-4 w-4" />
+                </a>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" asChild>
+                <a
+                  href={directionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackProfileClick(business.id, 'directions', trackClicks)}
+                >
+                  <Navigation className="mr-2 h-4 w-4" /> Cómo llegar
+                </a>
+              </Button>
+              {showContact && business.phone && (
+                <Button variant="outline" size="icon" asChild>
                   <a
-                    href={directionsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackProfileClick(business.id, 'directions', trackClicks)}
+                    href={`tel:${business.phone}`}
+                    aria-label="Llamar"
+                    onClick={() => trackProfileClick(business.id, 'phone', trackClicks)}
                   >
-                    <Navigation className="mr-2 h-4 w-4" /> Cómo llegar
+                    <Phone className="h-4 w-4" />
                   </a>
                 </Button>
-                {showContact && business.phone && (
-                  <Button variant="outline" size="icon" asChild>
-                    <a
-                      href={`tel:${business.phone}`}
-                      aria-label="Llamar"
-                      onClick={() => trackProfileClick(business.id, 'phone', trackClicks)}
-                    >
-                      <Phone className="h-4 w-4" />
-                    </a>
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        )}
+              )}
+            </>
+          )}
+        </div>
 
         <div className="space-y-2 text-sm">
           {displayLocations.map(loc => {
@@ -400,7 +404,7 @@ export default function BusinessProfileView({
               </a>
             </div>
           )}
-          <BusinessHoursDisplay hours={business.opening_hours} />
+          {showDetails && <BusinessHoursDisplay hours={business.opening_hours} />}
           {showSocial && (
             <BusinessSocialLinks
               className="mt-4 gap-3"
@@ -416,7 +420,7 @@ export default function BusinessProfileView({
         <div>
           <h3 className="mb-2 font-semibold">Sobre este lugar</h3>
           <p className="text-sm text-muted-foreground">
-            {business.description || 'Añade una descripción para contar qué ofrece tu negocio.'}
+            {visibleDescription || 'Añade una descripción para contar qué ofrece tu negocio.'}
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, MapPin, Phone, Globe, DollarSign, Clock, ImagePlus, X, ArrowLeft, ArrowRight, Check, Users, FileText, Sparkles } from 'lucide-react';
+import { Store, MapPin, Phone, Globe, DollarSign, ImagePlus, X, ArrowLeft, ArrowRight, Check, Users, FileText, Sparkles } from 'lucide-react';
 import { AppLogo } from '@/components/AppLogo';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -26,20 +26,29 @@ import {
 } from '@/lib/business-image-upload';
 import { uploadBusinessImage } from '@/lib/object-storage';
 import {
+  clampDescriptionForTier,
+  getMaxDescriptionForTier,
   getMaxPhotosForTier,
   getMaxServicesForTier,
+  isProfileGroupAvailable,
   planLabelForTier,
   resolveProfilePlanTier,
 } from '@/lib/business-profile-plan';
+import { accountDashboardPath } from '@/lib/account-dashboard';
 import { getMyBusinesses } from '@/services/api';
 type Step = 'info' | 'details' | 'images' | 'review';
 
 export default function RegisterBusiness() {
-  const { user, planId, role } = useAuth();
+  const { user, planId, role, roleLoading } = useAuth();
   const { categories, getSubcategoriesForCategory } = useSiteContent();
   const planTier = resolveProfilePlanTier(planId, role);
   const maxServices = getMaxServicesForTier(planTier);
   const maxPhotos = getMaxPhotosForTier(planTier);
+  const maxDescription = getMaxDescriptionForTier(planTier);
+  const canEditContact = isProfileGroupAvailable(planTier, 'contact');
+  const canEditDetails = isProfileGroupAvailable(planTier, 'details');
+  const canEditServices = isProfileGroupAvailable(planTier, 'services');
+  const showDetailsStep = canEditContact || canEditDetails || canEditServices;
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -104,7 +113,7 @@ export default function RegisterBusiness() {
 
   const steps: { key: Step; label: string; icon: React.ElementType }[] = [
     { key: 'info', label: 'Información', icon: FileText },
-    { key: 'details', label: 'Detalles', icon: Store },
+    ...(showDetailsStep ? [{ key: 'details' as const, label: 'Detalles', icon: Store }] : []),
     { key: 'images', label: 'Imágenes', icon: ImagePlus },
     { key: 'review', label: 'Revisión', icon: Check },
   ];
@@ -185,6 +194,14 @@ export default function RegisterBusiness() {
     if (s === 'info') {
       if (!name.trim() || !category || !subcategory || !location || !description.trim()) {
         toast({ title: 'Completa todos los campos obligatorios', variant: 'destructive' });
+        return false;
+      }
+      if (description.trim().length > maxDescription) {
+        toast({
+          title: `Máximo ${maxDescription} caracteres`,
+          description: `Tu plan ${planLabelForTier(planTier)} permite una descripción de hasta ${maxDescription} caracteres.`,
+          variant: 'destructive',
+        });
         return false;
       }
       if (!isAddressConfirmed(addressValue)) {
@@ -290,12 +307,12 @@ export default function RegisterBusiness() {
         subcategory,
         location,
         address: formatStoredAddress(addressValue),
-        description: description.trim(),
-        phone: phone.trim() || null,
-        website: website.trim() || null,
-        price_range: parseInt(priceRange, 10),
-        min_age: minAge !== '' && minAge != null ? parseInt(minAge, 10) : null,
-        services: selectedServices.slice(0, maxServices),
+        description: clampDescriptionForTier(description, planTier),
+        phone: canEditContact ? phone.trim() || null : null,
+        website: canEditContact ? website.trim() || null : null,
+        price_range: canEditDetails ? parseInt(priceRange, 10) : 2,
+        min_age: canEditDetails && minAge !== '' && minAge != null ? parseInt(minAge, 10) : null,
+        services: canEditServices ? selectedServices.slice(0, maxServices) : [],
         latitude: lat,
         longitude: lon,
         image_url: imageUrls[0] || '',
@@ -303,7 +320,7 @@ export default function RegisterBusiness() {
         rating: 0,
         review_count: 0,
         is_recommended: false,
-        opening_hours: openingHours,
+        opening_hours: canEditDetails ? openingHours : null,
       };
       if (imageUrls.length > 0) {
         row.gallery = imageUrls;
@@ -331,7 +348,7 @@ export default function RegisterBusiness() {
     '3': '€€€ — Premium',
   };
 
-  if (checkingExisting) {
+  if (checkingExisting || roleLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4">
         <p className="text-sm text-muted-foreground">Comprobando tu cuenta…</p>
@@ -347,7 +364,7 @@ export default function RegisterBusiness() {
           <AppLogo size="md" asLink />
           <h1 className="text-2xl font-bold text-foreground">Registra tu negocio</h1>
           <p className="text-sm text-muted-foreground">
-            Completa la información para aparecer en el directorio
+            Completa la información de tu plan {planLabelForTier(planTier)} para aparecer en el directorio
           </p>
 
           {/* Steps */}
@@ -457,12 +474,24 @@ export default function RegisterBusiness() {
                   id="biz-desc"
                   placeholder="Describe tu negocio, qué ofreces, qué lo hace especial…"
                   value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  rows={4}
-                  maxLength={500}
+                  onChange={e => setDescription(e.target.value.slice(0, maxDescription))}
+                  rows={planTier === 'free' ? 3 : 4}
+                  maxLength={maxDescription}
                 />
-                <p className="text-xs text-muted-foreground text-right">{description.length}/500</p>
+                <p className="text-xs text-muted-foreground text-right">
+                  {description.length}/{maxDescription}
+                  {planTier === 'free' ? ' · Plan Free: descripción corta' : ''}
+                </p>
               </div>
+              {planTier === 'free' && (
+                <p className="text-xs text-muted-foreground">
+                  El plan Free incluye ficha básica y 1 foto.{' '}
+                  <Link to={accountDashboardPath('plan')} className="font-medium text-primary hover:underline">
+                    Mejora a Basic
+                  </Link>{' '}
+                  para teléfono, WhatsApp, horario y hasta 3 fotos.
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
@@ -478,53 +507,61 @@ export default function RegisterBusiness() {
               <CardDescription>Información adicional y servicios</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="biz-phone">Teléfono</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="biz-phone" placeholder="+376 800 000" value={phone} onChange={e => setPhone(e.target.value)} className="pl-10" />
+              {canEditContact && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="biz-phone">Teléfono</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input id="biz-phone" placeholder="+376 800 000" value={phone} onChange={e => setPhone(e.target.value)} className="pl-10" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="biz-web">Sitio web</Label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input id="biz-web" placeholder="https://tu-web.com" value={website} onChange={e => setWebsite(e.target.value)} className="pl-10" />
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="biz-web">Sitio web</Label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="biz-web" placeholder="https://tu-web.com" value={website} onChange={e => setWebsite(e.target.value)} className="pl-10" />
+              )}
+
+              {canEditDetails && (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Rango de precio</Label>
+                      <Select value={priceRange} onValueChange={setPriceRange}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">€ — Económico</SelectItem>
+                          <SelectItem value="2">€€ — Moderado</SelectItem>
+                          <SelectItem value="3">€€€ — Premium</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="biz-age">Edad mínima</Label>
+                      <div className="relative">
+                        <Users className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input id="biz-age" type="number" placeholder="Ej: 16 (vacío = todas)" value={minAge} onChange={e => setMinAge(e.target.value)} className="pl-10" min={0} max={99} />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Rango de precio</Label>
-                  <Select value={priceRange} onValueChange={setPriceRange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">€ — Económico</SelectItem>
-                      <SelectItem value="2">€€ — Moderado</SelectItem>
-                      <SelectItem value="3">€€€ — Premium</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="biz-age">Edad mínima</Label>
-                  <div className="relative">
-                    <Users className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="biz-age" type="number" placeholder="Ej: 16 (vacío = todas)" value={minAge} onChange={e => setMinAge(e.target.value)} className="pl-10" min={0} max={99} />
-                  </div>
-                </div>
-              </div>
+                  <BusinessHoursEditor value={openingHours} onChange={setOpeningHours} />
+                </>
+              )}
 
-              <BusinessHoursEditor value={openingHours} onChange={setOpeningHours} />
-
-              <BusinessServicesPicker
-                selectedServices={selectedServices}
-                maxServices={maxServices}
-                onToggle={toggleService}
-              />
+              {canEditServices && (
+                <BusinessServicesPicker
+                  selectedServices={selectedServices}
+                  maxServices={maxServices}
+                  onToggle={toggleService}
+                />
+              )}
             </CardContent>
           </Card>
         )}
@@ -630,27 +667,29 @@ export default function RegisterBusiness() {
                 <p className="text-sm text-foreground/80">{description}</p>
 
                 <div className="grid gap-2 sm:grid-cols-2 text-sm">
-                  {phone && (
+                  {canEditContact && phone && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Phone className="h-3.5 w-3.5" /> {phone}
                     </div>
                   )}
-                  {website && (
+                  {canEditContact && website && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Globe className="h-3.5 w-3.5" /> {website}
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <DollarSign className="h-3.5 w-3.5" /> {priceLabels[priceRange]}
-                  </div>
-                  {minAge && (
+                  {canEditDetails && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <DollarSign className="h-3.5 w-3.5" /> {priceLabels[priceRange]}
+                    </div>
+                  )}
+                  {canEditDetails && minAge && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Users className="h-3.5 w-3.5" /> Edad mínima: {minAge} años
                     </div>
                   )}
                 </div>
 
-                {selectedServices.length > 0 && (
+                {canEditServices && selectedServices.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedServices.map(s => (
                       <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
