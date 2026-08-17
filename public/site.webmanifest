@@ -1,0 +1,30 @@
+{
+  "name": "Andorra Viva",
+  "short_name": "Andorra Viva",
+  "description": "La guía exclusiva de experiencias en el Principado: restaurantes, hoteles, spa y ocio en Andorra.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2F5B4C",
+  "theme_color": "#2F5B4C",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

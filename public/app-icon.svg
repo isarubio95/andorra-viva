@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Andorra Viva">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2F5B4C"/>
+      <stop offset="100%" stop-color="#1F9B5A"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="30%" y1="20%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#FFE08A"/>
+      <stop offset="100%" stop-color="#F0A020"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="390" cy="120" r="160" fill="#ffffff" opacity="0.08"/>
+  <circle cx="348" cy="188" r="58" fill="url(#sun)"/>
+  <path fill="#ffffff" d="M86 392 L168 208 L224 286 L292 148 L426 392 Z"/>
+  <path fill="#ffffff" opacity="0.22" d="M86 392 L140 290 L188 352 L248 250 L320 392 Z"/>
+</svg>
